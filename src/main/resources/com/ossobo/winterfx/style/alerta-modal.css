@@ -1,0 +1,561 @@
+/* ==========================================================================
+   alerta-modal.css - Estilos para Modal de Alerta
+   Design moderno com diferentes níveis de severidade
+   ========================================================================== */
+
+/* Variáveis CSS para níveis de alerta */
+.root {
+    /* Cores de severidade */
+    -fx-cor-info: #3498DB;
+    -fx-cor-sucesso: #2ECC71;
+    -fx-cor-aviso: #F39C12;
+    -fx-cor-erro: #E74C3C;
+    -fx-cor-critico: #C0392B;
+
+    /* Cores de fundo por nível */
+    -fx-fundo-info: linear-gradient(to bottom, #EBF5FB, #D6EAF8);
+    -fx-fundo-sucesso: linear-gradient(to bottom, #EAFAF1, #D5F5E3);
+    -fx-fundo-aviso: linear-gradient(to bottom, #FEF9E7, #FCF3CF);
+    -fx-fundo-erro: linear-gradient(to bottom, #FDEDEC, #FADBD8);
+    -fx-fundo-critico: linear-gradient(to bottom, #FBEEE6, #F6DDCC);
+
+    /* Bordas por nível */
+    -fx-borda-info: #3498DB;
+    -fx-borda-sucesso: #2ECC71;
+    -fx-borda-aviso: #F39C12;
+    -fx-borda-erro: #E74C3C;
+    -fx-borda-critico: #C0392B;
+
+    /* Cores de texto */
+    -fx-texto-escuro: #2C3E50;
+    -fx-texto-medio: #566573;
+    -fx-texto-claro: #7F8C8D;
+
+    /* Sombras */
+    -fx-sombra-modal: rgba(0, 0, 0, 0.2);
+    -fx-sombra-botao: rgba(0, 0, 0, 0.1);
+    -fx-sombra-interna: rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   CONTÊINER PRINCIPAL
+   ========================================================================== */
+.alerta-modal {
+    -fx-background-color: white;
+    -fx-background-radius: 12px;
+    -fx-border-color: -fx-borda-info; /* Cor padrão - será sobrescrita */
+    -fx-border-width: 3px;
+    -fx-border-radius: 12px;
+    -fx-effect: dropshadow(three-pass-box, -fx-sombra-modal, 20, 0.3, 0, 8);
+    -fx-padding: 20px;
+    -fx-spacing: 15px;
+    -fx-min-width: 350px;
+    -fx-max-width: 500px;
+}
+
+/* Classes de severidade para o modal */
+.alerta-modal.info {
+    -fx-border-color: -fx-borda-info;
+    -fx-background-color: -fx-fundo-info;
+    -fx-background-image: url("../assets/info-bg.png"); /* Opcional: imagem de fundo */
+}
+
+.alerta-modal.success {
+    -fx-border-color: -fx-borda-sucesso;
+    -fx-background-color: -fx-fundo-sucesso;
+}
+
+.alerta-modal.warning {
+    -fx-border-color: -fx-borda-aviso;
+    -fx-background-color: -fx-fundo-aviso;
+}
+
+.alerta-modal.error {
+    -fx-border-color: -fx-borda-erro;
+    -fx-background-color: -fx-fundo-erro;
+}
+
+.alerta-modal.critical {
+    -fx-border-color: -fx-borda-critico;
+    -fx-background-color: -fx-fundo-critico;
+    -fx-border-width: 4px;
+}
+
+/* ==========================================================================
+   CABEÇALHO / TÍTULO
+   ========================================================================== */
+.alerta-titulo-modal {
+    -fx-font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -fx-texto-escuro;
+    -fx-padding: 5px 0;
+    -fx-wrap-text: true;
+    -fx-alignment: center-left;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.9), 0, 0, 0, 1);
+}
+
+/* Container do cabeçalho com ícone */
+.header-container {
+    -fx-spacing: 12px;
+    -fx-alignment: center-left;
+}
+
+/* Ícones de severidade (usando FontAwesome ou similar) */
+.icon-severity {
+    -fx-font-family: "FontAwesome";
+    -fx-font-size: 20px;
+    -fx-min-width: 24px;
+    -fx-text-alignment: center;
+}
+
+.icon-info {
+    -fx-text-fill: -fx-cor-info;
+    -fx-glyph-name: "INFO_CIRCLE";
+}
+
+.icon-success {
+    -fx-text-fill: -fx-cor-sucesso;
+    -fx-glyph-name: "CHECK_CIRCLE";
+}
+
+.icon-warning {
+    -fx-text-fill: -fx-cor-aviso;
+    -fx-glyph-name: "EXCLAMATION_TRIANGLE";
+}
+
+.icon-error {
+    -fx-text-fill: -fx-cor-erro;
+    -fx-glyph-name: "TIMES_CIRCLE";
+}
+
+.icon-critical {
+    -fx-text-fill: -fx-cor-critico;
+    -fx-glyph-name: "BOLT";
+    -fx-effect: dropshadow(gaussian, rgba(192, 57, 43, 0.3), 2, 0, 0, 1);
+}
+
+/* ==========================================================================
+   DESCRIÇÃO / ÁREA DE TEXTO
+   ========================================================================== */
+.alerta-descricao-modal {
+    -fx-font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-texto-medio;
+    -fx-background-color: rgba(255, 255, 255, 0.85);
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(0, 0, 0, 0.08);
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-padding: 12px;
+    -fx-wrap-text: true;
+    -fx-pref-row-count: 4;
+    -fx-max-height: 120px;
+    -fx-effect: dropshadow(gaussian, -fx-sombra-interna, 3, 0, 0, 1);
+    -fx-font-smoothing-type: gray;
+}
+
+/* Estados da área de texto */
+.alerta-descricao-modal:focused {
+    -fx-border-color: rgba(52, 152, 219, 0.3);
+    -fx-border-width: 2px;
+    -fx-background-color: white;
+}
+
+.alerta-descricao-modal:hover {
+    -fx-border-color: rgba(0, 0, 0, 0.15);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 4, 0, 0, 2);
+}
+
+/* Scrollbar personalizado */
+.alerta-descricao-modal .scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.alerta-descricao-modal .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.alerta-descricao-modal .scroll-bar {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-pref-width: 10px;
+    -fx-pref-height: 10px;
+}
+
+.alerta-descricao-modal .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+}
+
+.alerta-descricao-modal .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(0, 0, 0, 0.15);
+    -fx-background-radius: 5px;
+    -fx-background-insets: 2px;
+}
+
+.alerta-descricao-modal .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.25);
+}
+
+.alerta-descricao-modal .scroll-bar .increment-button,
+.alerta-descricao-modal .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 0 0;
+}
+
+/* ==========================================================================
+   INFORMAÇÕES (ORIGEM, TIMESTAMP, ETC)
+   ========================================================================== */
+.alerta-origem-modal {
+    -fx-font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-text-fill: -fx-texto-claro;
+    -fx-padding: 5px 0;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.8), 0, 0, 0, 1);
+}
+
+/* Container para informações adicionais */
+.info-container {
+    -fx-spacing: 15px;
+    -fx-padding: 8px 0;
+    -fx-border-color: rgba(0, 0, 0, 0.05);
+    -fx-border-width: 1px 0 0 0;
+    -fx-border-style: solid;
+}
+
+.info-row {
+    -fx-spacing: 10px;
+    -fx-alignment: center-left;
+}
+
+.info-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-texto-claro;
+    -fx-font-weight: 600;
+    -fx-min-width: 80px;
+}
+
+.info-value {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-texto-medio;
+    -fx-font-weight: 500;
+}
+
+/* Timestamp */
+.timestamp {
+    -fx-font-size: 11px;
+    -fx-text-fill: #95A5A6;
+    -fx-font-style: italic;
+    -fx-padding: 2px 0;
+}
+
+/* ==========================================================================
+   BOTÕES
+   ========================================================================== */
+
+/* Container de botões */
+.button-container {
+    -fx-spacing: 12px;
+    -fx-padding: 10px 0 0 0;
+    -fx-alignment: center-right;
+}
+
+/* Botão Primário (OK/Aceitar) */
+.botao-primario {
+    -fx-font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-text-fill: white;
+    -fx-background-color: linear-gradient(to bottom, #2ECC71, #27AE60);
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 28px;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(gaussian, -fx-sombra-botao, 4, 0, 0, 2);
+    -fx-transition: all 0.2s ease;
+    -fx-font-smoothing-type: gray;
+}
+
+.botao-primario:hover {
+    -fx-background-color: linear-gradient(to bottom, #27AE60, #229954);
+    -fx-effect: dropshadow(gaussian, -fx-sombra-botao, 6, 0, 0, 3);
+    -fx-translate-y: -1px;
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.botao-primario:pressed {
+    -fx-background-color: #229954;
+    -fx-effect: dropshadow(gaussian, -fx-sombra-botao, 2, 0, 0, 1);
+    -fx-translate-y: 0;
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.botao-primario:focused {
+    -fx-border-color: rgba(46, 204, 113, 0.4);
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-border-insets: -2px;
+    -fx-background-color: linear-gradient(to bottom, #27AE60, #229954);
+}
+
+/* Botão Detalhes (Secundário) */
+.botao-detalhes {
+    -fx-font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #3498DB;
+    -fx-background-color: transparent;
+    -fx-background-radius: 8px;
+    -fx-padding: 9px 24px;
+    -fx-cursor: hand;
+    -fx-border-color: #3498DB;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-transition: all 0.2s ease;
+    -fx-font-smoothing-type: gray;
+}
+
+.botao-detalhes:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.1);
+    -fx-text-fill: #2980B9;
+    -fx-border-color: #2980B9;
+    -fx-translate-y: -1px;
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.botao-detalhes:pressed {
+    -fx-background-color: rgba(52, 152, 219, 0.2);
+    -fx-translate-y: 0;
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.botao-detalhes:focused {
+    -fx-border-color: #2980B9;
+    -fx-border-width: 2px;
+    -fx-background-color: rgba(52, 152, 219, 0.05);
+    -fx-text-fill: #2980B9;
+}
+
+/* ==========================================================================
+   ANIMAÇÕES E TRANSITIONS
+   ========================================================================== */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        -fx-translate-y: 30px;
+        -fx-scale-x: 0.95;
+        -fx-scale-y: 0.95;
+    }
+    to {
+        opacity: 1;
+        -fx-translate-y: 0;
+        -fx-scale-x: 1;
+        -fx-scale-y: 1;
+    }
+}
+
+@keyframes pulse {
+    0% {
+        -fx-effect: dropshadow(three-pass-box, -fx-sombra-modal, 20, 0.3, 0, 8);
+    }
+    50% {
+        -fx-effect: dropshadow(three-pass-box, rgba(231, 76, 60, 0.4), 25, 0.4, 0, 10);
+    }
+    100% {
+        -fx-effect: dropshadow(three-pass-box, -fx-sombra-modal, 20, 0.3, 0, 8);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { -fx-translate-x: 0; }
+    10%, 30%, 50%, 70%, 90% { -fx-translate-x: -3px; }
+    20%, 40%, 60%, 80% { -fx-translate-x: 3px; }
+}
+
+/* Aplicar animação de entrada */
+.alerta-modal {
+    -fx-animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Animação para alertas críticos */
+.alerta-modal.critical {
+    -fx-animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), pulse 2s infinite;
+}
+
+/* Animação de shake para erros importantes */
+.alerta-modal.error.shake {
+    -fx-animation: slideIn 0.4s ease, shake 0.5s ease;
+}
+
+/* ==========================================================================
+   RESPONSIVIDADE
+   ========================================================================== */
+
+/* Para telas menores */
+@media (max-width: 420px) {
+    .alerta-modal {
+        -fx-pref-width: 320px !important;
+        -fx-max-width: 320px !important;
+        -fx-padding: 15px;
+        -fx-spacing: 12px;
+        -fx-border-width: 2px;
+    }
+
+    .alerta-titulo-modal {
+        -fx-font-size: 16px;
+    }
+
+    .alerta-descricao-modal {
+        -fx-font-size: 13px;
+        -fx-padding: 10px;
+        -fx-pref-row-count: 3;
+    }
+
+    .alerta-origem-modal {
+        -fx-font-size: 12px;
+    }
+
+    .botao-primario, .botao-detalhes {
+        -fx-font-size: 13px;
+        -fx-padding: 8px 20px;
+        -fx-min-width: 80px;
+    }
+
+    .button-container {
+        -fx-spacing: 8px;
+    }
+}
+
+/* Para telas maiores */
+@media (min-width: 768px) {
+    .alerta-modal {
+        -fx-max-width: 550px;
+        -fx-pref-width: 500px;
+    }
+}
+
+/* ==========================================================================
+   COMPONENTES ADICIONAIS
+   ========================================================================== */
+
+/* Badge de prioridade */
+.priority-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 10px;
+    -fx-background-radius: 12px;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}
+
+.priority-low {
+    -fx-background-color: linear-gradient(to right, #2ECC71, #27AE60);
+}
+
+.priority-medium {
+    -fx-background-color: linear-gradient(to right, #F39C12, #E67E22);
+}
+
+.priority-high {
+    -fx-background-color: linear-gradient(to right, #E74C3C, #C0392B);
+}
+
+.priority-critical {
+    -fx-background-color: linear-gradient(to right, #C0392B, #A93226);
+    -fx-effect: dropshadow(gaussian, rgba(192, 57, 43, 0.3), 3, 0, 0, 2);
+}
+
+/* Separador visual */
+.separator {
+    -fx-padding: 8px 0;
+    -fx-border-color: rgba(0, 0, 0, 0.08);
+    -fx-border-width: 1px 0 0 0;
+}
+
+/* Progress indicator para operações em andamento */
+.progress-indicator {
+    -fx-progress-color: -fx-cor-info;
+    -fx-padding: 5px;
+}
+
+.progress-indicator.success {
+    -fx-progress-color: -fx-cor-sucesso;
+}
+
+.progress-indicator.warning {
+    -fx-progress-color: -fx-cor-aviso;
+}
+
+/* ==========================================================================
+   ESTADOS ESPECIAIS
+   ========================================================================== */
+
+/* Modal bloqueado (não fechável) */
+.alerta-modal.blocked {
+    -fx-border-style: dashed;
+    -fx-border-color: #95A5A6;
+    -fx-opacity: 0.9;
+}
+
+/* Modal com timeout */
+.alerta-modal.timeout {
+    -fx-border-style: dotted;
+}
+
+/* Barra de timeout */
+.timeout-bar {
+    -fx-background-color: #ECF0F1;
+    -fx-background-radius: 2px;
+    -fx-pref-height: 4px;
+}
+
+.timeout-bar .bar {
+    -fx-background-color: linear-gradient(to right, #2ECC71, #F39C12, #E74C3C);
+    -fx-background-radius: 2px;
+}
+
+/* ==========================================================================
+   UTILITÁRIOS
+   ========================================================================== */
+
+/* Texto truncado com ellipsis */
+.text-truncate {
+    -fx-text-overrun: ellipsis;
+    -fx-wrap-text: false;
+}
+
+/* Tooltip estilizado */
+.tooltip {
+    -fx-font-size: 12px;
+    -fx-background-color: rgba(44, 62, 80, 0.95);
+    -fx-text-fill: white;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 5, 0, 0, 2);
+}
+
+/* Classe para ocultar elementos */
+.hidden {
+    -fx-opacity: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+    -fx-margin: 0;
+    visibility: hidden;
+}
+
+/* Classe para mostrar elementos */
+.visible {
+    -fx-opacity: 1;
+    -fx-max-height: none;
+    visibility: visible;
+    -fx-transition: opacity 0.3s ease, max-height 0.3s ease;
+}

@@ -1,0 +1,429 @@
+/* Neumorphic Theme for JavaFX FXML */
+
+/* ========== FOUNDATION TOKENS ========== */
+.root {
+    /* Base Colors */
+    -neu-base: #e0e5ec;
+    -neu-background: #eef0f4;
+    -neu-surface: #e0e5ec;
+    -neu-text-primary: #4a4e5c;
+    -neu-text-secondary: #7a7e8c;
+    -neu-text-disabled: #b0b4c0;
+
+    /* Neumorphic Shadow Tokens */
+    -neu-shadow-light: #ffffff;
+    -neu-shadow-dark: #a3b1c6;
+
+    /* Elevation Levels */
+    -neu-level-1: 3px 3px 6px var(-neu-shadow-dark), -3px -3px 6px var(-neu-shadow-light);
+    -neu-level-2: 5px 5px 10px var(-neu-shadow-dark), -5px -5px 10px var(-neu-shadow-light);
+    -neu-level-3: 8px 8px 16px var(-neu-shadow-dark), -8px -8px 16px var(-neu-shadow-light);
+    -neu-level-4: 12px 12px 24px var(-neu-shadow-dark), -12px -12px 24px var(-neu-shadow-light);
+    -neu-level-5: 16px 16px 32px var(-neu-shadow-dark), -16px -16px 32px var(-neu-shadow-light);
+
+    /* Inset/Pressed State */
+    -neu-inset: inset 3px 3px 6px var(-neu-shadow-dark), inset -3px -3px 6px var(-neu-shadow-light);
+
+    /* Border Tokens */
+    -neu-border-thin: 1px;
+    -neu-border-regular: 2px;
+    -neu-border-thick: 4px;
+
+    /* Radius Scale */
+    -neu-radius-sm: 4px;
+    -neu-radius-md: 8px;
+    -neu-radius-lg: 12px;
+    -neu-radius-xl: 20px;
+    -neu-radius-circle: 50%;
+
+    /* Spacing Scale */
+    -neu-space-xs: 4px;
+    -neu-space-sm: 8px;
+    -neu-space-md: 16px;
+    -neu-space-lg: 24px;
+    -neu-space-xl: 32px;
+
+    /* Transitions */
+    -neu-transition: all 0.2s ease;
+}
+
+/* ========== GLOBAL STYLES ========== */
+.root {
+    -fx-background-color: var(-neu-background);
+    -fx-font-family: 'System';
+    -fx-font-size: 13px;
+}
+
+/* ========== CONTAINERS & LAYERS ========== */
+
+/* Base/Raised Layer - Default Neumorphic Card */
+.neu-card, .neu-raised {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-lg);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 10, 0, 5, 5),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.8), 10, 0, -5, -5);
+    -fx-padding: var(-neu-space-lg);
+}
+
+/* Inset Layer - Pressed/Depressed Effect */
+.neu-inset {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-lg);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.3), 5, 0, 2, 2),
+                innershadow(gaussian, rgba(255, 255, 255, 0.8), 5, 0, -2, -2);
+}
+
+/* ========== BUTTONS ========== */
+
+/* Primary Button */
+.neu-button-primary {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-md);
+    -fx-text-fill: var(-neu-text-primary);
+    -fx-font-weight: bold;
+    -fx-padding: var(-neu-space-sm) var(-neu-space-lg);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.5), 8, 0, 4, 4),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.9), 8, 0, -4, -4);
+    -fx-cursor: hand;
+    -fx-transition: var(-neu-transition);
+}
+
+.neu-button-primary:hover {
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.6), 12, 0, 6, 6),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.9), 12, 0, -6, -6);
+}
+
+.neu-button-primary:pressed {
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.5), 4, 0, 2, 2),
+                innershadow(gaussian, rgba(255, 255, 255, 0.8), 4, 0, -2, -2);
+}
+
+/* Disabled State */
+.neu-button-primary:disabled, .neu-disabled {
+    -fx-opacity: 0.6;
+    -fx-effect: none;
+    -fx-background-color: derive(var(-neu-surface), -10%);
+    -fx-text-fill: var(-neu-text-disabled);
+}
+
+/* ========== FORM CONTROLS ========== */
+
+/* Input Fields */
+.neu-input {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-md);
+    -fx-border-width: 0;
+    -fx-padding: var(-neu-space-sm) var(-neu-space-md);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.2), 3, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.7), 3, 0, -1, -1);
+}
+
+.neu-input:focused {
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.3), 4, 0, 2, 2),
+                innershadow(gaussian, rgba(255, 255, 255, 0.8), 4, 0, -2, -2);
+    -fx-border-color: transparent;
+}
+
+/* Checkbox */
+.neu-checkbox .box {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-sm);
+    -fx-padding: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 3, 0, 2, 2),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.8), 3, 0, -2, -2);
+}
+
+.neu-checkbox:selected .box {
+    -fx-background-color: var(-neu-surface);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.3), 3, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.8), 3, 0, -1, -1);
+}
+
+.neu-checkbox .mark {
+    -fx-background-color: var(-neu-text-primary);
+}
+
+/* Radio Button */
+.neu-radio .radio {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-circle);
+    -fx-padding: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 3, 0, 2, 2),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.8), 3, 0, -2, -2);
+}
+
+.neu-radio:selected .dot {
+    -fx-background-color: var(-neu-text-primary);
+    -fx-background-radius: var(-neu-radius-circle);
+    -fx-padding: 4px;
+}
+
+/* Toggle/Switch */
+.neu-switch .thumb {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-circle);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.4), 4, 0, 2, 2),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.9), 4, 0, -2, -2);
+}
+
+.neu-switch .track {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-xl);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.2), 2, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.7), 2, 0, -1, -1);
+}
+
+/* Slider */
+.neu-slider .track {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-xl);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.3), 3, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.8), 3, 0, -1, -1);
+}
+
+.neu-slider .thumb {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-circle);
+    -fx-padding: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.5), 6, 0, 3, 3),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.9), 6, 0, -3, -3);
+}
+
+/* ========== NAVIGATION ========== */
+
+/* Tabs */
+.neu-tabs {
+    -fx-background-color: transparent;
+    -fx-spacing: var(-neu-space-md);
+}
+
+.neu-tab {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-md) var(-neu-radius-md) 0 0;
+    -fx-padding: var(-neu-space-sm) var(-neu-space-lg);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.2), 3, 0, -1, -1),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.7), 3, 0, 1, 1);
+}
+
+.neu-tab:selected {
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.2), 3, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.7), 3, 0, -1, -1);
+    -fx-background-color: derive(var(-neu-surface), -2%);
+}
+
+/* Breadcrumbs */
+.neu-breadcrumb {
+    -fx-background-color: transparent;
+    -fx-padding: var(-neu-space-sm);
+}
+
+.neu-breadcrumb .label {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-sm);
+    -fx-padding: var(-neu-space-xs) var(-neu-space-sm);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.2), 2, 0, 1, 1),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.6), 2, 0, -1, -1);
+}
+
+/* ========== DATA DISPLAY ========== */
+
+/* Cards */
+.neu-data-card {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-lg);
+    -fx-padding: var(-neu-space-lg);
+    -fx-spacing: var(-neu-space-sm);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 8, 0, 4, 4),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.8), 8, 0, -4, -4);
+}
+
+/* List Items */
+.neu-list-item {
+    -fx-background-color: transparent;
+    -fx-padding: var(-neu-space-sm) var(-neu-space-md);
+    -fx-background-radius: var(-neu-radius-md);
+}
+
+.neu-list-item:hover {
+    -fx-background-color: derive(var(-neu-surface), 5%);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.2), 4, 0, 2, 2),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.7), 4, 0, -2, -2);
+}
+
+.neu-list-item:selected {
+    -fx-background-color: var(-neu-surface);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.2), 3, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.7), 3, 0, -1, -1);
+}
+
+/* Badges */
+.neu-badge {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-xl);
+    -fx-padding: var(-neu-space-xs) var(-neu-space-sm);
+    -fx-text-fill: var(-neu-text-secondary);
+    -fx-font-size: 11px;
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.2), 2, 0, 1, 1),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.6), 2, 0, -1, -1);
+}
+
+/* Avatars */
+.neu-avatar {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-circle);
+    -fx-padding: var(-neu-space-md);
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 4, 0, 2, 2),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.8), 4, 0, -2, -2);
+}
+
+/* Step Indicator */
+.neu-step-indicator {
+    -fx-background-color: transparent;
+}
+
+.neu-step {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-circle);
+    -fx-padding: 8px;
+    -fx-min-width: 32px;
+    -fx-min-height: 32px;
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 3, 0, 2, 2),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.7), 3, 0, -2, -2);
+}
+
+.neu-step:current {
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.5), 6, 0, 3, 3),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.9), 6, 0, -3, -3);
+    -fx-background-color: derive(var(-neu-surface), -5%);
+}
+
+/* ========== FEEDBACK ========== */
+
+/* Modal/Dialog */
+.neu-modal {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-lg);
+    -fx-padding: var(-neu-space-xl);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 20, 0, 0, 0),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.9), 20, 0, 0, 0);
+}
+
+/* Toast Message */
+.neu-toast {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-md);
+    -fx-padding: var(-neu-space-sm) var(-neu-space-lg);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.4), 8, 0, 4, 4),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.8), 8, 0, -4, -4);
+}
+
+/* Progress Indicators */
+.neu-progress-bar .track {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-xl);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.2), 3, 0, 1, 1),
+                innershadow(gaussian, rgba(255, 255, 255, 0.7), 3, 0, -1, -1);
+}
+
+.neu-progress-bar .bar {
+    -fx-background-color: linear-gradient(to right, #b0b7c4, #9aa1af);
+    -fx-background-radius: var(-neu-radius-xl);
+    -fx-effect: innershadow(gaussian, rgba(255, 255, 255, 0.5), 2, 0, 1, 1);
+}
+
+/* Spinner */
+.neu-spinner {
+    -fx-background-color: transparent;
+}
+
+.neu-spinner .increment-arrow-button,
+.neu-spinner .decrement-arrow-button {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-sm);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.2), 2, 0, 1, 1),
+                dropshadow(gaussian, rgba(255, 255, 255, 0.6), 2, 0, -1, -1);
+}
+
+/* Skeleton Loader */
+.neu-skeleton {
+    -fx-background-color: linear-gradient(to right,
+        derive(var(-neu-surface), -5%) 0%,
+        derive(var(-neu-surface), 5%) 50%,
+        derive(var(-neu-surface), -5%) 100%);
+    -fx-background-radius: var(-neu-radius-md);
+    -fx-opacity: 0.7;
+}
+
+/* ========== ICONOGRAPHY ========== */
+
+.neu-icon-16 {
+    -fx-icon-size: 16px;
+}
+
+.neu-icon-20 {
+    -fx-icon-size: 20px;
+}
+
+.neu-icon-24 {
+    -fx-icon-size: 24px;
+}
+
+/* ========== TABLES ========== */
+
+.neu-table-view {
+    -fx-background-color: transparent;
+    -fx-table-cell-border-color: transparent;
+}
+
+.neu-table-view .column-header {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-sm) var(-neu-radius-sm) 0 0;
+    -fx-padding: var(-neu-space-sm);
+    -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.1), 2, 0, 1, 1);
+}
+
+.neu-table-row-cell {
+    -fx-background-color: transparent;
+    -fx-padding: var(-neu-space-xs);
+}
+
+.neu-table-row-cell:hover {
+    -fx-background-color: derive(var(-neu-surface), 10%);
+    -fx-background-radius: var(-neu-radius-sm);
+}
+
+.neu-table-row-cell:selected {
+    -fx-background-color: var(-neu-surface);
+    -fx-background-radius: var(-neu-radius-sm);
+    -fx-effect: innershadow(gaussian, rgba(163, 177, 198, 0.2), 2, 0, 1, 1);
+}
+
+/* ========== LAYOUT UTILITIES ========== */
+
+/* Spacing Utilities */
+.neu-spacing-xs { -fx-spacing: var(-neu-space-xs); }
+.neu-spacing-sm { -fx-spacing: var(-neu-space-sm); }
+.neu-spacing-md { -fx-spacing: var(-neu-space-md); }
+.neu-spacing-lg { -fx-spacing: var(-neu-space-lg); }
+.neu-spacing-xl { -fx-spacing: var(-neu-space-xl); }
+
+/* Padding Utilities */
+.neu-padding-xs { -fx-padding: var(-neu-space-xs); }
+.neu-padding-sm { -fx-padding: var(-neu-space-sm); }
+.neu-padding-md { -fx-padding: var(-neu-space-md); }
+.neu-padding-lg { -fx-padding: var(-neu-space-lg); }
+.neu-padding-xl { -fx-padding: var(-neu-space-xl); }
+
+/* Border Radius Utilities */
+.neu-radius-sm { -fx-background-radius: var(-neu-radius-sm); }
+.neu-radius-md { -fx-background-radius: var(-neu-radius-md); }
+.neu-radius-lg { -fx-background-radius: var(-neu-radius-lg); }
+.neu-radius-xl { -fx-background-radius: var(-neu-radius-xl); }
+.neu-radius-circle { -fx-background-radius: var(-neu-radius-circle); }
+
+/* Shadow Levels */
+.neu-shadow-1 { -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.2), 4, 0, 2, 2), dropshadow(gaussian, rgba(255, 255, 255, 0.7), 4, 0, -2, -2); }
+.neu-shadow-2 { -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.3), 8, 0, 4, 4), dropshadow(gaussian, rgba(255, 255, 255, 0.8), 8, 0, -4, -4); }
+.neu-shadow-3 { -fx-effect: dropshadow(gaussian, rgba(163, 177, 198, 0.4), 12, 0, 6, 6), dropshadow(gaussian, rgba(255, 255, 255, 0.9), 12, 0, -6, -6); }

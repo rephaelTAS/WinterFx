@@ -1,0 +1,53 @@
+/* Paleta base */
+:root {
+    --primary-bg: #e0e5ec;
+    --primary-shadow: #a3b1c6;
+    --secondary-shadow: #ffffff;
+    --primary-color: #333333;
+    --accent-color: #4a90e2;
+    --border-radius: 12px;
+    --spacing: 8px;
+    --transition-duration: 150ms;
+}
+
+/* Containers */
+.root, .pane, .vbox, .hbox {
+    -fx-background-color: var(--primary-bg);
+    -fx-background-radius: var(--border-radius);
+    -fx-padding: var(--spacing);
+    -fx-effect: dropshadow( gaussian , rgba(163,177,198,0.4) , 10,0,4,4);
+}
+
+/* Botões */
+.button {
+    -fx-background-color: var(--primary-bg);
+    -fx-text-fill: var(--primary-color);
+    -fx-background-radius: var(--border-radius);
+    -fx-padding: calc(var(--spacing) * 1.5);
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+}
+
+/* Hover effect handled in Java */
+
+/* Labels */
+.label {
+    -fx-text-fill: var(--primary-color);
+    -fx-font-size: 13px;
+}
+
+/* TextFields */
+.text-field, .password-field {
+    -fx-background-color: var(--primary-bg);
+    -fx-background-radius: var(--border-radius);
+    -fx-border-color: var(--primary-shadow);
+    -fx-border-radius: var(--border-radius);
+    -fx-padding: calc(var(--spacing));
+    -fx-text-fill: var(--primary-color);
+}
+
+/* ScrollPane */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}

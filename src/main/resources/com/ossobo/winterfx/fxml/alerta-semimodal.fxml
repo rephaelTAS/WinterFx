@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<?import java.net.URL?>
+<VBox fx:id="containerPrincipal" xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.ossobo.nexusfx.AlertSystem.fx.AlertaController"
+      styleClass="alerta-semimodal"
+      prefWidth="380" prefHeight="180"
+      spacing="10">
+
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <!-- Cabeçalho com temporizador -->
+    <HBox spacing="10">
+        <Label fx:id="lblTitulo" styleClass="alerta-titulo-semimodal"
+               text="Título" wrapText="true"
+               HBox.hgrow="ALWAYS"/>
+        <Label fx:id="lblTempo" styleClass="alerta-tempo"
+               text="5s" minWidth="40"/>
+    </HBox>
+
+    <!-- Barra de progresso do tempo -->
+    <ProgressBar fx:id="progressoTempo" prefWidth="350"/>
+
+    <!-- Descrição - MUDADO: TextArea → Label -->
+    <Label fx:id="txtDescricao" styleClass="alerta-descricao-semimodal"
+           wrapText="true" maxHeight="60"
+           VBox.vgrow="ALWAYS"/>
+
+    <!-- Informações -->
+    <Label fx:id="lblOrigem" styleClass="alerta-origem-semimodal"
+           text="Origem: Sistema"/>
+
+    <!-- Botões -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="btnDetalhes" text="Detalhes"
+                styleClass="botao-detalhes"/>
+        <Button fx:id="btnOk" text="OK"
+                styleClass="botao-primario"/>
+    </HBox>
+
+</VBox>

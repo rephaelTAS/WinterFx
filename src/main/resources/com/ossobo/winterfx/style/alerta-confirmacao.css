@@ -1,0 +1,141 @@
+/* alerta-confirmacao.css */
+
+/* Container principal */
+.alerta-confirmacao {
+    -fx-background-color: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    -fx-border-color: #6c757d;
+    -fx-border-width: 2;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 15, 0.2, 0, 5);
+}
+
+/* Ícone de confirmação */
+.icone-confirmacao {
+    -fx-font-size: 48px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0d6efd;
+    -fx-background-color: white;
+    -fx-background-radius: 50%;
+    -fx-padding: 10px;
+    -fx-min-width: 70px;
+    -fx-min-height: 70px;
+    -fx-alignment: center;
+    -fx-border-color: #0d6efd;
+    -fx-border-width: 3;
+    -fx-border-radius: 50%;
+}
+
+/* Mensagem de confirmação */
+.mensagem-confirmacao {
+    -fx-font-size: 15px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #212529;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-padding: 10px;
+}
+
+/* Área de detalhes */
+.detalhes-confirmacao {
+    -fx-font-size: 12px;
+    -fx-text-fill: #495057;
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #dee2e6;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 8px;
+}
+
+.detalhes-confirmacao .content {
+    -fx-background-color: #f8f9fa;
+}
+
+/* Botão Confirmar */
+.botao-confirmar {
+    -fx-background-color: linear-gradient(to bottom, #0d6efd, #0b5ed7);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 8px 20px;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(13, 110, 253, 0.3), 5, 0.2, 0, 2);
+}
+
+.botao-confirmar:hover {
+    -fx-background-color: linear-gradient(to bottom, #0b5ed7, #0a58ca);
+    -fx-effect: dropshadow(gaussian, rgba(13, 110, 253, 0.5), 8, 0.3, 0, 3);
+}
+
+.botao-confirmar:pressed {
+    -fx-background-color: #0a58ca;
+    -fx-effect: dropshadow(gaussian, rgba(13, 110, 253, 0.2), 3, 0.1, 0, 1);
+}
+
+.botao-confirmar:focused {
+    -fx-border-color: #86b7fe;
+    -fx-border-width: 2;
+    -fx-border-radius: 6;
+}
+
+/* Botão Cancelar */
+.botao-cancelar {
+    -fx-background-color: linear-gradient(to bottom, #6c757d, #5c636a);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 8px 20px;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(108, 117, 125, 0.3), 5, 0.2, 0, 2);
+}
+
+.botao-cancelar:hover {
+    -fx-background-color: linear-gradient(to bottom, #5c636a, #565e64);
+    -fx-effect: dropshadow(gaussian, rgba(108, 117, 125, 0.5), 8, 0.3, 0, 3);
+}
+
+.botao-cancelar:pressed {
+    -fx-background-color: #565e64;
+    -fx-effect: dropshadow(gaussian, rgba(108, 117, 125, 0.2), 3, 0.1, 0, 1);
+}
+
+.botao-cancelar:focused {
+    -fx-border-color: #b6bbc2;
+    -fx-border-width: 2;
+    -fx-border-radius: 6;
+}
+
+/* Estados de confirmação específicos */
+.alerta-confirmacao.perigo .icone-confirmacao {
+    -fx-text-fill: #dc3545;
+    -fx-border-color: #dc3545;
+}
+
+.alerta-confirmacao.perigo .botao-confirmar {
+    -fx-background-color: linear-gradient(to bottom, #dc3545, #bb2d3b);
+}
+
+.alerta-confirmacao.perigo .botao-confirmar:hover {
+    -fx-background-color: linear-gradient(to bottom, #bb2d3b, #b02a37);
+}
+
+.alerta-confirmacao.aviso .icone-confirmacao {
+    -fx-text-fill: #ffc107;
+    -fx-border-color: #ffc107;
+}
+
+.alerta-confirmacao.info .icone-confirmacao {
+    -fx-text-fill: #0dcaf0;
+    -fx-border-color: #0dcaf0;
+}
+
+.alerta-confirmacao.sucesso .icone-confirmacao {
+    -fx-text-fill: #198754;
+    -fx-border-color: #198754;
+}
