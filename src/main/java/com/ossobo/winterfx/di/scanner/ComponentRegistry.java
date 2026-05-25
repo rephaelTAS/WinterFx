@@ -12,9 +12,9 @@ import java.util.stream.Collectors;
 
 /**
  * ComponentRegistry v2.0
- *
+ * <p>
  * Registo central de definições de beans.
- *
+ * <p>
  * Suporta:
  * - Beans por nome e por tipo
  * - @Primary (primeiro registado ganha)
@@ -81,6 +81,17 @@ public class ComponentRegistry {
                         .filter(def -> type.isAssignableFrom(def.getType()))
                         .collect(Collectors.toList())
         );
+    }
+
+    /**
+     * Retorna TODAS as definições de beans registradas.
+     * 🔥 USADO POR: DiContainer.findClassesWithAnnotation()
+     *              DiContainer.findMethodsWithAnnotation()
+     *
+     * @return Coleção imutável de todas as BeanDefinitions
+     */
+    public Collection<BeanDefinition> getAllDefinitions() {
+        return Collections.unmodifiableCollection(definitionsByName.values());
     }
 
     // ===== AOT =====

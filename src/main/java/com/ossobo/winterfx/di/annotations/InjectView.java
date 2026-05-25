@@ -1,6 +1,8 @@
 package com.ossobo.winterfx.di.annotations;
 
-package com.desktopspring.annotations;
+
+
+import com.ossobo.winterfx.di.annotations.enums.ViewAnimation;
 
 import java.lang.annotation.*;
 
@@ -65,7 +67,7 @@ public @interface InjectView {
      * ID de um nó filho específico do FXML a ser extraído.
      * Se vazio, o nó raiz do FXML é usado.
      *
-     * Exemplo: Se o FXML tem <VBox fx:id="tabelaDados">,
+     * Exemplo: Se o FXML tem <VBox fx:id="tabelaDados">lt;VBox fx:id="tabelaDados"<VBox fx:id="tabelaDados">gt;,
      * use child = "tabelaDados" para injetar apenas esse VBox.
      */
     String child() default "";

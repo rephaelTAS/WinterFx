@@ -16,17 +16,25 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 🔍 ResourceResolver v2.0
+ * 🔍 ResourceResolver v2.1
  *
  * Camada de serviço para obtenção de recursos.
  * Transforma metadado em acesso prático sem interpretar o conteúdo.
- * É a ponte entre o catálogo e o uso real.
+ * É a ponte entre o catálogo (ResourceRegistry) e o uso real.
+ *
+ * <p><b>🔥 ATUALIZAÇÃO v2.1:</b></p>
+ * <ul>
+ *   <li>Adicionado método {@code resolveView(String)} para @RegisterView</li>
+ *   <li>Adicionado método {@code resolveImage(String)} para @RegisterImage</li>
+ *   <li>Adicionado método {@code resolveNotification(String)} para @RegisterNotification</li>
+ *   <li>Logs padronizados com java.util.logging</li>
+ * </ul>
  *
  * <pre>
  * Uso típico:
  *   URL url = resolver.resolveUrl("login-view");
- *   Optional&lt;ViewDescriptor&gt; view = resolver.resolveTyped("main", ViewDescriptor.class);
- *   Optional&lt;ImageDescriptor&gt; img = resolver.resolveTyped("logo", ImageDescriptor.class);
+ *   Optional&lt;ViewDescriptor&gt; view = resolver.resolveView("main");
+ *   Optional&lt;ImageDescriptor&gt; img = resolver.resolveImage("logo");
  * </pre>
  */
 public final class ResourceResolver {
@@ -37,7 +45,7 @@ public final class ResourceResolver {
 
     public ResourceResolver(ResourceRegistry registry) {
         this.registry = registry;
-        LOGGER.info("🔍 ResourceResolver v2.0 inicializado");
+        LOGGER.info("🔍 ResourceResolver v2.1 inicializado");
     }
 
     // ===== RESOLUÇÃO DE URL =====
@@ -125,32 +133,48 @@ public final class ResourceResolver {
         return registry.findByIdAndType(id, type).isPresent();
     }
 
-    // ===== MÉTODOS DE CONVENIÊNCIA =====
+    // ===== MÉTODOS DE CONVENIÊNCIA POR TIPO =====
 
+    /**
+     * Resolve URL de uma view FXML.
+     */
     public URL getViewUrl(String viewId) {
         return resolveUrl(viewId, ResourceType.FXML);
     }
 
+    /**
+     * Resolve URL de uma imagem.
+     */
     public URL getImageUrl(String imageId) {
         return resolveUrl(imageId, ResourceType.IMAGE);
     }
 
+    /**
+     * Resolve URL de um CSS.
+     */
     public URL getCssUrl(String cssId) {
         return resolveUrl(cssId, ResourceType.CSS);
     }
 
+    /**
+     * Resolve URL de um som.
+     */
     public URL getSoundUrl(String soundId) {
         return resolveUrl(soundId, ResourceType.SOUND);
     }
 
+    /**
+     * Resolve URL de um alerta.
+     */
     public URL getAlertUrl(String alertId) {
         return resolveUrl(alertId, ResourceType.ALERT);
     }
 
-    // ===== NOVOS MÉTODOS PARA SUPORTE A ANOTAÇÕES =====
+    // ===== 🔥 NOVOS MÉTODOS PARA ANOTAÇÕES =====
 
     /**
-     * Resolve um ViewDescriptor com validação de tipo FXML ou ALERT.
+     * Resolve um ViewDescriptor (para @RegisterView).
+     * Aceita FXML ou ALERT.
      */
     public Optional<ViewDescriptor> resolveView(String id) {
         return resolveTyped(id, ViewDescriptor.class)
@@ -159,10 +183,35 @@ public final class ResourceResolver {
     }
 
     /**
-     * Resolve um ImageDescriptor.
+     * Resolve um ViewDescriptor apenas para views FXML.
+     */
+    public Optional<ViewDescriptor> resolveFxmlView(String id) {
+        return resolveTyped(id, ViewDescriptor.class)
+                .filter(d -> d.getResourceType() == ResourceType.FXML);
+    }
+
+    /**
+     * Resolve um ViewDescriptor apenas para alertas.
+     */
+    public Optional<ViewDescriptor> resolveAlert(String id) {
+        return resolveTyped(id, ViewDescriptor.class)
+                .filter(d -> d.getResourceType() == ResourceType.ALERT);
+    }
+
+    /**
+     * Resolve um ImageDescriptor (para @RegisterImage).
      */
     public Optional<ImageDescriptor> resolveImage(String id) {
         return resolveTyped(id, ImageDescriptor.class);
+    }
+
+    /**
+     * Resolve uma notificação (para @RegisterNotification).
+     * Notificações são armazenadas como ViewDescriptor com tipo ALERT.
+     */
+    public Optional<ViewDescriptor> resolveNotification(String id) {
+        return resolveTyped(id, ViewDescriptor.class)
+                .filter(d -> d.getResourceType() == ResourceType.ALERT);
     }
 
     @Override

@@ -3,218 +3,175 @@ package com.ossobo.winterfx.di.scanner;
 import com.ossobo.winterfx.di.annotations.RegisterImage;
 import com.ossobo.winterfx.di.annotations.RegisterImages;
 import com.ossobo.winterfx.di.annotations.RegisterView;
-import com.ossobo.winterfx.resources.api.ResourceAPI;
 import com.ossobo.winterfx.resources.descriptor.ImageDescriptor;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.resources.resolver.ImageAnnotationResolver;
-import com.ossobo.winterfx.resources.resolver.ViewAnnotationResolver;
+import com.ossobo.winterfx.resources.registry.ResourceRegistry;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 🏷️ AnnotationScanner v1.0
+ * 🏷️ AnnotationScanner v3.1 - CORRIGIDO!
  *
- * Scanner especializado para anotações de recursos:
- * - @RegisterView → ViewDescriptor
- * - @RegisterImage / @RegisterImages → ImageDescriptor
- *
- * <p>Fluxo:
- * <ol>
- *   <li>ClassGraph descobre classes com @RegisterView e @RegisterImage</li>
- *   <li>Resolve as anotações para descritores (usando os resolvers)</li>
- *   <li>Registra no ResourceAPI</li>
- * </ol>
- *
- * <p>Totalmente integrado com o sistema de injeção por anotações.</p>
+ * <p>🔥 Correções:</p>
+ * <ul>
+ *   <li>✅ getAnnotationsByType() para @RegisterImage/@RegisterImages</li>
+ *   <li>✅ resolveResource() usa sourceClass.getResource() PRIMEIRO</li>
+ *   <li>✅ Tratamento correto de barra inicial no path</li>
+ * </ul>
  */
 public final class AnnotationScanner {
 
     private static final Logger LOGGER = Logger.getLogger(AnnotationScanner.class.getName());
 
-    private final ResourceAPI resourceAPI;
+    private final ResourceRegistry resourceRegistry;
+    private final ClassLoader classLoader;
     private final String[] basePackages;
 
-    // Estatísticas
     private int viewsFound = 0;
     private int imagesFound = 0;
 
-    /**
-     * Construtor principal.
-     *
-     * @param resourceAPI  API de recursos para registro
-     * @param basePackages Pacotes a escanear
-     */
-    public AnnotationScanner(ResourceAPI resourceAPI, String... basePackages) {
-        this.resourceAPI = resourceAPI;
-        this.basePackages = (basePackages != null && basePackages.length > 0)
-                ? basePackages
-                : new String[]{""};
+    public AnnotationScanner(ResourceRegistry resourceRegistry, ClassLoader classLoader, String... basePackages) {
+        this.resourceRegistry = resourceRegistry;
+        this.classLoader = classLoader;
+        this.basePackages = (basePackages != null && basePackages.length > 0) ? basePackages : new String[]{""};
     }
 
-    /**
-     * Executa o scan completo:
-     * 1. Descobre @RegisterView
-     * 2. Descobre @RegisterImage / @RegisterImages
-     * 3. Registra tudo no ResourceAPI
-     */
+    public AnnotationScanner(ResourceRegistry resourceRegistry, String... basePackages) {
+        this(resourceRegistry, Thread.currentThread().getContextClassLoader(), basePackages);
+    }
+
     public void scanAndRegister() {
-        LOGGER.log(Level.INFO, "🏷️ Iniciando scan de recursos nos pacotes: {0}",
-                String.join(", ", basePackages));
-
+        LOGGER.log(Level.INFO, "🏷️ Iniciando scan de recursos nos pacotes: {0}", String.join(", ", basePackages));
         long startTime = System.currentTimeMillis();
-
-        try (ScanResult result = new ClassGraph()
-                .enableAnnotationInfo()
-                .enableClassInfo()
-                .acceptPackages(basePackages)
-                .scan()) {
-
-            // ===== SCAN DE @RegisterView =====
+        try (ScanResult result = new ClassGraph().enableAnnotationInfo().enableClassInfo().acceptPackages(basePackages).scan()) {
             scanViews(result);
-
-            // ===== SCAN DE @RegisterImage =====
             scanImages(result);
-
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Falha no scan de recursos: {0}", e.getMessage());
+            LOGGER.log(Level.SEVERE, "❌ Falha no scan: {0}", e.getMessage());
             throw new RuntimeException("Falha no escaneamento de recursos", e);
         }
-
-        long duration = System.currentTimeMillis() - startTime;
-        printSummary(duration);
+        printSummary(System.currentTimeMillis() - startTime);
     }
 
     // =============================================
-    // SCAN DE VIEWS (@RegisterView)
+    // SCAN DE VIEWS
     // =============================================
 
-    /**
-     * Escaneia e registra views anotadas com @RegisterView.
-     */
     private void scanViews(ScanResult result) {
-        Set<String> viewClassNames = result.getClassesWithAnnotation(RegisterView.class).getNames();
-
-        LOGGER.log(Level.INFO, "📄 Views encontradas: {0}", viewClassNames.size());
-
-        for (String className : viewClassNames) {
+        List<String> names = result.getClassesWithAnnotation(RegisterView.class).getNames();
+        LOGGER.log(Level.INFO, "📄 Views encontradas: {0}", names.size());
+        for (String className : names) {
             try {
                 Class<?> clazz = Class.forName(className);
                 registerView(clazz);
             } catch (ClassNotFoundException e) {
-                LOGGER.log(Level.WARNING, "Classe de view não encontrada: {0}", className);
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Erro ao registar view: " + className, e);
+                LOGGER.log(Level.WARNING, "⚠️ Classe não encontrada: {0}", className);
             }
         }
     }
 
-    /**
-     * Registra uma view a partir da classe anotada.
-     */
     private void registerView(Class<?> clazz) {
         try {
-            ViewDescriptor descriptor = resourceAPI.registerFromAnnotatedClass(clazz);
+            RegisterView ann = clazz.getAnnotation(RegisterView.class);
+            if (ann == null) return;
+            URL fxmlUrl = resolveResource(clazz, ann.fxml());
+            if (fxmlUrl == null) {
+                LOGGER.warning("⚠️ FXML não encontrado: " + ann.fxml());
+                return;
+            }
+            ViewDescriptor d = ViewDescriptor.builder()
+                    .id(ann.id()).fxmlUrl(fxmlUrl).controllerClass(clazz)
+                    .title(ann.title()).width(ann.width()).height(ann.height())
+                    .resizable(ann.resizable()).centered(ann.centered()).alwaysOnTop(ann.alwaysOnTop())
+                    .viewType(ann.viewType()).cssMode(ann.cssMode()).modeUse(ann.modeUse())
+                    .origin(ann.origin()).description(ann.description())
+                    .tags(ann.tags().length > 0 ? List.of(ann.tags()) : null)
+                    .encoding(ann.encoding()).initMethod(ann.initMethod())
+                    .eager(ann.eager()).loadOrder(ann.loadOrder()).stageStyle(ann.stageStyle())
+                    .build();
+            resourceRegistry.register(d);
             viewsFound++;
-            LOGGER.log(Level.FINE, "✅ View registrada: {0} → {1}",
-                    new Object[]{descriptor.getId(), descriptor.getFxmlUrl()});
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "⚠️ Falha ao registar view: " + clazz.getName() +
-                    " - " + e.getMessage());
+            LOGGER.warning("⚠️ Falha ao registar view: " + clazz.getName() + " - " + e.getMessage());
         }
     }
 
     // =============================================
-    // SCAN DE IMAGENS (@RegisterImage)
+    // 🔥 SCAN DE IMAGENS (CORRIGIDO!)
     // =============================================
 
-    /**
-     * Escaneia e registra imagens anotadas com @RegisterImage / @RegisterImages.
-     */
     private void scanImages(ScanResult result) {
-        // Classes com @RegisterImages (container)
-        Set<String> multiImageClassNames = result.getClassesWithAnnotation(RegisterImages.class).getNames();
-        LOGGER.log(Level.INFO, "🖼️ Classes com @RegisterImages: {0}", multiImageClassNames.size());
+        List<String> classNames = new ArrayList<>();
+        classNames.addAll(result.getClassesWithAnnotation(RegisterImages.class).getNames());
+        classNames.addAll(result.getClassesWithAnnotation(RegisterImage.class).getNames());
+        LOGGER.log(Level.INFO, "🖼️ Classes com @RegisterImage: {0}", classNames.size());
 
-        for (String className : multiImageClassNames) {
+        for (String className : classNames) {
             try {
                 Class<?> clazz = Class.forName(className);
-                registerImagesFromClass(clazz);
+                for (RegisterImage ann : clazz.getAnnotationsByType(RegisterImage.class)) {
+                    registerImageFromAnnotation(clazz, ann);
+                }
             } catch (ClassNotFoundException e) {
-                LOGGER.log(Level.WARNING, "Classe de imagens não encontrada: {0}", className);
-            }
-        }
-
-        // Classes com @RegisterImage individual
-        Set<String> singleImageClassNames = result.getClassesWithAnnotation(RegisterImage.class).getNames();
-        LOGGER.log(Level.INFO, "🖼️ Classes com @RegisterImage: {0}", singleImageClassNames.size());
-
-        for (String className : singleImageClassNames) {
-            try {
-                Class<?> clazz = Class.forName(className);
-                registerSingleImage(clazz);
-            } catch (ClassNotFoundException e) {
-                LOGGER.log(Level.WARNING, "Classe de imagem não encontrada: {0}", className);
+                LOGGER.log(Level.WARNING, "⚠️ Classe não encontrada: {0}", className);
             }
         }
     }
 
-    /**
-     * Registra múltiplas imagens de uma classe (@RegisterImages).
-     */
-    private void registerImagesFromClass(Class<?> clazz) {
-        try {
-            List<ImageDescriptor> descriptors = resourceAPI.registerImagesFromClass(clazz);
-            imagesFound += descriptors.size();
-            LOGGER.log(Level.FINE, "✅ {0} imagens registradas da classe: {1}",
-                    new Object[]{descriptors.size(), clazz.getSimpleName()});
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "⚠️ Falha ao registar imagens: " + clazz.getName() +
-                    " - " + e.getMessage());
+    private void registerImageFromAnnotation(Class<?> sourceClass, RegisterImage ann) {
+        URL imageUrl = resolveResource(sourceClass, ann.src());
+        if (imageUrl == null) {
+            LOGGER.warning("⚠️ Imagem não encontrada: " + ann.src());
+            return;
         }
-    }
-
-    /**
-     * Registra uma imagem individual (@RegisterImage).
-     */
-    private void registerSingleImage(Class<?> clazz) {
-        try {
-            RegisterImage annotation = clazz.getAnnotation(RegisterImage.class);
-            if (annotation != null) {
-                ImageDescriptor descriptor = resourceAPI.registerImageFromAnnotation(annotation);
-                imagesFound++;
-                LOGGER.log(Level.FINE, "✅ Imagem registrada: {0} → {1}",
-                        new Object[]{descriptor.getId(), descriptor.getImageUrl()});
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "⚠️ Falha ao registar imagem: " + clazz.getName() +
-                    " - " + e.getMessage());
-        }
+        ImageDescriptor d = ImageDescriptor.builder()
+                .id(ann.id()).url(imageUrl).imageType(ann.imageType())
+                .preferredWidth(ann.preferredWidth()).preferredHeight(ann.preferredHeight())
+                .preserveRatio(ann.preserveRatio()).smooth(ann.smooth())
+                .description(ann.description()).tags(ann.tags()).origin(ann.origin())
+                .build();
+        resourceRegistry.register(d);
+        imagesFound++;
+        LOGGER.log(Level.FINE, "✅ Imagem registrada: {0} → {1}", new Object[]{ann.id(), imageUrl});
     }
 
     // =============================================
-    // ESTATÍSTICAS
+    // 🔥 RESOLUÇÃO DE RECURSOS (CORRIGIDO!)
     // =============================================
+
+    private URL resolveResource(Class<?> sourceClass, String path) {
+        if (path == null || path.isBlank()) return null;
+        if (path.startsWith("http:") || path.startsWith("https:") || path.startsWith("file:") || path.startsWith("jar:")) {
+            try { return new URL(path); } catch (Exception e) { return null; }
+        }
+        // 1. ClassLoader da classe fonte
+        if (sourceClass != null) {
+            URL url = sourceClass.getResource(path.startsWith("/") ? path : "/" + path);
+            if (url != null) return url;
+        }
+        // 2. ContextClassLoader da aplicação
+        String clean = path.startsWith("/") ? path.substring(1) : path;
+        URL url = classLoader.getResource(clean);
+        if (url != null) return url;
+        // 3. Fallback
+        url = getClass().getClassLoader().getResource(clean);
+        if (url != null) return url;
+        LOGGER.warning("⚠️ Recurso não encontrado: " + path);
+        return null;
+    }
+
+    private URL resolveResource(String path) { return resolveResource(null, path); }
 
     private void printSummary(long durationMs) {
-        LOGGER.log(Level.INFO, """
-
-                ═══════════════════════════════════════
-                 🏷️ SCAN DE RECURSOS CONCLUÍDO
-                ═══════════════════════════════════════
-                Duração: {0}ms
-                📄 Views registradas:  {1}
-                🖼️ Imagens registradas: {2}
-                ═══════════════════════════════════════""",
-                new Object[]{durationMs, viewsFound, imagesFound});
+        LOGGER.log(Level.INFO, "🏷️ Scan concluído em {0}ms - Views: {1}, Imagens: {2}", new Object[]{durationMs, viewsFound, imagesFound});
     }
-
-    // ===== GETTERS =====
 
     public int getViewsFound() { return viewsFound; }
     public int getImagesFound() { return imagesFound; }

@@ -1,7 +1,7 @@
 package com.ossobo.winterfx.di.annotations;
 
 
-import com.ossobo.winterfx.resources.descriptor.ImageDescriptor.ImageType;
+import com.ossobo.winterfx.resources.enums.ImageType;
 import com.ossobo.winterfx.resources.enums.ResourceOrigin;
 
 import java.lang.annotation.*;
@@ -16,7 +16,7 @@ import java.lang.annotation.*;
  * <p>Basta anotar qualquer classe ou usar via configuração para
  * registrar imagens que serão injetadas com {@code @InjectImage}.</p>
  *
- * <h3>Exemplo de uso:</h3>
+ * <H3>Exemplo de uso:</h3>
  * <pre>
  * {@code
  * @RegisterImage(

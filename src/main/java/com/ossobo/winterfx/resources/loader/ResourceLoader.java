@@ -1,9 +1,8 @@
 package com.ossobo.winterfx.resources.loader;
 
 import com.ossobo.winterfx.resources.descriptor.ImageDescriptor;
-import com.ossobo.winterfx.resources.descriptor.ImageDescriptor.ImageType;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.CssMode;
+import com.ossobo.winterfx.resources.enums.CssMode;
 import com.ossobo.winterfx.resources.excecoes.ResourceLoadException;
 import com.ossobo.winterfx.resources.registry.ResourceRegistry;
 import com.ossobo.winterfx.resources.resolver.ResourceResolver;

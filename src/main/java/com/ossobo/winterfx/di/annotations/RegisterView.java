@@ -1,11 +1,8 @@
 package com.ossobo.winterfx.di.annotations;
 
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.AlertType;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.CssMode;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.ModeUse;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.Modality;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.ViewType;
-import com.ossobo.winterfx.resources.enums.ResourceOrigin;
+import com.ossobo.winterfx.di.annotations.enums.StageStyle;
+import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
+import com.ossobo.winterfx.resources.enums.*;
 
 import java.lang.annotation.*;
 
@@ -20,7 +17,7 @@ import java.lang.annotation.*;
  * scanner automaticamente a descobre, resolve os caminhos para URL
  * e registra um {@code ViewDescriptor} no {@code ViewRegistry}.</p>
  *
- * <h3>Exemplo de uso:</h3>
+ * <H3>Exemplo de uso:</h3>
  * <pre>
  * {@code
  * @RegisterView(
@@ -42,7 +39,6 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @see com.ossobo.winterfx.resources.descriptor.ViewDescriptor
- * @see com.ossobo.winterfx.resources.ViewAnnotationResolver
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
@@ -112,8 +108,6 @@ public @interface RegisterView {
      * <ul>
      *   <li>{@link ResourceOrigin#FRAMEWORK FRAMEWORK}: Views do framework</li>
      *   <li>{@link ResourceOrigin#APPLICATION APPLICATION}: Views da aplicação</li>
-     *   <li>{@link ResourceOrigin#PLUGIN PLUGIN}: Views de plugins</li>
-     *   <li>{@link ResourceOrigin#EXTERNAL EXTERNAL}: Views externas</li>
      * </ul>
      */
     ResourceOrigin origin() default ResourceOrigin.APPLICATION;

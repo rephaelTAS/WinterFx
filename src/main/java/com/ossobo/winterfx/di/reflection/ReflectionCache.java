@@ -11,47 +11,40 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * ReflectionCache v2.1
+ * ReflectionCache v3.0
  *
  * Cache filtrado de metadados de reflection específicos do framework.
  *
+ * 🔥 @Inject é o ÚNICO responsável por injeção de dependências!
+ * 🔥 @GetController REMOVIDO - @Inject já resolve!
+ *
  * Suporta:
  * - @Inject, @PostConstruct, @PreDestroy (componentes)
- * - @InjectView, @GetController (views)   ← NOVO!
- * - @InjectImage (imagens)                ← NOVO!
+ * - @InjectView (views)
+ * - @InjectImage (imagens)
+ * - @FloatingWindow (janelas flutuantes)
+ * - @NotifySender (notificações)
  *
  * Thread-safe. Métricas de hits/misses.
- *
- * @since 2.1
  */
 public final class ReflectionCache {
 
     // ===== COMPONENTES =====
-
     private final Map<Class<?>, Constructor<?>> injectableConstructors = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Field>> injectableFields = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Method>> injectableMethods = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Method>> postConstructMethods = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Method>> preDestroyMethods = new ConcurrentHashMap<>();
 
-    // ===== VIEWS (NOVO!) =====
-
-    /** Campos anotados com @InjectView */
+    // ===== RESOURCES =====
     private final Map<Class<?>, List<Field>> injectViewFields = new ConcurrentHashMap<>();
-
-    /** Campos anotados com @GetController */
-    private final Map<Class<?>, List<Field>> getControllerFields = new ConcurrentHashMap<>();
-
-    // ===== IMAGENS (NOVO!) =====
-
-    /** Campos anotados com @InjectImage */
     private final Map<Class<?>, List<Field>> injectImageFields = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Field>> floatingWindowFields = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Field>> notifySenderFields = new ConcurrentHashMap<>();
 
     // ===== MÉTRICAS =====
-
     private final AtomicLong hits = new AtomicLong(0);
     private final AtomicLong misses = new AtomicLong(0);
-
     private final ReflectionScanner scanner;
 
     public ReflectionCache(ReflectionScanner scanner) {
@@ -65,16 +58,12 @@ public final class ReflectionCache {
     public Constructor<?> getInjectableConstructor(Class<?> type) {
         return injectableConstructors.computeIfAbsent(type, t -> {
             List<Constructor<?>> ctors = scanner.getConstructors(t);
-            // @Inject explícito
             for (Constructor<?> c : ctors) {
                 if (c.isAnnotationPresent(Inject.class)) return c;
             }
-            // Construtor padrão
             try {
-                Constructor<?> defaultCtor = t.getDeclaredConstructor();
-                return defaultCtor;
+                return t.getDeclaredConstructor();
             } catch (NoSuchMethodException e) {
-                // Único construtor
                 if (ctors.size() == 1) return ctors.get(0);
                 throw new RuntimeException("Nenhum construtor adequado: " + t.getName());
             }
@@ -97,9 +86,7 @@ public final class ReflectionCache {
     public List<Method> getInjectableMethods(Class<?> type) {
         return cache(injectableMethods, type, () -> {
             List<Method> methods = scanner.getMethodsWithAnnotation(type, Inject.class);
-            return methods.stream()
-                    .filter(m -> m.getParameterCount() > 0)
-                    .toList();
+            return methods.stream().filter(m -> m.getParameterCount() > 0).toList();
         });
     }
 
@@ -110,9 +97,7 @@ public final class ReflectionCache {
     public List<Method> getPostConstructMethods(Class<?> type) {
         return cache(postConstructMethods, type, () -> {
             List<Method> methods = scanner.getMethodsWithAnnotation(type, PostConstruct.class);
-            return methods.stream()
-                    .filter(m -> m.getParameterCount() == 0)
-                    .toList();
+            return methods.stream().filter(m -> m.getParameterCount() == 0).toList();
         });
     }
 
@@ -123,95 +108,66 @@ public final class ReflectionCache {
     public List<Method> getPreDestroyMethods(Class<?> type) {
         return cache(preDestroyMethods, type, () -> {
             List<Method> methods = scanner.getMethodsWithAnnotation(type, PreDestroy.class);
-            return methods.stream()
-                    .filter(m -> m.getParameterCount() == 0)
-                    .toList();
+            return methods.stream().filter(m -> m.getParameterCount() == 0).toList();
         });
     }
 
     // =============================================
-    // @InjectView (NOVO!)
+    // @InjectView (StageManager)
     // =============================================
 
-    /**
-     * Retorna campos anotados com @InjectView.
-     * Estes campos receberão FXML carregado automaticamente.
-     */
     public List<Field> getInjectViewFields(Class<?> type) {
         return cache(injectViewFields, type,
                 () -> scanner.getFieldsWithAnnotation(type, InjectView.class));
     }
 
-    /**
-     * Verifica se a classe tem algum @InjectView.
-     */
     public boolean hasInjectViewFields(Class<?> type) {
         return !getInjectViewFields(type).isEmpty();
     }
 
     // =============================================
-    // @GetController (NOVO!)
+    // @InjectImage (ImageManager)
     // =============================================
 
-    /**
-     * Retorna campos anotados com @GetController.
-     * Estes campos receberão o controller da view automaticamente.
-     */
-    public List<Field> getGetControllerFields(Class<?> type) {
-        return cache(getControllerFields, type,
-                () -> scanner.getFieldsWithAnnotation(type, GetController.class));
-    }
-
-    /**
-     * Verifica se a classe tem algum @GetController.
-     */
-    public boolean hasGetControllerFields(Class<?> type) {
-        return !getGetControllerFields(type).isEmpty();
-    }
-
-    // =============================================
-    // @InjectImage (NOVO!)
-    // =============================================
-
-    /**
-     * Retorna campos anotados com @InjectImage.
-     * Estes campos receberão imagens carregadas automaticamente.
-     */
     public List<Field> getInjectImageFields(Class<?> type) {
         return cache(injectImageFields, type,
                 () -> scanner.getFieldsWithAnnotation(type, InjectImage.class));
     }
 
-    /**
-     * Verifica se a classe tem algum @InjectImage.
-     */
     public boolean hasInjectImageFields(Class<?> type) {
         return !getInjectImageFields(type).isEmpty();
     }
 
     // =============================================
-    // CONVENIÊNCIA: TODAS AS ANOTAÇÕES DE RESOURCES
+    // @FloatingWindow (FloatingWindowManager)
     // =============================================
 
-    /**
-     * Verifica se a classe tem QUALQUER anotação de resource
-     * (@InjectView, @GetController, @InjectImage).
-     */
-    public boolean hasResourceAnnotations(Class<?> type) {
-        return hasInjectViewFields(type)
-                || hasGetControllerFields(type)
-                || hasInjectImageFields(type);
+    public List<Field> getFloatingWindowFields(Class<?> type) {
+        return cache(floatingWindowFields, type,
+                () -> scanner.getFieldsWithAnnotation(type, FloatingWindow.class));
     }
 
-    /**
-     * Retorna TODOS os campos de resources anotados.
-     */
-    public List<Field> getAllResourceFields(Class<?> type) {
-        List<Field> all = new ArrayList<>();
-        all.addAll(getInjectViewFields(type));
-        all.addAll(getGetControllerFields(type));
-        all.addAll(getInjectImageFields(type));
-        return Collections.unmodifiableList(all);
+    public boolean hasFloatingWindowFields(Class<?> type) {
+        return !getFloatingWindowFields(type).isEmpty();
+    }
+
+    // =============================================
+    // @NotifySender (NotificationManager)
+    // =============================================
+
+    public List<Field> getNotifySenderFields(Class<?> type) {
+        return cache(notifySenderFields, type,
+                () -> scanner.getFieldsWithAnnotation(type, NotifySender.class));
+    }
+
+    // =============================================
+    // CONVENIÊNCIA
+    // =============================================
+
+    public boolean hasResourceAnnotations(Class<?> type) {
+        return hasInjectViewFields(type)
+                || hasInjectImageFields(type)
+                || hasFloatingWindowFields(type);
     }
 
     // =============================================
@@ -230,12 +186,10 @@ public final class ReflectionCache {
         stats.put("misses", m);
         stats.put("total", total);
         stats.put("hitRatePercent", total == 0 ? 0 : (h * 100 / total));
-
-        // Adiciona contagens de anotações de resources
-        stats.put("injectViewCacheSize", (long) injectViewFields.size());
-        stats.put("getControllerCacheSize", (long) getControllerFields.size());
-        stats.put("injectImageCacheSize", (long) injectImageFields.size());
-
+        stats.put("injectViewFields", (long) injectViewFields.size());
+        stats.put("injectImageFields", (long) injectImageFields.size());
+        stats.put("floatingWindowFields", (long) floatingWindowFields.size());
+        stats.put("notifySenderFields", (long) notifySenderFields.size());
         return stats;
     }
 
@@ -249,9 +203,10 @@ public final class ReflectionCache {
         injectableMethods.clear();
         postConstructMethods.clear();
         preDestroyMethods.clear();
-        injectViewFields.clear();      // NOVO
-        getControllerFields.clear();   // NOVO
-        injectImageFields.clear();     // NOVO
+        injectViewFields.clear();
+        injectImageFields.clear();
+        floatingWindowFields.clear();
+        notifySenderFields.clear();
         hits.set(0);
         misses.set(0);
     }

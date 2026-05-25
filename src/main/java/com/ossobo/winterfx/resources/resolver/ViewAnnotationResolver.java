@@ -3,20 +3,31 @@ package com.ossobo.winterfx.resources.resolver;
 import com.ossobo.winterfx.di.annotations.RegisterView;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.*;
+import com.ossobo.winterfx.resources.enums.ModeUse;
 import com.ossobo.winterfx.resources.enums.ResourceOrigin;
 
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * ViewAnnotationResolver v2.0
+ * ViewAnnotationResolver v2.1
  *
  * Resolve anotações @RegisterView em ViewDescriptor.
  * Faz a ponte entre os caminhos String da anotação e os URLs usados pelo ViewDescriptor.
+ *
+ * <p><b>🔥 ATUALIZAÇÃO v2.1:</b></p>
+ * <ul>
+ *   <li>Logs padronizados com java.util.logging</li>
+ *   <li>Resolução de classpath melhorada (ContextClassLoader + Fallback)</li>
+ * </ul>
  */
 public final class ViewAnnotationResolver {
+
+    private static final Logger LOGGER = Logger.getLogger(ViewAnnotationResolver.class.getName());
 
     private ViewAnnotationResolver() {}
 
@@ -136,28 +147,41 @@ public final class ViewAnnotationResolver {
             }
         }
 
+        LOGGER.log(Level.FINE, "✅ ViewDescriptor criado: id={0}, fxml={1}",
+                new Object[]{ann.id(), ann.fxml()});
+
         return builder.build();
     }
 
     /**
      * Resolve um caminho para URL via classpath.
+     *
+     * <p><b>Ordem de resolução:</b></p>
+     * <ol>
+     *   <li>ContextClassLoader (aplicação cliente)</li>
+     *   <li>ClassLoader do WinterFX (fallback)</li>
+     * </ol>
      */
     private static URL resolveUrl(String path, String tipo, String viewId, boolean required) {
-        URL url = ViewAnnotationResolver.class.getResource(path);
+        // 1. ContextClassLoader (aplicação cliente)
+        URL url = Thread.currentThread().getContextClassLoader().getResource(path);
+
+        // 2. Fallback: ClassLoader do WinterFX
+        if (url == null) {
+            url = ViewAnnotationResolver.class.getResource(path);
+        }
 
         if (url == null) {
             String mensagem = String.format(
                     "%s não encontrado para view '%s': %s", tipo, viewId, path
             );
-
             if (required) {
                 throw new IllegalArgumentException(mensagem);
             } else {
-                System.err.println("⚠️ " + mensagem);
+                LOGGER.warning("⚠️ " + mensagem);
                 return null;
             }
         }
-
         return url;
     }
 }

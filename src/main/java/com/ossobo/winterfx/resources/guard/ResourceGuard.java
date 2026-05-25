@@ -98,7 +98,7 @@ public final class ResourceGuard {
         registry.findById(descriptor.getId()).ifPresent(existing -> {
             throw new ResourceValidationException(
                     String.format("Recurso com ID '%s' já registrado (tipo: %s, origem: %s)",
-                            descriptor.getId(), existing.getType(), existing.getOrigin())
+                            descriptor.getId(), existing.getResourceType(), existing.getOrigin())
             );
         });
     }
@@ -109,7 +109,7 @@ public final class ResourceGuard {
      */
     private void validateTypeConsistency(ResourceDescriptor descriptor) {
         String url = descriptor.getUrl().toString().toLowerCase();
-        ResourceType declaredType = descriptor.getType();
+        ResourceType declaredType = descriptor.getResourceType();
         ResourceType detectedType = detectTypeFromUrl(url);
 
         if (detectedType != ResourceType.UNKNOWN && detectedType != declaredType) {
@@ -145,10 +145,10 @@ public final class ResourceGuard {
     public void validateExists(String id, ResourceType expectedType) {
         registry.findById(id).ifPresentOrElse(
                 descriptor -> {
-                    if (descriptor.getType() != expectedType) {
+                    if (descriptor.getResourceType() != expectedType) {
                         throw new ResourceValidationException(
                                 String.format("Recurso '%s' é do tipo %s, mas %s era esperado",
-                                        id, descriptor.getType(), expectedType)
+                                        id, descriptor.getResourceType(), expectedType)
                         );
                     }
                 },

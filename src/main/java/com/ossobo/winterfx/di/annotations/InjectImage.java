@@ -15,7 +15,7 @@ import java.lang.annotation.*;
  *   <li>{@code javafx.scene.layout.Background} - Background para panes</li>
  * </ul>
  *
- * <h3>Exemplos:</h3>
+ * <H3>Exemplos:</h3>
  * <pre>
  * {@code
  * // Injeta como Image

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ============================================================================
-# 🚀 NEXUSFX - BUILD E INSTALAÇÃO UNIVERSAL
+# 🚀 WINTERFX - BUILD E INSTALAÇÃO UNIVERSAL
 # Versão: 2.0.0
-# Descrição: Script completo para build e instalação do framework NexusFX
+# Descrição: Script completo para build e instalação do framework WinterFx
 # Plataformas: Linux, macOS, Windows (Git Bash/WSL)
 # ============================================================================
 
@@ -19,7 +19,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 PROJECT_DIR=$(pwd)
-MVN_REPO="$HOME/.m2/repository/com/ossobo/nexusfx"
+MVN_REPO="$HOME/.m2/repository/com/ossobo/winterfx"
 MVN_WRAPPER="./mvnw"  # Maven Wrapper (se existir)
 
 # ============================================================================
@@ -244,7 +244,7 @@ print_success "Instalando: $MAIN_JAR"
 $MVN_CMD install:install-file \
     -Dfile="$MAIN_JAR" \
     -DgroupId=com.ossobo \
-    -DartifactId=nexusfx \
+    -DartifactId=winterfx \
     -Dversion="$VERSION" \
     -Dpackaging=jar \
     -DgeneratePom=true \
@@ -255,13 +255,13 @@ $MVN_CMD install:install-file \
 # ============================================================================
 print_header "✅ PASSO 6: VERIFICANDO INSTALAÇÃO"
 
-if [ -f "$MVN_REPO/$VERSION/nexusfx-${VERSION}.jar" ]; then
+if [ -f "$MVN_REPO/$VERSION/winterfx-${VERSION}.jar" ]; then
     print_success "Instalação confirmada!"
     echo -e "\n${BLUE}Arquivos instalados:${NC}"
     ls -la "$MVN_REPO/$VERSION/"
 
     # Mostrar tamanho do JAR
-    JAR_SIZE=$(du -h "$MVN_REPO/$VERSION/nexusfx-${VERSION}.jar" | cut -f1)
+    JAR_SIZE=$(du -h "$MVN_REPO/$VERSION/winterfx-${VERSION}.jar" | cut -f1)
     print_success "Tamanho do JAR: $JAR_SIZE"
 else
     print_error "Falha na verificação! JAR não encontrado em $MVN_REPO/$VERSION/"
@@ -273,13 +273,13 @@ fi
 # ============================================================================
 print_header "📖 COMO USAR"
 
-echo -e "${GREEN}✅ NEXUSFX v${VERSION} INSTALADO COM SUCESSO!${NC}"
+echo -e "${GREEN}✅ WINTERFX v${VERSION} INSTALADO COM SUCESSO!${NC}"
 echo
 echo "Para usar em outros projetos, adicione no pom.xml:"
 echo
 echo "    <dependency>"
 echo "        <groupId>com.ossobo</groupId>"
-echo "        <artifactId>nexusfx</artifactId>"
+echo "        <artifactId>winterfx</artifactId>"
 echo "        <version>${VERSION}</version>"
 echo "    </dependency>"
 echo
@@ -292,11 +292,11 @@ echo "        <version>25.0.2</version>"
 echo "    </dependency>"
 echo
 echo -e "${BLUE}Arquivos gerados:${NC}"
-echo "  • JAR principal: target/NexusFX-${VERSION}.jar"
-echo "  • Sources JAR:   target/NexusFX-${VERSION}-sources.jar"
-echo "  • JavaDoc JAR:   target/NexusFX-${VERSION}-javadoc.jar"
-if [ -f "target/NexusFX-${VERSION}-shaded.jar" ]; then
-    echo "  • Fat JAR:       target/NexusFX-${VERSION}-shaded.jar"
+echo "  • JAR principal: target/WinterFx-${VERSION}.jar"
+echo "  • Sources JAR:   target/WinterFx-${VERSION}-sources.jar"
+echo "  • JavaDoc JAR:   target/WinterFx-${VERSION}-javadoc.jar"
+if [ -f "target/WinterFx-${VERSION}-shaded.jar" ]; then
+    echo "  • Fat JAR:       target/WinterFx-${VERSION}-shaded.jar"
 fi
 echo
 echo -e "${GREEN}========================================${NC}"

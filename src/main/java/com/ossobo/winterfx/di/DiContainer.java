@@ -20,33 +20,40 @@ import com.ossobo.winterfx.di.scopes.ScopeManager;
 import com.ossobo.winterfx.di.scopes.implementations.SingletonScope;
 import com.ossobo.winterfx.di.scopes.interfaces.ScopeInterface;
 
-import java.util.List;
-import java.util.Map;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * DiContainer v3.2 — Inicialização Segura com BootSequence v2.0.
+ * DiContainer v3.4 — Container de Injeção de Dependências.
  *
- * BootSequence v2.0 usa padrão NASCIMENTO → INJEÇÃO:
+ * <p><b>Papel ÚNICO:</b></p>
+ * <ul>
+ *   <li>✅ Escanear e registrar beans (@Controller, @Service, @Repository, @Component)</li>
+ *   <li>✅ Processar @Inject e injetar dependências</li>
+ *   <li>✅ Responder consultas sobre annotations (@RegisterView, @RegisterImage, etc.)</li>
+ *   <li>❌ NÃO carregar FXML, imagens ou notificações (responsabilidade dos módulos)</li>
+ *   <li>❌ NÃO gerenciar recursos (responsabilidade do ResourceRegistry)</li>
+ * </ul>
+ *
+ * <p><b>Fluxo de consulta:</b></p>
+ * <pre>
+ * ResourceScanner → diContainer.findClassesWithAnnotation(RegisterView.class)
+ * FloatingWindowManager → diContainer.findMethodsWithAnnotation(FloatingWindow.class)
+ * StageManager → diContainer.injectDependencies(controller)
+ * </pre>
+ *
+ * <p>BootSequence v2.0 usa padrão NASCIMENTO → INJEÇÃO:
  *   1. Todas as classes nascem com construtor vazio
  *   2. Dependências são injetadas exclusivamente via setters
  *
- * Resultado: ZERO nulls em construtores. ZERO dependências circulares.
+ * <p>Resultado: ZERO nulls em construtores. ZERO dependências circulares.</p>
  *
- * API pública compatível com versões anteriores.
- *
- * Uso:
- * <pre>
- *   DiContainer.initialize("com.meuapp");
- *   DiContainer container = DiContainer.getInstance();
- *   MeuService service = container.getBean(MeuService.class);
- *   container.close();
- * </pre>
- *
- * @since 3.0
- * @version v3.2 (18/05/2026)
+ * @author WinterFX
+ * @version 3.4
  */
 public final class DiContainer {
 
@@ -78,7 +85,7 @@ public final class DiContainer {
 
     private DiContainer(String... packages) {
         this.packages = packages;
-        LOGGER.log(Level.INFO, "🚀 DiContainer v3.2 — pronto para boot.");
+        LOGGER.log(Level.INFO, "🚀 DiContainer v3.4 — pronto para boot.");
     }
 
     /**
@@ -97,19 +104,14 @@ public final class DiContainer {
 
     /**
      * Boot via BootSequence v2.0 — NASCIMENTO → INJEÇÃO → VALIDAÇÃO → SCAN.
-     *
-     * NENHUM construtor recebe null. Todas as dependências são injetadas via setters.
-     *
-     * @version v3.2
      */
     private void boot() {
         LOGGER.log(Level.INFO, "Iniciando boot via BootSequence v2.0...");
 
-        // BootSequence faz tudo: nascimento, injeção, validação, scan
         BootSequence sequence = new BootSequence(packages);
         BootSequence.BootResult result = sequence.boot();
 
-        // Extrai TUDO do resultado — todos os componentes prontos e conectados
+        // Extrai TUDO do resultado
         this.dependencyResolver = result.dependencyResolver();
         this.injectionManager   = result.injectionManager();
         this.instanceCreator    = result.instanceCreator();
@@ -119,13 +121,12 @@ public final class DiContainer {
         this.lifecycleManager   = result.lifecycleManager();
         this.componentScanner   = result.componentScanner();
 
-
-        LOGGER.log(Level.INFO, "✅ DiContainer v3.2 inicializado. {0} beans registados.",
+        LOGGER.log(Level.INFO, "✅ DiContainer v3.4 inicializado. {0} beans registados.",
                 componentRegistry.getBeanNames().size());
     }
 
     // =========================================================================
-    // API PÚBLICA
+    // API PÚBLICA - INSTÂNCIA
     // =========================================================================
 
     public static DiContainer getInstance() {
@@ -136,7 +137,9 @@ public final class DiContainer {
         return INSTANCE;
     }
 
-    // ===== getBean =====
+    // =========================================================================
+    // API PÚBLICA - getBean
+    // =========================================================================
 
     public <T> T getBean(Class<T> type) {
         return dependencyResolver.getBean(type);
@@ -160,7 +163,88 @@ public final class DiContainer {
         return dependencyResolver.getAllBeansOfType(type);
     }
 
-    // ===== REGISTO MANUAL =====
+    // =========================================================================
+    // API PÚBLICA - CONSULTA DE ANNOTATIONS (🔥 NOVO!)
+    // =========================================================================
+
+    /**
+     * Encontra todas as classes registradas que possuem uma determinada annotation.
+     *
+     * <p><b>USADO POR:</b></p>
+     * <ul>
+     *   <li>ResourceScanner → "Quais classes têm @RegisterView?"</li>
+     *   <li>ResourceScanner → "Quais classes têm @RegisterImage?"</li>
+     *   <li>ResourceScanner → "Quais classes têm @RegisterNotification?"</li>
+     * </ul>
+     *
+     * @param annotationClass A annotation a ser procurada
+     * @return Conjunto de classes que possuem a annotation
+     */
+    public Set<Class<?>> findClassesWithAnnotation(Class<? extends Annotation> annotationClass) {
+        Set<Class<?>> result = new HashSet<>();
+        for (BeanDefinition definition : componentRegistry.getAllDefinitions()) {
+            Class<?> clazz = definition.getType();
+            if (clazz.isAnnotationPresent(annotationClass)) {
+                result.add(clazz);
+            }
+        }
+        LOGGER.log(Level.FINE, "🔍 Encontradas {0} classes com @{1}",
+                new Object[]{result.size(), annotationClass.getSimpleName()});
+        return result;
+    }
+
+    /**
+     * Encontra todos os métodos anotados com uma determinada annotation.
+     *
+     * <p><b>USADO POR:</b></p>
+     * <ul>
+     *   <li>FloatingWindowManager → "Quais métodos têm @FloatingWindow?"</li>
+     *   <li>NotificationManager → "Quais métodos têm @Notify?"</li>
+     *   <li>ImageManager → "Quais métodos têm @InjectImage?"</li>
+     *   <li>ViewManager → "Quais métodos têm @InjectView?"</li>
+     * </ul>
+     *
+     * @param annotationClass A annotation a ser procurada nos métodos
+     * @return Conjunto de métodos que possuem a annotation
+     */
+    public Set<Method> findMethodsWithAnnotation(Class<? extends Annotation> annotationClass) {
+        Set<Method> result = new HashSet<>();
+        for (BeanDefinition definition : componentRegistry.getAllDefinitions()) {
+            Class<?> clazz = definition.getType();
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(annotationClass)) {
+                    result.add(method);
+                }
+            }
+        }
+        LOGGER.log(Level.FINE, "🔍 Encontrados {0} métodos com @{1}",
+                new Object[]{result.size(), annotationClass.getSimpleName()});
+        return result;
+    }
+
+    /**
+     * Injeta dependências em um objeto já existente (não gerenciado pelo container).
+     *
+     * <p><b>USADO POR:</b></p>
+     * <ul>
+     *   <li>StageManager → Para injetar @Inject nos controllers FXML</li>
+     *   <li>NotificationManager → Para injetar dependências nos controllers de notificação</li>
+     * </ul>
+     *
+     * @param target Objeto que receberá as injeções via @Inject
+     * @throws IllegalArgumentException se target for nulo
+     */
+    public void injectDependencies(Object target) {
+        if (target == null) {
+            throw new IllegalArgumentException("Target não pode ser nulo para injeção de dependências");
+        }
+        LOGGER.log(Level.FINE, "💉 Injetando dependências em: {0}", target.getClass().getSimpleName());
+        injectionManager.inject(target);
+    }
+
+    // =========================================================================
+    // API PÚBLICA - REGISTO MANUAL
+    // =========================================================================
 
     public <T> void register(Class<T> type, T instance) {
         SingletonScope singletonScope = scopeManager.getSingletonScope();
@@ -203,13 +287,17 @@ public final class DiContainer {
         scopeManager.registerScope(name, scope);
     }
 
-    // ===== AOT =====
+    // =========================================================================
+    // API PÚBLICA - AOT
+    // =========================================================================
 
     public <T> void registerAotFactory(Class<T> beanType, InstanceFactory<T> factory) {
         componentRegistry.registerAotFactory(beanType, factory);
     }
 
-    // ===== LIFECYCLE =====
+    // =========================================================================
+    // API PÚBLICA - LIFECYCLE
+    // =========================================================================
 
     public void addLifecycleListener(DependencyLifecycleListener listener) {
         lifecycleManager.addListener(listener);
@@ -223,36 +311,41 @@ public final class DiContainer {
         lifecycleManager.initialize();
     }
 
-    /**
-     * Encerra o container, destruindo todos os singletons.
-     */
     public void close() {
         LOGGER.log(Level.INFO, "Encerrando DiContainer...");
         lifecycleManager.shutdown();
-        reflectionCache.clear();
-        reflectionScanner.clear();
-        componentRegistry.clear();
+        if (reflectionCache != null) reflectionCache.clear();
+        if (reflectionScanner != null) reflectionScanner.clear();
+        if (componentRegistry != null) componentRegistry.clear();
         INSTANCE = null;
         LOGGER.log(Level.INFO, "DiContainer encerrado.");
     }
 
-    // ===== CONFIGURAÇÃO =====
+    // =========================================================================
+    // GETTERS (apenas para uso interno do framework)
+    // =========================================================================
 
     public ConfigurationManager getConfiguration() {
         return configurationManager;
     }
-
-    // ===== ESTATÍSTICAS =====
 
     public int getBeanCount() {
         return componentRegistry.getBeanNames().size();
     }
 
     public Map<String, Long> getReflectionStatistics() {
-        return reflectionCache.getStatistics();
+        return reflectionCache != null ? reflectionCache.getStatistics() : Collections.emptyMap();
     }
 
     public Map<String, Integer> getLifecycleStatistics() {
-        return eventPublisher.getStatistics();
+        return eventPublisher != null ? eventPublisher.getStatistics() : Collections.emptyMap();
+    }
+
+    public ReflectionCache getReflectionCache() {
+        return reflectionCache;
+    }
+
+    public ComponentRegistry getComponentRegistry() {
+        return componentRegistry;
     }
 }

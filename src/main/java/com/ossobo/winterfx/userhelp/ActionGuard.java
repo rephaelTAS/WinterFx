@@ -1,16 +1,17 @@
 /*
- * ActionGuard v1.1
+ * ActionGuard v2.1
  *
  * Proteção de ações críticas com confirmação explícita.
  * Mostra impacto da ação e exige digitação para confirmar.
  *
- * Módulo: NexusFX UserHelp
- * v1.1: Corrigido - nome do campo confirmationTarget vs confirmTarget
- *       Corrigido - confirmarPerigo com 4 parâmetros (Consumer<Boolean>)
+ * Módulo: WinterFX UserHelp
+ * v2.1: Atualizado para WinterFX v11 - usa NotificationManager
  */
 package com.ossobo.winterfx.userhelp;
 
-import com.ossobo.winterfx.WinterFX;
+import com.ossobo.winterfx.di.annotations.Inject;
+import com.ossobo.winterfx.notifications.NotificationManager;
+
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -19,15 +20,39 @@ import javafx.stage.Window;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 🛡️ ActionGuard v2.1
+ *
+ * Proteção de ações críticas com confirmação explícita.
+ *
+ * <p><b>🔥 v2.1:</b> Substitui NotificationSender por NotificationManager.</p>
+ *
+ * <p><b>Exemplo de uso:</b></p>
+ * <pre>
+ * new ActionGuard()
+ *     .title("Excluir Livro")
+ *     .warning("Esta ação não pode ser desfeita!")
+ *     .impact("O livro será removido permanentemente",
+ *             "Todos os empréstimos associados serão cancelados")
+ *     .requireConfirmation("EXCLUIR")
+ *     .onConfirm(() -> livroService.excluir(livro))
+ *     .owner(stage)
+ *     .show();
+ * </pre>
+ */
 public class ActionGuard {
 
     private String title = "Confirmar Ação";
     private String warning;
     private List<String> impacts = new ArrayList<>();
     private String confirmationPrompt;
-    private String confirmationTarget;  // ✅ CORRIGIDO: declarado como campo
+    private String confirmationTarget;
     private Runnable onConfirm;
     private Window owner;
+
+    // 🔥 Injeta o NotificationManager (substitui NotificationSender)
+    @Inject
+    private NotificationManager notificationManager;
 
     // =========================================================================
     // CONFIGURAÇÃO (API FLUENTE)
@@ -78,17 +103,19 @@ public class ActionGuard {
         if (confirmationTarget != null) {
             showWithConfirmationField();
         } else {
-            // Modo simples: alerta de confirmação padrão
-            WinterFX.alerts().confirmarPerigo(
-                    warning != null ? warning : "Confirmar ação?",
-                    impacts.isEmpty() ? "Esta ação é irreversível" : String.join("\n", impacts),
-                    title,
-                    confirmado -> {
-                        if (confirmado && onConfirm != null) {
-                            onConfirm.run();
-                        }
-                    }
-            );
+            // 🔥 Modo simples: usa NotificationManager para confirmar
+            if (notificationManager != null) {
+                String descricao = warning != null ? warning : "Confirmar ação?";
+
+                boolean confirmado = notificationManager.confirm(title, descricao);
+
+                if (confirmado && onConfirm != null) {
+                    onConfirm.run();
+                }
+            } else {
+                // Fallback: diálogo padrão do JavaFX
+                showFallbackConfirmation();
+            }
         }
     }
 
@@ -97,6 +124,11 @@ public class ActionGuard {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
+
+        // Configura owner se disponível
+        if (owner != null) {
+            alert.initOwner(owner);
+        }
 
         // Conteúdo
         VBox content = new VBox(12);
@@ -114,7 +146,7 @@ public class ActionGuard {
             content.getChildren().add(impactTitle);
 
             for (String impact : impacts) {
-                Label impactLabel = new Label("  " + impact);
+                Label impactLabel = new Label("  • " + impact);
                 impactLabel.setWrapText(true);
                 content.getChildren().add(impactLabel);
             }
@@ -155,6 +187,37 @@ public class ActionGuard {
                 errorLabel.setText("Texto não confere. Digite exatamente: " + confirmationTarget);
             }
         });
+
+        // Foco automático no campo de confirmação
+        confirmationField.requestFocus();
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK && onConfirm != null) {
+                onConfirm.run();
+            }
+        });
+    }
+
+    /** Fallback quando NotificationManager não está disponível */
+    private void showFallbackConfirmation() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(warning != null ? warning : "Confirmar ação?");
+
+        // Configura owner se disponível
+        if (owner != null) {
+            alert.initOwner(owner);
+        }
+
+        // Conteúdo com impactos
+        if (!impacts.isEmpty()) {
+            String contentText = "Impactos:\n" + String.join("\n", impacts);
+            alert.setContentText(contentText);
+        } else {
+            alert.setContentText("Esta ação é irreversível. Deseja continuar?");
+        }
+
+        styleDialog(alert);
 
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK && onConfirm != null) {

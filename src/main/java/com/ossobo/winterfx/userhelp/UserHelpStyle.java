@@ -63,7 +63,7 @@ public final class UserHelpStyle {
     // ===== CLASSES CSS =====
     public static final String CSS_FIELD_ERROR = "field-error";
     public static final String CSS_FIELD_VALID = "field-valid";
-    public static final String CSS_TOAST_SUCCESS = "toast-success";
+    public static final String CSS_TOAST_SUCCESS = "toast-success.fxml";
     public static final String CSS_TOAST_ERROR = "toast-error";
     public static final String CSS_TOAST_INFO = "toast-info";
     public static final String CSS_GUARD_DIALOG = "guard-dialog";

@@ -8,5 +8,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Inject {
-    String value() default ""; // Para qualificador, similar ao @Qualifier
+    String value() default "";
 }

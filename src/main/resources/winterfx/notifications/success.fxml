@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.ossobo.winterfx.notifications.controller.NotificationControllerImpl"
+      spacing="12"
+      style="-fx-background-color: #27ae60; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 5);"
+      maxWidth="420" minWidth="350">
+
+    <!-- Cabeçalho: Ícone + Título -->
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <!-- Ícone de sucesso (círculo verde com check) -->
+        <Circle radius="18" fill="white" opacity="0.9"/>
+        <Label fx:id="tituloLabel"
+               style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;"
+               text="Sucesso"
+               wrapText="true"
+               maxWidth="300"/>
+    </HBox>
+
+    <!-- Descrição -->
+    <Label fx:id="descricaoLabel"
+           style="-fx-font-size: 14px; -fx-text-fill: white; -fx-opacity: 0.95;"
+           text="Operação realizada com sucesso!"
+           wrapText="true"
+           maxWidth="380"/>
+
+    <!-- Detalhes técnicos (oculto por padrão) -->
+    <TextArea fx:id="detalhesArea"
+              style="-fx-font-size: 11px; -fx-background-color: rgba(0,0,0,0.15); -fx-text-fill: white; -fx-border-radius: 6; -fx-background-radius: 6;"
+              editable="false"
+              wrapText="true"
+              visible="false"
+              managed="false"
+              maxHeight="80"
+              prefRowCount="3"/>
+
+    <!-- Origem (oculto por padrão) -->
+    <Label fx:id="origemLabel"
+           style="-fx-font-size: 10px; -fx-text-fill: rgba(255,255,255,0.6); -fx-font-style: italic;"
+           visible="false"
+           managed="false"/>
+
+</VBox>

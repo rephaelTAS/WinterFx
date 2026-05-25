@@ -1,7 +1,7 @@
 package com.ossobo.winterfx.resources.descriptor;
 
-import com.ossobo.winterfx.resources.enums.ResourceOrigin;
-import com.ossobo.winterfx.resources.enums.ResourceType;
+import com.ossobo.winterfx.di.annotations.enums.StageStyle;
+import com.ossobo.winterfx.resources.enums.*;
 
 import java.net.URL;
 import java.util.Collections;
@@ -12,32 +12,8 @@ public final class ViewDescriptor extends ResourceDescriptor {
 
     // ===== ENUMS =====
 
-    public enum ViewType { STATIC, DYNAMIC }
-    public enum CssMode  { REPLACE, APPEND, NONE }
-    public enum ModeUse  { VIEW, ALERT }
-    public enum AlertType { INFO, WARNING, ERROR, CONFIRMATION, SUCCESS }
-    public enum Modality  { APPLICATION_MODAL, WINDOW_MODAL, NONE }
 
-    /**
-     * Estilos de janela suportados.
-     */
-    public enum StageStyle {
-        DECORATED,
-        UNDECORATED,
-        TRANSPARENT,
-        UNIFIED,
-        UTILITY;
 
-        public javafx.stage.StageStyle toJavaFX() {
-            return switch (this) {
-                case DECORATED   -> javafx.stage.StageStyle.DECORATED;
-                case UNDECORATED -> javafx.stage.StageStyle.UNDECORATED;
-                case TRANSPARENT -> javafx.stage.StageStyle.TRANSPARENT;
-                case UNIFIED     -> javafx.stage.StageStyle.UNIFIED;
-                case UTILITY     -> javafx.stage.StageStyle.UTILITY;
-            };
-        }
-    }
 
     // ===== CAMPOS COMUNS (VIEW E ALERT) =====
 
