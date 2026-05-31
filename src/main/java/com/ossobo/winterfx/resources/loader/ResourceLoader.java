@@ -2,9 +2,9 @@ package com.ossobo.winterfx.resources.loader;
 
 import com.ossobo.winterfx.resources.descriptor.ImageDescriptor;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.resources.enums.CssMode;
+import com.ossobo.winterfx.view.design.enums.CssMode;
 import com.ossobo.winterfx.resources.excecoes.ResourceLoadException;
-import com.ossobo.winterfx.resources.registry.ResourceRegistry;
+import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.resources.resolver.ResourceResolver;
 
 import javafx.application.Platform;
@@ -18,7 +18,6 @@ import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
-import javafx.scene.layout.Pane;
 import javafx.scene.media.AudioClip;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;

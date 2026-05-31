@@ -1,11 +1,11 @@
 package com.ossobo.winterfx.di.instantiation.strategies;
 
-import com.ossobo.winterfx.di.annotations.Inject;
+import com.ossobo.winterfx.anotations.Inject;
 import com.ossobo.winterfx.di.exceptions.DependencyResolutionException;
 import com.ossobo.winterfx.di.instantiation.InstantiationStrategy;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
-import com.ossobo.winterfx.di.scanner.models.BeanDefinition;
+import com.ossobo.winterfx.scanner.models.BeanDefinition;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;

@@ -1,5 +1,6 @@
 package com.ossobo.winterfx.di.resolver;
 
+import com.ossobo.winterfx.anotations.Qualifier;
 import com.ossobo.winterfx.di.aot.InstanceFactory;
 import com.ossobo.winterfx.di.exceptions.BeanNotFoundException;
 import com.ossobo.winterfx.di.exceptions.CircularDependencyException;
@@ -9,8 +10,9 @@ import com.ossobo.winterfx.di.lifecycle.LifecycleManager;
 import com.ossobo.winterfx.di.lifecycle.events.LifecycleEventPublisher;
 import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener;
 import com.ossobo.winterfx.di.resolver.methods.CircularDependencyDetector;
-import com.ossobo.winterfx.di.scanner.models.BeanDefinition;
-import com.ossobo.winterfx.di.scanner.ComponentRegistry;
+import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
+import com.ossobo.winterfx.scanner.models.BeanDefinition;
+import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.di.scopes.ScopeManager;
 import com.ossobo.winterfx.di.scopes.interfaces.ScopeInterface;
 
@@ -36,12 +38,13 @@ public final class DependencyResolver {
 
     private static final Logger LOGGER = Logger.getLogger(DependencyResolver.class.getName());
 
-    private ComponentRegistry componentRegistry;
+    private BeanRegistry beanRegistry;
     private ScopeManager scopeManager;
     private InstanceCreator instanceCreator;
     private LifecycleManager lifecycleManager;
     private LifecycleEventPublisher eventPublisher;
     private CircularDependencyDetector dependencyDetector;
+    private BeanMetadataExtractor metadataExtractor;
 
     // ============================================================
     // CONSTRUTORES
@@ -58,16 +61,16 @@ public final class DependencyResolver {
     /**
      * Construtor com dependências — compatível com código existente.
      */
-    public DependencyResolver(ComponentRegistry componentRegistry, ScopeManager scopeManager,
+    public DependencyResolver(BeanRegistry beanRegistry, ScopeManager scopeManager,
                               InstanceCreator instanceCreator, LifecycleManager lifecycleManager,
                               LifecycleEventPublisher eventPublisher, CircularDependencyDetector dependencyDetector) {
-        this.componentRegistry = componentRegistry;
+        this.beanRegistry = beanRegistry;
         this.scopeManager = scopeManager;
         this.instanceCreator = instanceCreator;
         this.lifecycleManager = lifecycleManager;
         this.eventPublisher = eventPublisher;
         this.dependencyDetector = dependencyDetector;
-        this.componentRegistry.setDependencyResolver(this);
+        this.beanRegistry.setDependencyResolver(this);
     }
 
     // ============================================================
@@ -75,9 +78,9 @@ public final class DependencyResolver {
     // ============================================================
 
     /** Define o ComponentRegistry e regista este resolver nele. */
-    public void setComponentRegistry(ComponentRegistry componentRegistry) {
-        this.componentRegistry = componentRegistry;
-        this.componentRegistry.setDependencyResolver(this);
+    public void setComponentRegistry(BeanRegistry beanRegistry) {
+        this.beanRegistry = beanRegistry;
+        this.beanRegistry.setDependencyResolver(this);
     }
 
     /** Define o ScopeManager após construção. */
@@ -108,6 +111,10 @@ public final class DependencyResolver {
         this.dependencyDetector = dependencyDetector;
     }
 
+    public void setMetadataExtractor(BeanMetadataExtractor extractor){
+        this.metadataExtractor = extractor;
+    }
+
     // ============================================================
     // API PÚBLICA
     // ============================================================
@@ -124,7 +131,7 @@ public final class DependencyResolver {
 
     @SuppressWarnings("unchecked")
     public <T> T getBean(String name) {
-        BeanDefinition definition = componentRegistry.getDefinition(name);
+        BeanDefinition definition = beanRegistry.getDefinition(name);
         if (definition == null) throw new BeanNotFoundException("Bean não encontrado: " + name);
         return (T) resolve(definition.getType(), null);
     }
@@ -136,7 +143,7 @@ public final class DependencyResolver {
 
     @SuppressWarnings("unchecked")
     public <T> List<T> getAllBeansOfType(Class<T> type) {
-        List<BeanDefinition> definitions = componentRegistry.getAllDefinitionsOfType(type);
+        List<BeanDefinition> definitions = beanRegistry.getAllDefinitionsOfType(type);
         if (definitions.isEmpty()) return Collections.emptyList();
         return definitions.stream()
                 .map(def -> (T) resolve(def.getType(), null))
@@ -182,7 +189,7 @@ public final class DependencyResolver {
 
             @SuppressWarnings({ "unchecked", "rawtypes" })
             Object result = scope.get((Class) implType, () -> {
-                InstanceFactory<?> aotFactory = componentRegistry.getAotFactory(implType);
+                InstanceFactory<?> aotFactory = beanRegistry.getAotFactory(implType);
                 if (aotFactory != null) {
                     LOGGER.log(Level.FINE, "AOT factory: {0}", implType.getName());
                     return aotFactory.create(this);
@@ -202,23 +209,30 @@ public final class DependencyResolver {
 
     private BeanDefinition findDefinition(Class<?> type, String qualifierName) {
         if (qualifierName != null && !qualifierName.isEmpty()) {
-            BeanDefinition def = componentRegistry.getDefinition(qualifierName);
+            BeanDefinition def = beanRegistry.getDefinition(qualifierName);
             if (def != null && type.isAssignableFrom(def.getType())) return def;
             throw new BeanNotFoundException(
                     "Qualifier '" + qualifierName + "' não encontrado para: " + type.getName());
         }
-        BeanDefinition def = componentRegistry.getDefinition(type);
+        BeanDefinition def = beanRegistry.getDefinition(type);
         if (def != null) return def;
-        List<BeanDefinition> all = componentRegistry.getAllDefinitionsOfType(type);
+        List<BeanDefinition> all = beanRegistry.getAllDefinitionsOfType(type);
         if (all.size() == 1) return all.get(0);
         if (all.size() > 1) throw new DependencyNotRegisteredException(
                 "Múltiplas implementações para " + type.getName() + ". Use @Primary ou @Qualifier.");
+
         if (!type.isInterface() && !java.lang.reflect.Modifier.isAbstract(type.getModifiers())) {
             String name = Character.toLowerCase(type.getSimpleName().charAt(0))
                     + type.getSimpleName().substring(1);
+
+
+
             BeanDefinition newDef = new BeanDefinition(name, type,
-                    com.ossobo.winterfx.di.scopes.enums.ScopeType.SINGLETON);
-            componentRegistry.registerDefinition(newDef);
+                    com.ossobo.winterfx.di.scopes.enums.ScopeType.SINGLETON,
+                    metadataExtractor.extractInjectionPoints(type),
+                    metadataExtractor.extractPostConstruct(type),
+                    metadataExtractor.extractPreDestroy(type)  );
+            beanRegistry.registerDefinition(newDef);
             return newDef;
         }
         return null;
@@ -254,7 +268,7 @@ public final class DependencyResolver {
         Type innerType = dependencyType.getActualTypeArguments()[0];
         if (!(innerType instanceof Class<?> componentType))
             throw new IllegalArgumentException("Coleção requer tipo concreto.");
-        List<BeanDefinition> definitions = componentRegistry.getAllDefinitionsOfType(componentType);
+        List<BeanDefinition> definitions = beanRegistry.getAllDefinitionsOfType(componentType);
         List<Object> instances = definitions.stream()
                 .map(def -> {
                     try {
@@ -275,8 +289,8 @@ public final class DependencyResolver {
     }
 
     private String getQualifierValue(java.lang.reflect.Parameter param) {
-        com.ossobo.winterfx.di.annotations.Qualifier qualifier = param
-                .getAnnotation(com.ossobo.winterfx.di.annotations.Qualifier.class);
+        Qualifier qualifier = param
+                .getAnnotation(Qualifier.class);
         if (qualifier != null && !qualifier.value().isEmpty()) return qualifier.value();
         return null;
     }

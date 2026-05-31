@@ -9,7 +9,7 @@
  */
 package com.ossobo.winterfx.userhelp;
 
-import com.ossobo.winterfx.di.annotations.Inject;
+import com.ossobo.winterfx.anotations.Inject;
 import com.ossobo.winterfx.notifications.NotificationManager;
 
 import javafx.geometry.Insets;

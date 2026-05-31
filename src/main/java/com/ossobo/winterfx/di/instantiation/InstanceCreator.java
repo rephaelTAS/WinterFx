@@ -9,12 +9,17 @@ import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener;
 import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
-import com.ossobo.winterfx.di.scanner.models.BeanDefinition;
-import com.ossobo.winterfx.di.scanner.ComponentRegistry;
+import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
+import com.ossobo.winterfx.scanner.models.BeanDefinition;
+import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.di.aot.InstanceFactory;
+import com.ossobo.winterfx.scanner.models.InjectionPoint;
 import com.ossobo.winterfx.di.scopes.ScopeManager;
+import com.ossobo.winterfx.di.scopes.enums.ScopeType;
 import com.ossobo.winterfx.di.scopes.implementations.SingletonScope;
 
+import java.lang.reflect.Method;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -49,10 +54,11 @@ public final class InstanceCreator {
     private InjectionManager injectionManager;
     private LifecycleManager lifecycleManager;
     private ScopeManager scopeManager;
-    private ComponentRegistry componentRegistry;
+    private BeanRegistry beanRegistry;
     private LifecycleEventPublisher eventPublisher;
     private InstantiationStrategyManager strategyManager;
     private ProxyManager proxyManager;
+    private BeanMetadataExtractor metadataExtractor;
 
     // ============================================================
     // CONSTRUTORES
@@ -74,19 +80,20 @@ public final class InstanceCreator {
                            InjectionManager injectionManager,
                            LifecycleManager lifecycleManager,
                            ScopeManager scopeManager,
-                           ComponentRegistry componentRegistry,
+                           BeanRegistry beanRegistry,
                            LifecycleEventPublisher eventPublisher,
                            InstantiationStrategyManager strategyManager,
-                           ProxyManager proxyManager) {
+                           ProxyManager proxyManager, BeanMetadataExtractor metadataExtractor) {
         this.reflectionCache = reflectionCache;
         this.reflectionProcessor = reflectionProcessor;
         this.injectionManager = injectionManager;
         this.lifecycleManager = lifecycleManager;
         this.scopeManager = scopeManager;
-        this.componentRegistry = componentRegistry;
+        this.beanRegistry = beanRegistry;
         this.eventPublisher = eventPublisher;
         this.strategyManager = strategyManager;
         this.proxyManager = proxyManager;
+        this.metadataExtractor = metadataExtractor;
     }
 
     // ============================================================
@@ -127,8 +134,8 @@ public final class InstanceCreator {
     }
 
     /** Define o ComponentRegistry após construção. */
-    public void setComponentRegistry(ComponentRegistry componentRegistry) {
-        this.componentRegistry = componentRegistry;
+    public void setComponentRegistry(BeanRegistry beanRegistry) {
+        this.beanRegistry = beanRegistry;
     }
 
     /** Define o LifecycleEventPublisher após construção. */
@@ -144,6 +151,10 @@ public final class InstanceCreator {
     /** Define o ProxyManager após construção (pode ser null). */
     public void setProxyManager(ProxyManager proxyManager) {
         this.proxyManager = proxyManager;
+    }
+
+    public void setMetadataExtractor(BeanMetadataExtractor metadataExtractor) {
+        this.metadataExtractor = metadataExtractor;
     }
 
     // ============================================================
@@ -169,12 +180,12 @@ public final class InstanceCreator {
         LOGGER.log(Level.FINE, "Criando instância: {0}", type.getName());
 
         try {
-            BeanDefinition definition = componentRegistry.getDefinition(type);
+            BeanDefinition definition = beanRegistry.getDefinition(type);
 
             // 1. AOT Factory?
             if (definition != null) {
                 InstanceFactory<T> aotFactory =
-                        (InstanceFactory<T>) componentRegistry.getAotFactory(type);
+                        (InstanceFactory<T>) beanRegistry.getAotFactory(type);
                 if (aotFactory != null) {
                     LOGGER.log(Level.FINE, "AOT factory: {0}", type.getName());
                     T instance = aotFactory.create(dependencyResolver);
@@ -301,9 +312,19 @@ public final class InstanceCreator {
     private BeanDefinition registerOnTheFly(Class<?> type) {
         String name = Character.toLowerCase(type.getSimpleName().charAt(0))
                 + type.getSimpleName().substring(1);
-        BeanDefinition definition = new BeanDefinition(name, type,
-                com.ossobo.winterfx.di.scopes.enums.ScopeType.SINGLETON);
-        componentRegistry.registerDefinition(definition);
+
+        List<InjectionPoint> deps = metadataExtractor != null
+                ? metadataExtractor.extractInjectionPoints(type) : List.of();
+        Method postConstruct = metadataExtractor != null
+                ? metadataExtractor.extractPostConstruct(type) : null;
+        Method preDestroy = metadataExtractor != null
+                ? metadataExtractor.extractPreDestroy(type) : null;
+
+        BeanDefinition definition = new BeanDefinition(
+                name, type, ScopeType.SINGLETON,
+                deps, postConstruct, preDestroy
+        );
+        beanRegistry.registerDefinition(definition);
         return definition;
     }
 }

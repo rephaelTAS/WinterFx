@@ -1,121 +1,100 @@
 package com.ossobo.winterfx.notifications;
 
-import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.resources.enums.AlertType;
-import com.ossobo.winterfx.resources.registry.ResourceRegistry;
+import com.ossobo.winterfx.notifications.enums.NotificationType;
+import com.ossobo.winterfx.notifications.enums.AlertType;
+import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.notifications.registry.NotificationViewRegistrar;
 import com.ossobo.winterfx.notifications.resolver.NotificationViewResolver;
 
-import javafx.scene.Node;
-import javafx.stage.Stage;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 🔔 NotificationManager v4.0 - SIMPLES e DIRETO!
+ * 🔔 NotificationManager v5.1
  *
- * <p>Uso: injete com @Inject e chame em 1 linha!</p>
- * {@code 
- * @Inject private NotificationManager nm;
- *
- * nm.info("Título", "Mensagem", "Origem");
- * nm.erro("Erro!", "Falha ao salvar", "Controller");
- * nm.warn("Aviso", "Campos obrigatórios", "FormValidator");
- * }
+ * API limpa para notificações.
+ * - UNDECORATED para todas
+ * - Temporizador: INFO (5s), SUCCESS (3s)
+ * - ERROR, CRITICAL, CONFIRMATION, EXCEPTION ficam até fechar
  */
 public class NotificationManager {
 
     private static final Logger LOGGER = Logger.getLogger(NotificationManager.class.getName());
 
-    private final StageManager stageManager;
+    private StageManager stageManager;
     private final ResourceRegistry resourceRegistry;
-    private final DiContainer diContainer;
 
-    public NotificationManager(StageManager stageManager, ResourceRegistry resourceRegistry) {
-        this.stageManager = stageManager;
+    public NotificationManager(ResourceRegistry resourceRegistry) {
         this.resourceRegistry = resourceRegistry;
-        this.diContainer = DiContainer.getInstance();
-
         NotificationViewRegistrar.registerAll(resourceRegistry);
-        LOGGER.info("🔔 NotificationManager v4.0 inicializado");
+        LOGGER.info("🔔 NotificationManager v5.1 inicializado");
+    }
+
+    public void setStageManager(StageManager stageManager) {
+        this.stageManager = stageManager;
     }
 
     // =============================================
-    // API PÚBLICA - SIMPLES E DIRETA!
+    // API PÚBLICA
     // =============================================
 
-    /** Notificação informativa */
+    /** Notificação informativa — some em 5 segundos */
     public void info(String titulo, String descricao) {
-        showAlert(AlertType.INFO, titulo, descricao, null, "App", null);
-    }
-    public void info(String titulo, String descricao, String origem) {
-        showAlert(AlertType.INFO, titulo, descricao, null, origem, null);
-    }
-    public void info(String titulo, String descricao, String detalhes, String origem) {
-        showAlert(AlertType.INFO, titulo, descricao, detalhes, origem, null);
+        showAlert(AlertType.INFO, titulo, descricao);
     }
 
-    /** Notificação de aviso */
+    /** Notificação de sucesso — some em 3 segundos */
+    public void success(String titulo, String descricao) {
+        showAlert(AlertType.SUCCESS, titulo, descricao);
+    }
+
+    /** Notificação de aviso — some em 5 segundos */
     public void warn(String titulo, String descricao) {
-        showAlert(AlertType.WARNING, titulo, descricao, null, "App", null);
-    }
-    public void warn(String titulo, String descricao, String origem) {
-        showAlert(AlertType.WARNING, titulo, descricao, null, origem, null);
-    }
-    public void warn(String titulo, String descricao, String detalhes, String origem) {
-        showAlert(AlertType.WARNING, titulo, descricao, detalhes, origem, null);
+        showAlert(AlertType.WARNING, titulo, descricao);
     }
 
-    /** Notificação de erro */
+    /** Notificação de erro — NÃO some (precisa fechar) */
     public void erro(String titulo, String descricao) {
-        showAlert(AlertType.ERROR, titulo, descricao, null, "App", null);
-    }
-    public void erro(String titulo, String descricao, String origem) {
-        showAlert(AlertType.ERROR, titulo, descricao, null, origem, null);
-    }
-    public void erro(String titulo, String descricao, String detalhes, String origem) {
-        showAlert(AlertType.ERROR, titulo, descricao, detalhes, origem, null);
+        showAlert(AlertType.ERROR, titulo, descricao);
     }
 
-    /** Notificação crítica (MODAL) */
+    /** Notificação crítica — NÃO some (precisa fechar) */
     public void critical(String titulo, String descricao) {
-        showAlert(AlertType.CRITICAL, titulo, descricao, null, "App", null);
-    }
-    public void critical(String titulo, String descricao, String origem) {
-        showAlert(AlertType.CRITICAL, titulo, descricao, null, origem, null);
-    }
-    public void critical(String titulo, String descricao, String detalhes, String origem) {
-        showAlert(AlertType.CRITICAL, titulo, descricao, detalhes, origem, null);
+        showAlert(AlertType.CRITICAL, titulo, descricao);
     }
 
-    /** Confirmação (Sim/Não) */
+    /** Confirmação (Sim/Não) — NÃO some (aguarda resposta) */
     public boolean confirm(String titulo, String descricao) {
         try {
-            String viewId = NotificationViewResolver.resolveViewId(
-                    com.ossobo.winterfx.di.annotations.enums.NotificationType.CONFIRMATION);
-            if (!resourceRegistry.contains(viewId)) return showNativeConfirm(titulo, descricao);
-            stageManager.openAlert(viewId);
+            String viewId = NotificationViewResolver.resolveViewId(NotificationType.CONFIRMATION);
+            if (!resourceRegistry.contains(viewId)) {
+                return showNativeConfirm(titulo, descricao);
+            }
+            stageManager.openAlertUndecorated(viewId, AlertType.CONFIRMATION);
             return true;
         } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Erro ao abrir confirmação, usando fallback nativo", e);
             return showNativeConfirm(titulo, descricao);
         }
     }
 
     // =============================================
-    // MÉTODO INTERNO ÚNICO!
+    // INTERNO
     // =============================================
 
-    private void showAlert(AlertType tipo, String titulo, String descricao,
-                           String detalhes, String origem, Node ownerNode) {
+    private void showAlert(AlertType tipo, String titulo, String descricao) {
         try {
-            // Converte AlertType para NotificationType
-            com.ossobo.winterfx.di.annotations.enums.NotificationType notificationType = switch (tipo) {
-                case INFO -> com.ossobo.winterfx.di.annotations.enums.NotificationType.INFO;
-                case WARNING -> com.ossobo.winterfx.di.annotations.enums.NotificationType.WARNING;
-                case ERROR, CRITICAL -> com.ossobo.winterfx.di.annotations.enums.NotificationType.ERROR;
-                default -> com.ossobo.winterfx.di.annotations.enums.NotificationType.INFO;
+            NotificationType notificationType = switch (tipo) {
+                case INFO -> NotificationType.INFO;
+                case SUCCESS -> NotificationType.SUCCESS;
+                case WARNING -> NotificationType.WARNING;
+                case ERROR, CRITICAL -> NotificationType.ERROR;
+                default -> NotificationType.INFO;
             };
 
             String viewId = NotificationViewResolver.resolveViewId(notificationType);
@@ -126,7 +105,9 @@ public class NotificationManager {
                 return;
             }
 
-            stageManager.openAlert(viewId);
+            // 🆕 Abre UNDECORATED com temporizador
+            stageManager.openAlertUndecorated(viewId, tipo);
+
             LOGGER.log(Level.INFO, "🔔 [{0}] {1}: {2}", new Object[]{tipo, titulo, descricao});
 
         } catch (Exception e) {
@@ -135,30 +116,12 @@ public class NotificationManager {
     }
 
     private boolean showNativeConfirm(String titulo, String descricao) {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.CONFIRMATION);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(titulo);
         alert.setHeaderText(titulo);
         alert.setContentText(descricao);
         return alert.showAndWait()
-                .filter(r -> r == javafx.scene.control.ButtonType.OK)
+                .filter(r -> r == ButtonType.OK)
                 .isPresent();
     }
-
-    // =============================================
-    // COMPATIBILIDADE (métodos antigos)
-    // =============================================
-
-    /** @deprecated Use info() */
-    @Deprecated public void success(String d) { info("Sucesso", d); }
-    /** @deprecated Use info() */
-    @Deprecated public void success(String t, String d) { info(t, d); }
-    /** @deprecated Use warn() */
-    @Deprecated public void warning(String d) { warn("Aviso", d); }
-    /** @deprecated Use warn() */
-    @Deprecated public void warning(String t, String d) { warn(t, d); }
-    /** @deprecated Use erro() */
-    @Deprecated public void error(String d) { erro("Erro", d); }
-    /** @deprecated Use erro() */
-    @Deprecated public void error(String t, String d) { erro(t, d); }
 }

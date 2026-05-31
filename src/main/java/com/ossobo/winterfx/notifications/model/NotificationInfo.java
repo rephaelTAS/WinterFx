@@ -1,8 +1,8 @@
 package com.ossobo.winterfx.notifications.model;
 
 
-import com.ossobo.winterfx.di.annotations.enums.Modalidade;
-import com.ossobo.winterfx.di.annotations.enums.NotificationType;
+import com.ossobo.winterfx.notifications.enums.NotificationType;
+import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
 
 /**
  * 📋 NotificationInfo v1.0
@@ -28,7 +28,7 @@ public final class NotificationInfo {
     private final String detalhes;
     private final String origem;
     private final NotificationType tipo;
-    private final Modalidade modalidade;
+    private final Modality modalidade;
 
     private NotificationInfo(Builder builder) {
         this.titulo = builder.titulo;
@@ -44,10 +44,10 @@ public final class NotificationInfo {
     public String getDetalhes()      { return detalhes; }
     public String getOrigem()        { return origem; }
     public NotificationType getTipo() { return tipo; }
-    public Modalidade getModalidade() { return modalidade; }
+    public Modality getModalidade() { return modalidade; }
 
     public boolean hasDetalhes()     { return detalhes != null && !detalhes.isEmpty(); }
-    public boolean isModal()         { return modalidade == Modalidade.MODAL; }
+    public boolean isModal()         { return modalidade == Modality.MODAL; }
 
     public static Builder builder() {
         return new Builder();
@@ -59,21 +59,21 @@ public final class NotificationInfo {
         private String detalhes;
         private String origem;
         private NotificationType tipo = NotificationType.INFO;
-        private Modalidade modalidade = Modalidade.NAO_MODAL;
+        private Modality modalidade = Modality.NAO_MODAL;
 
         public Builder titulo(String titulo)             { this.titulo = titulo; return this; }
         public Builder descricao(String descricao)       { this.descricao = descricao; return this; }
         public Builder detalhes(String detalhes)         { this.detalhes = detalhes; return this; }
         public Builder origem(String origem)             { this.origem = origem; return this; }
         public Builder tipo(NotificationType tipo)       { this.tipo = tipo; return this; }
-        public Builder modalidade(Modalidade modalidade) { this.modalidade = modalidade; return this; }
+        public Builder modalidade(Modality modalidade) { this.modalidade = modalidade; return this; }
 
         /** Atalho: SUCCESS (NAO_MODAL) */
         public Builder success(String titulo, String descricao) {
             this.titulo = titulo;
             this.descricao = descricao;
             this.tipo = NotificationType.SUCCESS;
-            this.modalidade = Modalidade.NAO_MODAL;
+            this.modalidade = Modality.NAO_MODAL;
             return this;
         }
 
@@ -82,7 +82,7 @@ public final class NotificationInfo {
             this.titulo = titulo;
             this.descricao = descricao;
             this.tipo = NotificationType.ERROR;
-            this.modalidade = Modalidade.MODAL;
+            this.modalidade = Modality.MODAL;
             return this;
         }
 
@@ -93,7 +93,7 @@ public final class NotificationInfo {
             this.detalhes = detalhes;
             this.origem = origem;
             this.tipo = NotificationType.ERROR;
-            this.modalidade = Modalidade.MODAL;
+            this.modalidade = Modality.MODAL;
             return this;
         }
 
@@ -102,7 +102,7 @@ public final class NotificationInfo {
             this.titulo = titulo;
             this.descricao = descricao;
             this.tipo = NotificationType.WARNING;
-            this.modalidade = Modalidade.NAO_MODAL;
+            this.modalidade = Modality.NAO_MODAL;
             return this;
         }
 
@@ -111,7 +111,7 @@ public final class NotificationInfo {
             this.titulo = titulo;
             this.descricao = descricao;
             this.tipo = NotificationType.INFO;
-            this.modalidade = Modalidade.NAO_MODAL;
+            this.modalidade = Modality.NAO_MODAL;
             return this;
         }
 

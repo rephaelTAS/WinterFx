@@ -2,8 +2,8 @@ package com.ossobo.winterfx.OwnerWindowProvider;
 
 
 import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.di.annotations.Component;
-import com.ossobo.winterfx.di.annotations.ScopeAnnotation;
+import com.ossobo.winterfx.anotations.Component;
+import com.ossobo.winterfx.anotations.Scope;
 
 import com.ossobo.winterfx.di.scopes.enums.ScopeType;
 import javafx.application.Platform;
@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Component
-@ScopeAnnotation(ScopeType.SINGLETON)
+@Scope(ScopeType.SINGLETON)
 public class OwnerWindowProvider {
     private static final Logger logger = LoggerFactory.getLogger(OwnerWindowProvider.class);
 

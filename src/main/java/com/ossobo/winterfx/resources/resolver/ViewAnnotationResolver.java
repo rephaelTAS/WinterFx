@@ -1,10 +1,8 @@
 package com.ossobo.winterfx.resources.resolver;
 
-import com.ossobo.winterfx.di.annotations.RegisterView;
+import com.ossobo.winterfx.view.anotations.RegisterView;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor.*;
-import com.ossobo.winterfx.resources.enums.ModeUse;
-import com.ossobo.winterfx.resources.enums.ResourceOrigin;
+import com.ossobo.winterfx.view.enums.ModeUse;
 
 import java.net.URL;
 import java.util.ArrayList;

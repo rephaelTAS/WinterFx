@@ -1,6 +1,6 @@
 package com.ossobo.winterfx.di.instantiation;
 
-import com.ossobo.winterfx.di.scanner.models.BeanDefinition;
+import com.ossobo.winterfx.scanner.models.BeanDefinition;
 
 public interface InstantiationStrategy {
 

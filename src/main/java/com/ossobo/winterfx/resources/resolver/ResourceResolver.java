@@ -6,7 +6,7 @@ import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
 import com.ossobo.winterfx.resources.enums.ResourceOrigin;
 import com.ossobo.winterfx.resources.enums.ResourceType;
 import com.ossobo.winterfx.resources.excecoes.ResourceNotFoundException;
-import com.ossobo.winterfx.resources.registry.ResourceRegistry;
+import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 
 import java.io.InputStream;
 import java.net.URL;

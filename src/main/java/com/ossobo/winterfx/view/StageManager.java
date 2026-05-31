@@ -1,12 +1,12 @@
 package com.ossobo.winterfx.view;
 
-
 import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.di.annotations.FloatingWindow;
-import com.ossobo.winterfx.di.annotations.InjectView;
+import com.ossobo.winterfx.notifications.enums.AlertType;
+import com.ossobo.winterfx.view.floatingwindow.anotations.FloatingWindow;
+import com.ossobo.winterfx.view.anotations.InjectView;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.resources.enums.ViewType;
-import com.ossobo.winterfx.resources.registry.ResourceRegistry;
+import com.ossobo.winterfx.view.enums.ViewType;
+import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.design.StyleManager;
 import com.ossobo.winterfx.view.loader.FXMLService;
 import com.ossobo.winterfx.view.loader.LoadedView;
@@ -20,7 +20,9 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
@@ -32,29 +34,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 🎬 StageManager v5.1
+ * 🎬 StageManager v5.3
  *
  * PONTO ÚNICO para carregamento de FXML + CSS + Injeção de Dependências.
- *
- * <p><b>🔥 NOVO v5.1:</b></p>
- * <ul>
- *   <li>Injeção de @Inject nos controllers FXML (via DiContainer.injectDependencies)</li>
- *   <li>Suporte a @FloatingWindow (delega para FloatingWindowManager)</li>
- *   <li>Usa ResourceRegistry como fonte única de views</li>
- * </ul>
- *
- * <p><b>Fluxo de Injeção:</b></p>
- * <pre>
- * StageManager.loadView("livros")
- *   → FXMLService.load()
- *     → DiContainer.getBean(LivrosController.class)
- *     → DiContainer.injectDependencies(controller)  // 🔥 @Inject resolvido!
- *     → FXMLLoader.load()
- * </pre>
+ * Suporte a alertas UNDECORATED com temporizador.
  */
 public class StageManager {
 
     private static final Logger LOGGER = Logger.getLogger(StageManager.class.getName());
+
+    // 🆕 Cache de controllers ativos (carregados pelo JavaFX com @FXML)
+    private final Map<Class<?>, Object> activeControllers = new ConcurrentHashMap<>();
 
     // =============================================
     // DEPENDÊNCIAS
@@ -83,27 +73,37 @@ public class StageManager {
     public StageManager(ResourceRegistry registry) {
         this.registry = registry;
         this.diContainer = DiContainer.getInstance();
-        this.fxmlService = new FXMLService();
+        this.fxmlService = new FXMLService(diContainer);
         this.styleManager = StyleManager.getInstance();
         this.refreshManager = new RefreshManager();
+        LOGGER.info("🎬 StageManager v5.3 inicializado");
+    }
 
-        LOGGER.info("🎬 StageManager v5.1 inicializado");
+    // =============================================
+    // 🆕 CACHE DE CONTROLLERS ATIVOS
+    // =============================================
+
+    private void registerActiveController(Object controller) {
+        if (controller != null) {
+            activeControllers.put(controller.getClass(), controller);
+            LOGGER.log(Level.FINE, "📝 Controller registrado: {0}",
+                    controller.getClass().getSimpleName());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T findActiveController(Class<T> type) {
+        return (T) activeControllers.get(type);
     }
 
     // =============================================
     // 🔥 PROCESSAMENTO DE @InjectView
     // =============================================
 
-    /**
-     * Processa anotações @InjectView em um bean.
-     * Chamado após o DiContainer injetar dependências.
-     */
     public void processAnnotations(Object bean) {
         if (bean == null) return;
-
         Class<?> clazz = bean.getClass();
-
-        for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
+        for (Field field : clazz.getDeclaredFields()) {
             InjectView injectView = field.getAnnotation(InjectView.class);
             if (injectView != null) {
                 processInjectView(bean, field, injectView);
@@ -111,42 +111,23 @@ public class StageManager {
         }
     }
 
-    // =============================================
-    // 🔥 PROCESSAMENTO DE @FloatingWindow (NOVO!)
-    // =============================================
-
-    /**
-     * Processa métodos anotados com @FloatingWindow em um controller.
-     * 🔥 USADO POR: FloatingWindowManager
-     *
-     * @param controller O controller que contém os métodos @FloatingWindow
-     */
     public void processFloatingWindows(Object controller) {
         if (controller == null) return;
-
         Class<?> clazz = controller.getClass();
         Set<Method> methods = diContainer.findMethodsWithAnnotation(FloatingWindow.class);
-
         for (Method method : methods) {
             if (method.getDeclaringClass().equals(clazz)) {
                 FloatingWindow annotation = method.getAnnotation(FloatingWindow.class);
-                LOGGER.log(Level.FINE, "🔍 @FloatingWindow encontrado: {0}.{1}() → viewId={2}",
+                LOGGER.log(Level.FINE, "🔍 @FloatingWindow: {0}.{1}() → viewId={2}",
                         new Object[]{clazz.getSimpleName(), method.getName(), annotation.viewId()});
             }
         }
     }
 
-    // =============================================
-    // PROCESSAMENTO DE @InjectView
-    // =============================================
-
-    private void processInjectView(Object bean, java.lang.reflect.Field field,
-                                   InjectView annotation) {
+    private void processInjectView(Object bean, Field field, InjectView annotation) {
         String viewId = annotation.value();
-
         try {
             Optional<ViewDescriptor> optDescriptor = registry.findViewById(viewId);
-
             if (optDescriptor.isEmpty()) {
                 if (annotation.required()) {
                     throw new IllegalArgumentException("View não registrada: '" + viewId + "'");
@@ -158,9 +139,7 @@ public class StageManager {
             ViewDescriptor descriptor = optDescriptor.get();
 
             if (annotation.newStage()) {
-                String title = !annotation.title().isEmpty()
-                        ? annotation.title()
-                        : descriptor.getTitle();
+                String title = !annotation.title().isEmpty() ? annotation.title() : descriptor.getTitle();
                 Stage stage = openInNewStage(viewId, title, descriptor);
                 field.setAccessible(true);
                 field.set(bean, stage);
@@ -175,7 +154,6 @@ public class StageManager {
             } else {
                 view = loadViewAsParent(viewId, descriptor);
             }
-
             injectViewIntoField(bean, field, view, viewId, annotation.child());
 
         } catch (Exception e) {
@@ -186,9 +164,8 @@ public class StageManager {
         }
     }
 
-    private void injectViewIntoField(Object bean, java.lang.reflect.Field field,
-                                     Parent view, String viewId, String childId)
-            throws IllegalAccessException {
+    private void injectViewIntoField(Object bean, Field field, Parent view,
+                                     String viewId, String childId) throws IllegalAccessException {
         field.setAccessible(true);
         Class<?> fieldType = field.getType();
 
@@ -203,29 +180,26 @@ public class StageManager {
                     pane.getChildren().add(view);
                 }
             }
-        } else if (Parent.class.isAssignableFrom(fieldType) ||
-                Node.class.isAssignableFrom(fieldType)) {
+        } else if (Parent.class.isAssignableFrom(fieldType) || Node.class.isAssignableFrom(fieldType)) {
             field.set(bean, view);
         }
-
         LOGGER.info("✅ View injetada: '" + viewId + "' → " + field.getName());
     }
 
-    /**
-     * 🔥 Carrega uma view para janela flutuante.
-     * SEMPRE cria nova instância se fresh=true (dados novos).
-     * Usa cache se fresh=false (mesma instância).
-     */
+    // =============================================
+    // CARREGAMENTO DE VIEW FLUTUANTE
+    // =============================================
+
     public LoadedView<?> loadFloatingView(String viewId, boolean fresh) {
         ViewDescriptor descriptor = getDescriptor(viewId);
-
+        LoadedView<?> loadedView;
         if (fresh) {
-            // 🔥 NOVA instância - dados frescos!
-            return fxmlService.loadFresh(descriptor, Object.class);
+            loadedView = fxmlService.loadFresh(descriptor, Object.class);
+        } else {
+            loadedView = fxmlService.load(descriptor, Object.class);
         }
-
-        // Usa cache - mesma instância
-        return fxmlService.load(descriptor, Object.class);
+        registerActiveController(loadedView.getController());
+        return loadedView;
     }
 
     // =============================================
@@ -244,9 +218,9 @@ public class StageManager {
         cacheMisses++;
         LoadedView<T> loadedView = fxmlService.load(descriptor, (Class<T>) Object.class);
 
-        // 🔥 INJETA DEPENDÊNCIAS NO CONTROLLER
         if (loadedView.getController() != null) {
             diContainer.injectDependencies(loadedView.getController());
+            registerActiveController(loadedView.getController());
         }
 
         styleManager.apply(loadedView.getRoot(), descriptor);
@@ -268,9 +242,9 @@ public class StageManager {
         cacheMisses++;
         LoadedView<?> loadedView = fxmlService.load(descriptor, Object.class);
 
-        // 🔥 INJETA DEPENDÊNCIAS NO CONTROLLER
         if (loadedView.getController() != null) {
             diContainer.injectDependencies(loadedView.getController());
+            registerActiveController(loadedView.getController());
         }
 
         styleManager.apply(loadedView.getRoot(), descriptor);
@@ -289,22 +263,17 @@ public class StageManager {
         LoadedView<T> loadedView = fxmlService.loadFresh(
                 descriptor, (Class<T>) Object.class, (Consumer<T>) configurator);
 
-        // 🔥 INJETA DEPENDÊNCIAS NO CONTROLLER
         if (loadedView.getController() != null) {
             diContainer.injectDependencies(loadedView.getController());
+            registerActiveController(loadedView.getController());
         }
 
         styleManager.apply(loadedView.getRoot(), descriptor);
         return loadedView;
     }
 
-    // =============================================
-    // CARREGAMENTO ASSÍNCRONO
-    // =============================================
-
     private void loadViewAsync(String viewId, ViewDescriptor descriptor,
-                               Object bean, java.lang.reflect.Field field,
-                               InjectView annotation) {
+                               Object bean, Field field, InjectView annotation) {
         LOGGER.info("⏳ Carregando view async: '" + viewId + "'");
         CompletableFuture.supplyAsync(() -> loadViewAsParent(viewId, descriptor))
                 .thenAccept(root -> {
@@ -326,9 +295,9 @@ public class StageManager {
         LoadedView<?> loadedView = fxmlService.loadFresh(descriptor, Object.class, null);
         Parent root = loadedView.getRoot();
 
-        // 🔥 INJETA DEPENDÊNCIAS NO CONTROLLER
         if (loadedView.getController() != null) {
             diContainer.injectDependencies(loadedView.getController());
+            registerActiveController(loadedView.getController());
         }
 
         styleManager.apply(root, descriptor);
@@ -356,6 +325,9 @@ public class StageManager {
         return stage;
     }
 
+    /**
+     * Abre um alerta padrão (método antigo — compatibilidade).
+     */
     public Stage openAlert(String viewId) {
         ViewDescriptor descriptor = registry.findAlertById(viewId)
                 .orElseThrow(() -> new IllegalArgumentException("Alerta não registrado: '" + viewId + "'"));
@@ -363,12 +335,10 @@ public class StageManager {
         LoadedView<?> loadedView = fxmlService.loadFresh(descriptor, Object.class, null);
         Parent root = loadedView.getRoot();
 
-        // 🔥 INJETA DEPENDÊNCIAS NO CONTROLLER DO ALERTA
         if (loadedView.getController() != null) {
             diContainer.injectDependencies(loadedView.getController());
+            registerActiveController(loadedView.getController());
         }
-
-        styleManager.apply(root, descriptor);
 
         Stage alertStage = new Stage();
         alertStage.setTitle(viewId);
@@ -377,8 +347,8 @@ public class StageManager {
         if (descriptor.getModality() != null) {
             alertStage.initModality(switch (descriptor.getModality()) {
                 case APPLICATION_MODAL -> Modality.APPLICATION_MODAL;
-                case WINDOW_MODAL -> Modality.WINDOW_MODAL;
-                case NONE -> Modality.NONE;
+                case WINDOW_MODAL      -> Modality.WINDOW_MODAL;
+                default                -> Modality.NONE;
             });
         }
 
@@ -387,12 +357,59 @@ public class StageManager {
         return alertStage;
     }
 
+    /**
+     * 🆕 Abre um alerta UNDECORATED com fechamento automático.
+     *
+     * @param viewId ID da view de notificação
+     * @param tipo   Tipo do alerta (define o temporizador)
+     * @return Stage do alerta
+     */
+    public Stage openAlertUndecorated(String viewId, AlertType tipo) {
+        ViewDescriptor descriptor = registry.findAlertById(viewId)
+                .orElseThrow(() -> new IllegalArgumentException("Alerta não registrado: '" + viewId + "'"));
+
+        LoadedView<?> loadedView = fxmlService.loadFresh(descriptor, Object.class);
+        Parent root = loadedView.getRoot();
+
+        if (loadedView.getController() != null) {
+            diContainer.injectDependencies(loadedView.getController());
+            registerActiveController(loadedView.getController());
+        }
+
+        Stage alertStage = new Stage();
+        alertStage.initStyle(StageStyle.UNDECORATED);  // 🆕 Sem bordas!
+        alertStage.setScene(new Scene(root));
+        alertStage.centerOnScreen();
+        alertStage.setAlwaysOnTop(true);
+
+        // 🆕 Temporizador — some automaticamente para tipos leves
+        long duracao = switch (tipo) {
+            case SUCCESS -> 3000;   // 3 segundos
+            case INFO, WARNING -> 5000;  // 5 segundos
+            default -> 0;  // ERROR, CRITICAL, CONFIRMATION → não some
+        };
+
+        if (duracao > 0) {
+            final Stage stage = alertStage;
+            new Thread(() -> {
+                try { Thread.sleep(duracao); } catch (Exception ignored) {}
+                Platform.runLater(() -> {
+                    if (stage.isShowing()) {
+                        stage.close();
+                    }
+                });
+            }).start();
+        }
+
+        alertStage.show();
+        return alertStage;
+    }
+
     // =============================================
     // REFRESH
     // =============================================
 
-    private void registerForRefresh(String viewId, LoadedView<?> loadedView,
-                                    ViewDescriptor descriptor) {
+    private void registerForRefresh(String viewId, LoadedView<?> loadedView, ViewDescriptor descriptor) {
         if (descriptor.getViewType() == ViewType.DYNAMIC && loadedView.getController() != null) {
             Object ctrl = loadedView.getController();
             if (ctrl instanceof RefreshableController refreshable) {
@@ -400,7 +417,6 @@ public class StageManager {
             }
         }
     }
-
 
     // =============================================
     // API PÚBLICA
@@ -430,17 +446,14 @@ public class StageManager {
 
     public void clearCache() {
         viewCache.clear();
+        activeControllers.clear();
         cacheHits = 0;
         cacheMisses = 0;
     }
 
     public int getCacheSize() { return viewCache.size(); }
-
     public ResourceRegistry getRegistry() { return registry; }
-
-    // =============================================
-    // UTILITÁRIOS
-    // =============================================
+    public FXMLService getFxmlService() { return fxmlService; }
 
     private ViewDescriptor getDescriptor(String viewId) {
         return registry.findViewById(viewId)

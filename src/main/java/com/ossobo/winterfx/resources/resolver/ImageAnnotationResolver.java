@@ -1,7 +1,7 @@
 package com.ossobo.winterfx.resources.resolver;
 
-import com.ossobo.winterfx.di.annotations.RegisterImage;
-import com.ossobo.winterfx.di.annotations.RegisterImages;
+import com.ossobo.winterfx.imagemanager.anotations.RegisterImage;
+import com.ossobo.winterfx.imagemanager.anotations.RegisterImages;
 import com.ossobo.winterfx.resources.descriptor.ImageDescriptor;
 
 import java.net.URL;

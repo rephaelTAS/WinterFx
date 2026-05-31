@@ -2,7 +2,7 @@ package com.ossobo.winterfx.di.instantiation.strategies;
 
 import com.ossobo.winterfx.di.instantiation.InstantiationStrategy;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
-import com.ossobo.winterfx.di.scanner.models.BeanDefinition;
+import com.ossobo.winterfx.scanner.models.BeanDefinition;
 
 
 import java.lang.reflect.Method;

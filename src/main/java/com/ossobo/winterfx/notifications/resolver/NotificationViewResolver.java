@@ -1,13 +1,13 @@
 package com.ossobo.winterfx.notifications.resolver;
 
-import com.ossobo.winterfx.di.annotations.enums.NotificationType;
-import com.ossobo.winterfx.di.annotations.enums.StageStyle;
+import com.ossobo.winterfx.notifications.enums.NotificationType;
+import com.ossobo.winterfx.view.enums.StageStyle;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.resources.enums.AlertType;
-import com.ossobo.winterfx.resources.enums.Modality;
-import com.ossobo.winterfx.resources.enums.ModeUse;
+import com.ossobo.winterfx.notifications.enums.AlertType;
+import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
+import com.ossobo.winterfx.view.enums.ModeUse;
 import com.ossobo.winterfx.resources.enums.ResourceOrigin;
-import com.ossobo.winterfx.resources.enums.ViewType;
+import com.ossobo.winterfx.view.enums.ViewType;
 
 import java.net.URL;
 import java.util.logging.Level;

@@ -3,7 +3,7 @@ package com.ossobo.winterfx.di.instantiation;
 import com.ossobo.winterfx.di.instantiation.strategies.ConstructorInstantiationStrategy;
 import com.ossobo.winterfx.di.instantiation.strategies.FactoryMethodStrategy;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
-import com.ossobo.winterfx.di.scanner.models.BeanDefinition;
+import com.ossobo.winterfx.scanner.models.BeanDefinition;
 
 import java.util.ArrayList;
 import java.util.List;

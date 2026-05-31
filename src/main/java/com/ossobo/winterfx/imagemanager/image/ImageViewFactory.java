@@ -1,8 +1,5 @@
 package com.ossobo.winterfx.imagemanager.image;
 
-import com.ossobo.winterfx.di.annotations.Component;
-import com.ossobo.winterfx.di.annotations.ScopeAnnotation;
-import com.ossobo.winterfx.di.scopes.enums.ScopeType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import org.slf4j.Logger;

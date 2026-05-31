@@ -1,7 +1,12 @@
 package com.ossobo.winterfx.di.reflection;
 
-import com.ossobo.winterfx.di.annotations.*;
-import com.ossobo.winterfx.di.scanner.ReflectionScanner;
+import com.ossobo.winterfx.anotations.Inject;
+import com.ossobo.winterfx.anotations.PostConstruct;
+import com.ossobo.winterfx.anotations.PreDestroy;
+import com.ossobo.winterfx.scanner.ReflectionScanner;
+import com.ossobo.winterfx.imagemanager.anotations.InjectImage;
+import com.ossobo.winterfx.view.floatingwindow.anotations.FloatingWindow;
+import com.ossobo.winterfx.view.anotations.InjectView;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -40,7 +45,6 @@ public final class ReflectionCache {
     private final Map<Class<?>, List<Field>> injectViewFields = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Field>> injectImageFields = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Field>> floatingWindowFields = new ConcurrentHashMap<>();
-    private final Map<Class<?>, List<Field>> notifySenderFields = new ConcurrentHashMap<>();
 
     // ===== MÉTRICAS =====
     private final AtomicLong hits = new AtomicLong(0);
@@ -151,14 +155,7 @@ public final class ReflectionCache {
         return !getFloatingWindowFields(type).isEmpty();
     }
 
-    // =============================================
-    // @NotifySender (NotificationManager)
-    // =============================================
 
-    public List<Field> getNotifySenderFields(Class<?> type) {
-        return cache(notifySenderFields, type,
-                () -> scanner.getFieldsWithAnnotation(type, NotifySender.class));
-    }
 
     // =============================================
     // CONVENIÊNCIA
@@ -189,7 +186,6 @@ public final class ReflectionCache {
         stats.put("injectViewFields", (long) injectViewFields.size());
         stats.put("injectImageFields", (long) injectImageFields.size());
         stats.put("floatingWindowFields", (long) floatingWindowFields.size());
-        stats.put("notifySenderFields", (long) notifySenderFields.size());
         return stats;
     }
 
@@ -206,7 +202,6 @@ public final class ReflectionCache {
         injectViewFields.clear();
         injectImageFields.clear();
         floatingWindowFields.clear();
-        notifySenderFields.clear();
         hits.set(0);
         misses.set(0);
     }

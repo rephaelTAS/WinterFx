@@ -10,25 +10,35 @@ import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
 import com.ossobo.winterfx.di.resolver.methods.CircularDependencyDetector;
-import com.ossobo.winterfx.di.scanner.ComponentRegistry;
-import com.ossobo.winterfx.di.scanner.ComponentScanner;
-import com.ossobo.winterfx.di.scanner.ReflectionScanner;
+import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
+import com.ossobo.winterfx.scanner.registry.BeanRegistry;
+import com.ossobo.winterfx.scanner.ReflectionScanner;
 import com.ossobo.winterfx.di.scopes.ScopeManager;
+import com.ossobo.winterfx.view.loader.FXMLService;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Orquestrador de inicialização segura do DiContainer.
+ * BootSequence v3.0 — Orquestrador de inicialização segura do DiContainer.
  *
- * Usa padrão de 2 fases:
- *   FASE 1 — NASCIMENTO: Constrói todas as classes com construtor vazio.
- *   FASE 2 — INJEÇÃO:   Conecta dependências exclusivamente via setters.
+ * <p><b>Mudanças v2.0 → v3.0:</b></p>
+ * <ul>
+ *   <li>🗑️ ComponentScanner removido — scan é feito externamente pelo ScannerEngine</li>
+ *   <li>🔄 BeanRegistry recebido no construtor (já populado)</li>
+ *   <li>🗑️ packages removido — não é mais responsabilidade do BootSequence</li>
+ *   <li>🔄 LifecycleManager simplificado — recebe BeanRegistry + ScopeManager</li>
+ *   <li>🔄 scan() agora só inicializa LifecycleManager (sem ClassGraph)</li>
+ *   <li>🗑️ componentScanner removido do BootResult</li>
+ * </ul>
  *
- * NENHUM construtor recebe null. NENHUMA dependência circular.
- * Cada classe nasce vazia e recebe o que precisa depois.
+ * <p><b>Padrão de 2 fases (mantido):</b></p>
+ * <ul>
+ *   <li>FASE 1 — NASCIMENTO: Constrói todas as classes com construtor vazio</li>
+ *   <li>FASE 2 — INJEÇÃO:   Conecta dependências exclusivamente via setters</li>
+ * </ul>
  *
- * @version v2.0 (18/05/2026)
+ * @version v3.0 (31/05/2026)
  */
 public final class BootSequence {
 
@@ -41,9 +51,11 @@ public final class BootSequence {
     private final LifecycleEventPublisher eventPublisher;
     private final CircularDependencyDetector circularDetector;
     private final ConfigurationManager configurationManager;
-    private final ComponentRegistry componentRegistry;
-    private final ComponentScanner componentScanner;
+    private final BeanRegistry beanRegistry;             // 🔄 Recebido de fora (já populado)
+    // 🗑️ private final ComponentScanner componentScanner;  // REMOVIDO
     private final LifecycleManager lifecycleManager;
+    private final BeanMetadataExtractor metadataExtractor;
+    private final ReflectionScanner reflectionScanner;
 
     // ===== COMPONENTES NÍVEL 1 (recebem dependências via setters) =====
     private InjectionManager injectionManager;
@@ -51,17 +63,20 @@ public final class BootSequence {
     private InstantiationStrategyManager strategyManager;
     private DependencyResolver dependencyResolver;
 
-    private final String[] packages;
+    // 🗑️ private final String[] packages;  // REMOVIDO
 
     /**
-     * FASE 1 — NASCIMENTO: Constrói todas as classes.
+     * 🔄 FASE 1 — NASCIMENTO: Constrói todas as classes.
      *
-     * Nível 0: Infraestrutura (zero dependências)
-     * Nível 1: Managers (criados vazios, recebem dependências na FASE 2)
+     * <p><b>BeanRegistry já vem populado do ScannerEngine.</b>
+     * BootSequence NÃO faz mais scan de classpath.</p>
+     *
+     * @param beanRegistry registry JÁ populado pelo ScannerEngine
      */
-    public BootSequence(String... packages) {
-        this.packages = packages;
-        LOGGER.log(Level.INFO, "🔧 BootSequence FASE 1 — NASCIMENTO: Construindo todas as classes...");
+    public BootSequence(BeanRegistry beanRegistry) {
+        this.beanRegistry = beanRegistry;  // 🔄 Recebido, não criado
+        LOGGER.log(Level.INFO, "🔧 BootSequence v3.0 FASE 1 — NASCIMENTO: {0} beans pré-registados.",
+                beanRegistry.getBeanNames().size());
 
         // ============================================================
         // NÍVEL 0: Infraestrutura — não dependem de ninguém
@@ -72,10 +87,11 @@ public final class BootSequence {
         this.eventPublisher = new LifecycleEventPublisher();
         this.circularDetector = new CircularDependencyDetector();
         this.configurationManager = new ConfigurationManager();
-        this.componentRegistry = new ComponentRegistry();
-        this.componentScanner = new ComponentScanner(componentRegistry, packages);
-        this.lifecycleManager = new LifecycleManager(
-                reflectionCache, reflectionProcessor, scopeManager, eventPublisher);
+        // 🗑️ this.componentScanner = new ComponentScanner(beanRegistry, packages);
+         this.lifecycleManager = new LifecycleManager(
+          reflectionCache, reflectionProcessor, scopeManager, eventPublisher);
+        this.reflectionScanner = new ReflectionScanner();
+        this.metadataExtractor = new BeanMetadataExtractor(reflectionScanner);
 
         // ============================================================
         // NÍVEL 1: Managers — construtores vazios, 100% seguros
@@ -85,31 +101,29 @@ public final class BootSequence {
         this.instanceCreator = new InstanceCreator();
         this.dependencyResolver = new DependencyResolver();
 
-        LOGGER.log(Level.INFO, "   ✅ 13 componentes construídos (4 vazios).");
+        LOGGER.log(Level.INFO, "   ✅ 12 componentes construídos (4 vazios).");  // 🔄 13 → 12
     }
 
     /**
      * FASE 2 — INJEÇÃO: Conecta todas as dependências via setters.
-     *
-     * Ordem não é crítica — cada setter é independente.
-     * Nenhum componente recebe null porque todos já existem.
      */
     private void inject() {
         LOGGER.log(Level.INFO, "🔗 BootSequence FASE 2 — INJEÇÃO: Conectando dependências...");
 
         // ============================================================
-        // dependencyResolver — recebe suas dependências
+        // dependencyResolver
         // ============================================================
-        dependencyResolver.setComponentRegistry(componentRegistry);
+        dependencyResolver.setComponentRegistry(beanRegistry);
         dependencyResolver.setScopeManager(scopeManager);
         dependencyResolver.setInstanceCreator(instanceCreator);
         dependencyResolver.setLifecycleManager(lifecycleManager);
         dependencyResolver.setEventPublisher(eventPublisher);
         dependencyResolver.setCircularDependencyDetector(circularDetector);
-        LOGGER.log(Level.FINE, "   ├─ DependencyResolver ← 6 dependências");
+        dependencyResolver.setMetadataExtractor(metadataExtractor);
+        LOGGER.log(Level.FINE, "   ├─ DependencyResolver ← 7 dependências");
 
         // ============================================================
-        // injectionManager — recebe suas dependências
+        // injectionManager
         // ============================================================
         injectionManager.setReflectionCache(reflectionCache);
         injectionManager.setReflectionProcessor(reflectionProcessor);
@@ -119,7 +133,7 @@ public final class BootSequence {
         LOGGER.log(Level.FINE, "   ├─ InjectionManager ← 5 dependências");
 
         // ============================================================
-        // instanceCreator — recebe suas dependências
+        // instanceCreator
         // ============================================================
         instanceCreator.setReflectionCache(reflectionCache);
         instanceCreator.setReflectionProcessor(reflectionProcessor);
@@ -127,16 +141,22 @@ public final class BootSequence {
         instanceCreator.setInjectionManager(injectionManager);
         instanceCreator.setLifecycleManager(lifecycleManager);
         instanceCreator.setScopeManager(scopeManager);
-        instanceCreator.setComponentRegistry(componentRegistry);
+        instanceCreator.setComponentRegistry(beanRegistry);
         instanceCreator.setEventPublisher(eventPublisher);
         instanceCreator.setStrategyManager(strategyManager);
         LOGGER.log(Level.FINE, "   ├─ InstanceCreator ← 9 dependências");
 
         // ============================================================
-        // strategyManager — recebe suas dependências
+        // strategyManager
         // ============================================================
         strategyManager.setDependencyResolver(dependencyResolver);
         LOGGER.log(Level.FINE, "   ├─ InstantiationStrategyManager ← 1 dependência");
+
+        // ============================================================
+        // 🆕 INICIALIZA INJECTORS (APÓS TODOS OS SETTERS!)
+        // ============================================================
+        injectionManager.initCoreInjectors();
+        LOGGER.log(Level.FINE, "   ├─ InjectionManager.initCoreInjectors() ✅");
 
         LOGGER.log(Level.INFO, "   ✅ Injeção concluída. Todos os componentes conectados.");
     }
@@ -152,7 +172,7 @@ public final class BootSequence {
         checkNotNull(injectionManager, "injectionManager", erros);
         checkNotNull(instanceCreator, "instanceCreator", erros);
         checkNotNull(strategyManager, "strategyManager", erros);
-        checkNotNull(componentRegistry, "componentRegistry", erros);
+        checkNotNull(beanRegistry, "beanRegistry", erros);  // 🔄 Nome corrigido
         checkNotNull(scopeManager, "scopeManager", erros);
         checkNotNull(lifecycleManager, "lifecycleManager", erros);
         checkNotNull(reflectionCache, "reflectionCache", erros);
@@ -175,18 +195,19 @@ public final class BootSequence {
     }
 
     /**
-     * Executa scan de componentes e registra beans.
+     * 🔄 Inicializa o LifecycleManager.
+     *
+     * <p>NÃO faz mais scan de classpath — os beans já estão no BeanRegistry.</p>
      */
     private void scan() {
-        LOGGER.log(Level.INFO, "🔍 BootSequence — Escaneando componentes...");
-        componentScanner.scanAndRegister();
+        LOGGER.log(Level.INFO, "🔍 BootSequence — Inicializando ciclo de vida...");
         lifecycleManager.initialize();
-        LOGGER.log(Level.INFO, "   ✅ Scan concluído. {0} beans registrados.",
-                componentRegistry.getBeanNames().size());
+        LOGGER.log(Level.INFO, "   ✅ LifecycleManager inicializado. {0} beans no registry.",
+                beanRegistry.getBeanNames().size());
     }
 
     /**
-     * Executa a sequência completa: NASCIMENTO → INJEÇÃO → VALIDAÇÃO → SCAN.
+     * Executa a sequência completa: NASCIMENTO → INJEÇÃO → VALIDAÇÃO → CICLO DE VIDA.
      */
     public BootResult boot() {
         inject();
@@ -197,28 +218,30 @@ public final class BootSequence {
                 injectionManager,
                 instanceCreator,
                 strategyManager,
-                componentRegistry,
+                beanRegistry,
                 scopeManager,
                 lifecycleManager,
-                componentScanner
+                // 🗑️ componentScanner REMOVIDO
+                metadataExtractor
         );
     }
 
     /**
-     * Resultado do boot com todos os componentes prontos.
+     * 🔄 Resultado do boot — componentScanner removido.
      */
     public record BootResult(
             DependencyResolver dependencyResolver,
             InjectionManager injectionManager,
             InstanceCreator instanceCreator,
             InstantiationStrategyManager strategyManager,
-            ComponentRegistry componentRegistry,
+            BeanRegistry beanRegistry,
             ScopeManager scopeManager,
             LifecycleManager lifecycleManager,
-            ComponentScanner componentScanner
+            // 🗑️ ComponentScanner componentScanner,  // REMOVIDO
+            BeanMetadataExtractor metadataExtractor
     ) {
         public int getBeanCount() {
-            return componentRegistry.getBeanNames().size();
+            return beanRegistry.getBeanNames().size();
         }
     }
 }

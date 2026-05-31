@@ -1,20 +1,17 @@
 package com.ossobo.winterfx.di.injection;
 
-import com.ossobo.winterfx.di.annotations.Qualifier;
-import com.ossobo.winterfx.di.annotations.Value;
 import com.ossobo.winterfx.di.configuration.ConfigurationManager;
 import com.ossobo.winterfx.di.lifecycle.events.LifecycleEventPublisher;
 import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener;
 import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
+import com.ossobo.winterfx.imagemanager.ImageManager;
+import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
+import com.ossobo.winterfx.view.StageManager;
+import com.ossobo.winterfx.view.floatingwindow.FloatingWindowManager;
+import com.ossobo.winterfx.view.loader.FXMLService;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -44,6 +41,21 @@ public final class InjectionManager {
     private DependencyResolver dependencyResolver;
     private ConfigurationManager configurationManager;
     private LifecycleEventPublisher eventPublisher;
+    private ImageManager imageManager;
+    private ResourceRegistry registry;
+    private FXMLService fxmlService;
+    private StageManager stageManager;
+    private FloatingWindowManager floatingWindowManager;
+
+
+    // 🆕 Injectors como campos — criados UMA vez, reutilizados sempre
+    private ValueInjector valueInjector;
+    private FieldInjector fieldInjector;
+    private MethodInjector methodInjector;
+    private ViewInjector viewInjector;
+    private ImageInjector imageInjector;
+    private  FloatingWindowInjector floatingWindowInjector;
+
 
     // ============================================================
     // CONSTRUTORES
@@ -110,212 +122,94 @@ public final class InjectionManager {
         this.eventPublisher = eventPublisher;
     }
 
+    public void setImageManager(ImageManager imageManager) {
+        this.imageManager = imageManager;
+    }
+
+    public void setRegistry(ResourceRegistry registry) {
+        this.registry = registry;
+    }
+
+    public void setFxmlService(FXMLService fxmlService) {
+        this.fxmlService = fxmlService;
+    }
+
+    public void setValueInjector(ValueInjector valueInjector) {
+        this.valueInjector = valueInjector;
+    }
+
+    public void setFieldInjector(FieldInjector fieldInjector) {
+        this.fieldInjector = fieldInjector;
+    }
+
+    public void setMethodInjector(MethodInjector methodInjector) {
+        this.methodInjector = methodInjector;
+    }
+
+    public void setViewInjector(ViewInjector viewInjector) {
+        this.viewInjector = viewInjector;
+    }
+
+    public void setImageInjector(ImageInjector imageInjector) {
+        this.imageInjector = imageInjector;
+    }
+
+    public void setFloatingWindowManager(FloatingWindowManager floatingWindowManager) {
+        this.floatingWindowManager = floatingWindowManager;
+    }
+
+    public void setStageManager(StageManager stageManager){
+        this.stageManager = stageManager;
+    }
+
     // ============================================================
-    // INJEÇÃO PRINCIPAL
+    // INICIALIZAÇÃO DOS INJECTORS (chamado após todos os setters)
     // ============================================================
 
     /**
-     * Injeta todas as dependências numa instância:
-     * 1. @Value (propriedades)
-     * 2. @Inject campos
-     * 3. @Inject métodos
-     *
-     * @param instance instância do bean recém-criada
+     * Inicializa injectors do DI (dependências já disponíveis no BootSequence).
      */
+// Apenas o método initCoreInjectors muda:
+    public void initCoreInjectors() {
+        this.valueInjector = new ValueInjector(reflectionCache, reflectionProcessor, configurationManager);
+        this.fieldInjector = new FieldInjector(reflectionCache, reflectionProcessor, dependencyResolver, stageManager);
+        this.methodInjector = new MethodInjector(reflectionCache, reflectionProcessor, dependencyResolver);
+    }
+
+    /**
+     * Inicializa injectors de recursos (dependências criadas no WinterApplication).
+     */
+    public void initResourceInjectors() {
+        this.viewInjector = new ViewInjector(reflectionCache, reflectionProcessor, registry, fxmlService);
+        this.imageInjector = new ImageInjector(reflectionCache, reflectionProcessor, imageManager);
+        this.floatingWindowInjector = new FloatingWindowInjector(floatingWindowManager);
+    }
+
+    /**
+     * Inicializa todos de uma vez (quando tudo está disponível).
+     */
+    public void initInjectors() {
+        initCoreInjectors();
+        initResourceInjectors();
+    }
+
+    // ============================================================
+    // INJEÇÃO PRINCIPAL (agora SIMPLES!)
+    // ============================================================
+
     public void inject(Object instance) {
         if (instance == null) return;
-
         Class<?> type = instance.getClass();
 
-        injectValues(instance, type);
-        injectFields(instance, type);
-        injectMethods(instance, type);
+        // 🆕 Usa os campos — sem criar objetos novos
+        valueInjector.inject(instance, type);
+        fieldInjector.inject(instance, type);
+        methodInjector.inject(instance, type);
+        viewInjector.inject(instance, type);
+        imageInjector.inject(instance, type);
+        floatingWindowInjector.inject(instance, type);
 
         eventPublisher.publishEvent(type, null,
                 DependencyLifecycleListener.LifecycleEventType.AFTER_INJECTION, instance);
-    }
-
-    // ===== @Value =====
-
-    /**
-     * Injeta valores de configuração em campos anotados com @Value.
-     * Suporta placeholders ${...} e valores padrão ${key:default}.
-     */
-    private void injectValues(Object instance, Class<?> type) {
-        List<Field> fields = reflectionCache.getInjectableFields(type);
-
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(Value.class)) {
-                Value valueAnnotation = field.getAnnotation(Value.class);
-                String expression = valueAnnotation.value();
-                Object resolvedValue = resolveValue(expression, field.getType());
-                reflectionProcessor.injectField(instance, field, resolvedValue);
-
-                LOGGER.log(Level.FINE, "@Value {0}.{1} = {2}",
-                        new Object[]{type.getSimpleName(), field.getName(), expression});
-            }
-        }
-    }
-
-    /**
-     * Resolve uma expressão @Value.
-     * Ex: "${app.name}" → "MyApp"
-     * Ex: "${app.port:8080}" → "8080" (se não definido)
-     */
-    private Object resolveValue(String expression, Class<?> targetType) {
-        String resolved = configurationManager.resolvePlaceholder(expression);
-
-        if (resolved == null) return null;
-
-        // Conversão de tipos básicos
-        if (targetType == String.class) return resolved;
-        if (targetType == int.class || targetType == Integer.class) return Integer.parseInt(resolved);
-        if (targetType == long.class || targetType == Long.class) return Long.parseLong(resolved);
-        if (targetType == boolean.class || targetType == Boolean.class) return Boolean.parseBoolean(resolved);
-        if (targetType == double.class || targetType == Double.class) return Double.parseDouble(resolved);
-
-        return resolved;
-    }
-
-    // ===== @Inject CAMPOS =====
-
-    /**
-     * Injeta dependências em campos @Inject.
-     */
-    private void injectFields(Object instance, Class<?> type) {
-        List<Field> fields = reflectionCache.getInjectableFields(type);
-
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(Value.class)) continue; // Já tratado
-
-            Object dependency = resolveFieldDependency(field);
-            reflectionProcessor.injectField(instance, field, dependency);
-
-            LOGGER.log(Level.FINE, "@Inject {0}.{1} ← {2}",
-                    new Object[]{type.getSimpleName(), field.getName(),
-                            dependency != null ? dependency.getClass().getSimpleName() : "null"});
-        }
-    }
-
-    /**
-     * Resolve a dependência para um campo @Inject.
-     */
-    private Object resolveFieldDependency(Field field) {
-        Class<?> fieldType = field.getType();
-        java.lang.reflect.Type genericType = field.getGenericType();
-
-        // Coleção?
-        if (Collection.class.isAssignableFrom(fieldType)) {
-            return resolveCollection(genericType);
-        }
-
-        // @Qualifier?
-        String qualifier = getQualifier(field);
-        if (qualifier != null) {
-            return dependencyResolver.getBean(fieldType, qualifier);
-        }
-
-        return dependencyResolver.getBean(fieldType);
-    }
-
-    // ===== @Inject MÉTODOS =====
-
-    /**
-     * Injeta dependências em métodos @Inject com parâmetros.
-     */
-    private void injectMethods(Object instance, Class<?> type) {
-        List<Method> methods = reflectionCache.getInjectableMethods(type);
-
-        for (Method method : methods) {
-            Object[] args = resolveMethodParameters(method);
-            reflectionProcessor.invokeMethod(instance, method, args);
-
-            LOGGER.log(Level.FINE, "@Inject método {0}.{1}()",
-                    new Object[]{type.getSimpleName(), method.getName()});
-        }
-    }
-
-    /**
-     * Resolve os parâmetros de um método @Inject.
-     */
-    private Object[] resolveMethodParameters(Method method) {
-        java.lang.reflect.Parameter[] params = method.getParameters();
-        Object[] args = new Object[params.length];
-
-        for (int i = 0; i < params.length; i++) {
-            args[i] = resolveParameter(params[i]);
-        }
-
-        return args;
-    }
-
-    /**
-     * Resolve um único parâmetro de método.
-     */
-    private Object resolveParameter(java.lang.reflect.Parameter param) {
-        Class<?> paramType = param.getType();
-        java.lang.reflect.Type genericType = param.getParameterizedType();
-
-        // Coleção?
-        if (Collection.class.isAssignableFrom(paramType)) {
-            return resolveCollection(genericType);
-        }
-
-        // @Qualifier?
-        String qualifier = getQualifier(param);
-        if (qualifier != null) {
-            return dependencyResolver.getBean(paramType, qualifier);
-        }
-
-        return dependencyResolver.getBean(paramType);
-    }
-
-    // ===== COLEÇÕES =====
-
-    /**
-     * Resolve coleção de implementações (List<Interface> ou Set<Interface>).
-     */
-    @SuppressWarnings("unchecked")
-    private Object resolveCollection(java.lang.reflect.Type collectionType) {
-        if (!(collectionType instanceof java.lang.reflect.ParameterizedType pt)) {
-            throw new IllegalArgumentException("Coleção deve ser genérica: " + collectionType);
-        }
-
-        Class<?> elementType = (Class<?>) pt.getActualTypeArguments()[0];
-        Class<?> rawType = (Class<?>) pt.getRawType();
-
-        List<?> implementations = dependencyResolver.getAllBeansOfType(elementType);
-
-        if (List.class.isAssignableFrom(rawType)) {
-            return implementations;
-        } else if (Set.class.isAssignableFrom(rawType)) {
-            return new java.util.HashSet<>(implementations);
-        }
-
-        throw new IllegalArgumentException("Tipo de coleção não suportado: " + rawType);
-    }
-
-    // ===== UTILITÁRIOS =====
-
-    /**
-     * Extrai o valor do @Qualifier de um campo.
-     */
-    private String getQualifier(Field field) {
-        if (field.isAnnotationPresent(Qualifier.class)) {
-            String value = field.getAnnotation(Qualifier.class).value();
-            if (!value.isEmpty()) return value;
-        }
-        return null;
-    }
-
-    /**
-     * Extrai o valor do @Qualifier de um parâmetro.
-     */
-    private String getQualifier(java.lang.reflect.Parameter param) {
-        if (param.isAnnotationPresent(Qualifier.class)) {
-            String value = param.getAnnotation(Qualifier.class).value();
-            if (!value.isEmpty()) return value;
-        }
-        return null;
     }
 }

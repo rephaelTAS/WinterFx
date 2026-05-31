@@ -2,9 +2,9 @@ package com.ossobo.winterfx.notifications.core;
 
 import com.ossobo.winterfx.notifications.NotificationManager;
 import com.ossobo.winterfx.notifications.model.UserFriendlyMessage;
-import com.ossobo.winterfx.di.annotations.Component;
-import com.ossobo.winterfx.di.annotations.Inject;
-import com.ossobo.winterfx.di.annotations.enums.NotificationType;
+import com.ossobo.winterfx.anotations.Component;
+import com.ossobo.winterfx.anotations.Inject;
+import com.ossobo.winterfx.notifications.enums.NotificationType;
 
 /**
  * 🛡️ WinterFX Error Handler v12
@@ -127,32 +127,29 @@ public class WinterErrorHandler {
             try {
                 String titulo = message.getTitle();
                 String corpo = message.getBody();
-                String origem = message.getContext();
 
                 switch (level) {
-                    case ERROR -> manager.erro(titulo, corpo,
-                            message.getAction() != null ? message.getAction() : "", origem);
-                    case WARNING -> manager.warn(titulo, corpo, origem);
-                    case SUCCESS -> manager.info(titulo, corpo, origem);
-                    default -> manager.info(titulo, corpo, origem);
+                    case ERROR   -> manager.erro(titulo, corpo);
+                    case WARNING -> manager.warn(titulo, corpo);
+                    case SUCCESS -> manager.info(titulo, corpo);
+                    default      -> manager.info(titulo, corpo);
                 }
             } catch (Exception e) {
-                fallbackNexusFX(message);
+                fallbackWinterFx(message);
             }
         }
 
-        void fallback(Exception originalError, String contexto, Throwable handlerError, NotificationManager manager) {
+        void fallback(Exception originalError, String contexto, Throwable handlerError,
+                      NotificationManager manager) {
             try {
-                manager.erro("Erro no Sistema", "Ocorreu um erro crítico.",
-                        handlerError.getMessage() != null ? handlerError.getMessage() : "Erro desconhecido",
-                        "WinterErrorHandler");
+                manager.erro("Erro no Sistema", "Ocorreu um erro crítico.");
             } catch (Exception e) {
                 System.err.println("❌ FALLBACK CRÍTICO: " + originalError.getMessage());
                 if (handlerError != null) System.err.println("   Handler error: " + handlerError.getMessage());
             }
         }
 
-        private void fallbackNexusFX(UserFriendlyMessage message) {
+        private void fallbackWinterFx(UserFriendlyMessage message) {
             System.err.println("⚠️ FALLBACK - Título: " + message.getTitle());
             System.err.println("   Mensagem: " + message.getBody());
         }

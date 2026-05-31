@@ -1,6 +1,6 @@
 package com.ossobo.winterfx.resources.descriptor;
 
-import com.ossobo.winterfx.resources.enums.ImageType;
+import com.ossobo.winterfx.imagemanager.enums.ImageType;
 import com.ossobo.winterfx.resources.enums.ResourceOrigin;
 import com.ossobo.winterfx.resources.enums.ResourceType;
 
@@ -15,7 +15,6 @@ import java.util.Objects;
  */
 public final class ImageDescriptor extends ResourceDescriptor {
 
-    // ===== ENUMS =====
 
 
     // ===== CAMPOS =====

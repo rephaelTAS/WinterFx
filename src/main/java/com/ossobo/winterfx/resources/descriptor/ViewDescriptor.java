@@ -1,7 +1,12 @@
 package com.ossobo.winterfx.resources.descriptor;
 
-import com.ossobo.winterfx.di.annotations.enums.StageStyle;
+import com.ossobo.winterfx.notifications.enums.AlertType;
+import com.ossobo.winterfx.view.design.enums.CssMode;
+import com.ossobo.winterfx.view.enums.ModeUse;
+import com.ossobo.winterfx.view.enums.StageStyle;
 import com.ossobo.winterfx.resources.enums.*;
+import com.ossobo.winterfx.view.enums.ViewType;
+import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
 
 import java.net.URL;
 import java.util.Collections;

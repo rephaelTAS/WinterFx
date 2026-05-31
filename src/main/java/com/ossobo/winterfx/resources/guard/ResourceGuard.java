@@ -12,7 +12,7 @@ package com.ossobo.winterfx.resources.guard;
 import com.ossobo.winterfx.resources.descriptor.ResourceDescriptor;
 import com.ossobo.winterfx.resources.enums.ResourceType;
 import com.ossobo.winterfx.resources.excecoes.ResourceValidationException;
-import com.ossobo.winterfx.resources.registry.ResourceRegistry;
+import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 
 import java.util.Objects;
 import java.util.logging.Logger;
