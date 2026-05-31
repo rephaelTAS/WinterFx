@@ -79,7 +79,7 @@ public class MinhaAplicacao extends Application {
 ```
 
 #✅ Sem Splash (padrão):
-```
+```java
 public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
@@ -92,7 +92,7 @@ public class Main extends Application {
 }
 ```
 # Com Splash (opcional):
-```
+```java
 public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
