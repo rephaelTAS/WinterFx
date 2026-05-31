@@ -78,6 +78,42 @@ public class MinhaAplicacao extends Application {
 }
 ```
 
+#✅ Sem Splash (padrão):
+```
+public class Main extends Application {
+    @Override
+    public void start(Stage primaryStage) {
+        WinterApplication.getInstance().autoStart(primaryStage);
+    }
+
+    public static void main(String[] args) {
+        WinterApplication.run(Main.class);  // ← UMA LINHA!
+    }
+}
+```
+# Com Splash (opcional):
+```
+public class Main extends Application {
+    @Override
+    public void start(Stage primaryStage) {
+        SplashScreenLoader.showSplashScreen(primaryStage, () -> {
+            mostrarLogin(primaryStage);
+        });
+
+        WinterApplication.getInstance().initializeWithProgress(progress -> {
+            Platform.runLater(() -> {
+                SplashScreenLoader.updateProgress(progress, "Carregando...");
+                if (progress >= 1.0) SplashScreenLoader.completeLoading();
+            });
+        });
+    }
+
+    public static void main(String[] args) {
+        // NÃO chama WinterApplication.run() — inicialização manual
+        Application.launch(Main.class);
+    }
+}
+```
 ---
 
 ## Criando uma View
