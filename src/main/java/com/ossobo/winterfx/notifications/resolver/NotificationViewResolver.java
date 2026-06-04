@@ -10,63 +10,41 @@ import com.ossobo.winterfx.resources.enums.ResourceOrigin;
 import com.ossobo.winterfx.view.enums.ViewType;
 
 import java.net.URL;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * 🔍 NotificationViewResolver v2.0
+ * NotificationViewResolver v2.1
  *
- * Resolve mapeamentos de tipos de notificação.
- *
- * <p><b>🔥 ATUALIZAÇÃO v2.0:</b></p>
- * <ul>
- *   <li>Logs padronizados com java.util.logging</li>
- *   <li>Método estático {@code resolveViewId()} mantido para compatibilidade</li>
- *   <li>Método estático {@code resolveAlertType()} para conversão de tipos</li>
- *   <li>Método estático {@code createDefaultDescriptor()} para criar descritores padrão</li>
- * </ul>
+ * Resolve mapeamentos de tipos de notificação para views FXML.
+ * Os FXMLs estão em META-INF/winterfx/notifications/.
  *
  * <p><b>Mapeamento:</b></p>
  * <ul>
- *   <li>SUCCESS → "winterfx-notify-success" (AlertType.SUCCESS)</li>
- *   <li>ERROR   → "winterfx-notify-error" (AlertType.ERROR)</li>
- *   <li>WARNING → "winterfx-notify-warning" (AlertType.WARNING)</li>
- *   <li>INFO    → "winterfx-notify-info" (AlertType.INFO)</li>
- *   <li>CONFIRMATION → "winterfx-confirm" (AlertType.CONFIRMATION)</li>
+ *   <li>SUCCESS → "winterfx-notify-success"</li>
+ *   <li>ERROR   → "winterfx-notify-error"</li>
+ *   <li>WARNING → "winterfx-notify-warning"</li>
+ *   <li>INFO    → "winterfx-notify-info"</li>
+ *   <li>CONFIRMATION → "winterfx-confirm"</li>
  * </ul>
  */
 public final class NotificationViewResolver {
 
-    private static final Logger LOGGER = Logger.getLogger(NotificationViewResolver.class.getName());
     private static final String PREFIX = "winterfx-notify-";
-    private static final String FXML_BASE_PATH = "/winterfx/notifications/";
+    private static final String FXML_BASE_PATH = "/META-INF/winterfx/notifications/";
 
-    private NotificationViewResolver() {
-        // Classe utilitária - não instanciável
-    }
-
-    // =========================================================================
-    // RESOLUÇÃO DE IDs
-    // =========================================================================
+    private NotificationViewResolver() {}
 
     /**
      * Resolve o ID da view a partir do tipo de notificação.
-     *
-     * @param type Tipo da notificação
-     * @return ID da view (ex: "winterfx-notify-success")
      */
     public static String resolveViewId(NotificationType type) {
         if (type == NotificationType.CONFIRMATION) {
-            return "winterfx-confirm"; // ID especial para confirmação
+            return "winterfx-confirm";
         }
         return PREFIX + type.name().toLowerCase();
     }
 
     /**
      * Resolve o AlertType correspondente ao tipo de notificação.
-     *
-     * @param type Tipo da notificação
-     * @return AlertType correspondente
      */
     public static AlertType resolveAlertType(NotificationType type) {
         return switch (type) {
@@ -78,18 +56,8 @@ public final class NotificationViewResolver {
         };
     }
 
-    // =========================================================================
-    // CRIAÇÃO DE DESCRITORES
-    // =========================================================================
-
     /**
      * Cria um ViewDescriptor padrão para notificação.
-     * Útil para criar notificações dinâmicas sem FXML pré-definido.
-     *
-     * @param type     Tipo da notificação
-     * @param title    Título da notificação
-     * @param duration Duração em milissegundos (0 = não fecha automaticamente)
-     * @return ViewDescriptor configurado
      */
     public static ViewDescriptor createDefaultDescriptor(NotificationType type,
                                                          String title,
@@ -98,11 +66,7 @@ public final class NotificationViewResolver {
         AlertType alertType = resolveAlertType(type);
         URL fxmlUrl = getDefaultFxmlUrl(type);
 
-        if (fxmlUrl == null) {
-            LOGGER.warning("⚠️ FXML padrão não encontrado para: " + type);
-        }
-
-        ViewDescriptor descriptor = ViewDescriptor.builder()
+        return ViewDescriptor.builder()
                 .id(viewId)
                 .fxmlUrl(fxmlUrl)
                 .title(title != null ? title : type.name())
@@ -119,106 +83,50 @@ public final class NotificationViewResolver {
                 .alwaysOnTop(true)
                 .stageStyle(StageStyle.UTILITY)
                 .autoCloseMillis(duration)
-                .closeOnExit(false)
                 .origin(ResourceOrigin.FRAMEWORK)
                 .build();
-
-        LOGGER.log(Level.FINE, "📋 ViewDescriptor criado: {0} [{1}]",
-                new Object[]{viewId, type});
-
-        return descriptor;
     }
-
-    // =========================================================================
-    // RESOLUÇÃO DE URLs
-    // =========================================================================
 
     /**
      * Obtém a URL do FXML padrão para o tipo de notificação.
-     *
-     * <p><b>Ordem de resolução:</b></p>
-     * <ol>
-     *   <li>/winterfx/notifications/{tipo}.fxml</li>
-     *   <li>/winterfx/notifications/default.fxml (fallback)</li>
-     * </ol>
-     *
-     * @param type Tipo da notificação
-     * @return URL do FXML ou null se não encontrado
+     * Procura em /META-INF/winterfx/notifications/{tipo}.fxml
      */
     private static URL getDefaultFxmlUrl(NotificationType type) {
-        // 1. Tenta o FXML específico do tipo
         String specificPath = FXML_BASE_PATH + type.name().toLowerCase() + ".fxml";
         URL url = NotificationViewResolver.class.getResource(specificPath);
+        if (url != null) return url;
 
-        if (url != null) {
-            LOGGER.log(Level.FINE, "✅ FXML específico: {0}", specificPath);
-            return url;
-        }
-
-        // 2. Fallback para default.fxml
         String defaultPath = FXML_BASE_PATH + "default.fxml";
         url = NotificationViewResolver.class.getResource(defaultPath);
-
-        if (url != null) {
-            LOGGER.log(Level.FINE, "⚠️ Usando FXML padrão: {0}", defaultPath);
-            return url;
-        }
-
-        // 3. Nada encontrado
-        LOGGER.warning("❌ Nenhum FXML de notificação encontrado para: " + type);
-        return null;
+        return url;
     }
 
     /**
      * Resolve a URL do FXML para um tipo de notificação.
-     * Método público para uso externo.
-     *
-     * @param type Tipo da notificação
-     * @return URL do FXML
-     * @throws IllegalStateException se o FXML não for encontrado
      */
     public static URL resolveFxmlUrl(NotificationType type) {
         URL url = getDefaultFxmlUrl(type);
         if (url == null) {
-            throw new IllegalStateException(
-                    "FXML de notificação não encontrado para: " + type);
+            throw new IllegalStateException("FXML de notificação não encontrado para: " + type);
         }
         return url;
     }
 
-    // =========================================================================
-    // UTILITÁRIOS
-    // =========================================================================
-
-    /**
-     * Verifica se um tipo de notificação é de confirmação.
-     */
     public static boolean isConfirmation(NotificationType type) {
         return type == NotificationType.CONFIRMATION;
     }
 
-    /**
-     * Verifica se um tipo de notificação é de erro.
-     */
     public static boolean isError(NotificationType type) {
         return type == NotificationType.ERROR;
     }
 
-    /**
-     * Retorna o tempo padrão de auto-fechamento para cada tipo.
-     */
     public static long getDefaultDuration(NotificationType type) {
         return switch (type) {
             case SUCCESS -> 3000;
             case INFO    -> 3000;
             case WARNING -> 4000;
-            case ERROR   -> 0;      // Não fecha automaticamente
-            case CONFIRMATION -> 0; // Não fecha automaticamente
+            case ERROR   -> 0;
+            case CONFIRMATION -> 0;
         };
-    }
-
-    @Override
-    public String toString() {
-        return "NotificationViewResolver[prefix=" + PREFIX + "]";
     }
 }

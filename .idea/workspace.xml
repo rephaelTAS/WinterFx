@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a27d44c0-66c8-4448-b2c2-7ceb0350fffd" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.mvn/wrapper/maven-wrapper.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap/WinterApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap/WinterApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/DiContainer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/DiContainer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/aop/DIInvocationHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/aop/ProxyManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstanceCreator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstanceCreator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/resolver/DependencyResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/resolver/DependencyResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/MethodInterceptor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/NotificationAnnotationProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/NotificationInterceptor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/registry/NotificationViewRegistrar.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/registry/NotificationViewRegistrar.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/resolver/NotificationViewResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/resolver/NotificationViewResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanAnnotationScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanAnnotationScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanMetadataExtractor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanMetadataExtractor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ReflectionScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ReflectionScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ResourceAnnotationScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ResourceAnnotationScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ScannerEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ScannerEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/BeanDefinition.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/BeanDefinition.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/InjectionPoint.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/InjectionPoint.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/InjectionType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/InjectionType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/BeanRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/BeanRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/ResourceRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/ResourceRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader/FXMLService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader/FXMLService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/icons/confirm.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/icons/confirm.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/icons/critical.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/icons/critical.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/icons/error.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/icons/error.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/icons/info.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/icons/info.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/icons/success.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/icons/success.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/icons/warning.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/icons/warning.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/sound/confirmation.mp3" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound/confirmation.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/sound/critical.mp3" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound/critical.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/sound/error.mp3" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound/error.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/sound/info.mp3" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound/info.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/assets/sound/warning.mp3" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound/warning.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/css/dfdf.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/css/dfdf.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/style/alerta-confirmacao.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/style/alerta-confirmacao.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/style/alerta-info.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/style/alerta-info.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/style/alerta-modal.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/style/alerta-modal.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/style/alertas.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/style/alertas.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/style/detailss.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/style/detailss.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/ossobo/winterfx/style/neumorphic.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/style/neumorphic.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/winterfx/notifications/confirmation.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/confirmation.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/winterfx/notifications/error.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/error.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/winterfx/notifications/info.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/info.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/winterfx/notifications/success.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/success.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/winterfx/notifications/warning.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/warning.fxml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Kotlin Class" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="4.04206861803916E-9" />
+      <entry key="MS500" value="0.043542609578344736" />
+      <entry key="S2" value="1.0826893433074134" />
+      <entry key="S5" value="2.2669879127414534" />
+      <entry key="S10" value="2.980871177765438" />
+      <entry key="S30" value="3.669343570186077" />
+      <entry key="S60" value="4.310790559889207" />
+      <entry key="M2" value="5.499221823128232" />
+      <entry key="M5" value="8.040147497901536" />
+      <entry key="M10" value="13.935177996422453" />
+      <entry key="M15" value="21.40087430214134" />
+      <entry key="M30" value="43.7062078049178" />
+      <entry key="H1" value="74.1037777483469" />
+      <entry key="H2" value="106.85667903640731" />
+      <entry key="H4" value="144.8423469849169" />
+      <entry key="D1" value="305.04346553506906" />
+      <entry key="W1" value="448.2480763385537" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="1.0000191805019305" />
+      <entry key="MS500" value="1.1139126600796427" />
+      <entry key="S2" value="1.5809556749707214" />
+      <entry key="S5" value="1.804742984560649" />
+      <entry key="S10" value="1.8970781147089704" />
+      <entry key="S30" value="1.9883358502076265" />
+      <entry key="S60" value="2.200602558261883" />
+      <entry key="M2" value="2.652357207438987" />
+      <entry key="M5" value="3.339463690416966" />
+      <entry key="M10" value="3.9843923541574306" />
+      <entry key="M15" value="4.550643829505201" />
+      <entry key="M30" value="6.145284249515426" />
+      <entry key="H1" value="8.6244423637768" />
+      <entry key="H2" value="12.186470614492631" />
+      <entry key="H4" value="22.284074802975514" />
+      <entry key="D1" value="184.09795230203503" />
+      <entry key="W1" value="380.18123214222095" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.0060035684057792044" />
+      <entry key="MS500" value="0.44574832748476045" />
+      <entry key="S2" value="2.3098982359218354" />
+      <entry key="S5" value="3.896495902311949" />
+      <entry key="S10" value="4.782825005777523" />
+      <entry key="S30" value="5.622366615734053" />
+      <entry key="S60" value="6.4866328138846105" />
+      <entry key="M2" value="8.131327931726275" />
+      <entry key="M5" value="11.366894596762707" />
+      <entry key="M10" value="17.911383628257212" />
+      <entry key="M15" value="25.944900937572168" />
+      <entry key="M30" value="49.84618965613016" />
+      <entry key="H1" value="82.72383344357944" />
+      <entry key="H2" value="119.03973682335696" />
+      <entry key="H4" value="167.12323945973588" />
+      <entry key="D1" value="489.1374584321017" />
+      <entry key="W1" value="828.4281575131927" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="3ED7L1Fk2JBLfLhN6RdS5nN4j6J" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/rtas/11_Programação/Back_End/Java/WinterFx/src/main/resources/META-INF/winterfx/notifications&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;SDKs&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.38390803&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="com.ossobo.winterfx.view.loader" />
+      <recent name="com.ossobo.winterfx.di.scanner.models" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications" />
+      <recent name="$PROJECT_DIR$/src/main/resources/META-INF/winterfx" />
+      <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap" />
+      <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader" />
+      <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/anotations" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.24374.151" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.24374.151" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a27d44c0-66c8-4448-b2c2-7ceb0350fffd" name="Changes" comment="" />
+      <created>1779701226394</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1779701226394</updated>
+      <workItem from="1779701227445" duration="13515000" />
+      <workItem from="1779810839812" duration="8113000" />
+      <workItem from="1779876876144" duration="12176000" />
+      <workItem from="1780059927424" duration="22431000" />
+      <workItem from="1780218158460" duration="32202000" />
+      <workItem from="1780384066839" duration="21806000" />
+      <workItem from="1780495177669" duration="10241000" />
+      <workItem from="1780524600798" duration="585000" />
+      <workItem from="1780563421442" duration="4368000" />
+      <workItem from="1780575780893" duration="889000" />
+      <workItem from="1780580153229" duration="4720000" />
+      <workItem from="1780597899660" duration="5134000" />
+      <workItem from="1780604447341" duration="1917000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

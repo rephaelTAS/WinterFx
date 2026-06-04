@@ -14,6 +14,7 @@ import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
 import com.ossobo.winterfx.scanner.models.BeanDefinition;
 import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.di.scopes.ScopeManager;
+import com.ossobo.winterfx.di.scopes.enums.ScopeType;
 import com.ossobo.winterfx.di.scopes.interfaces.ScopeInterface;
 
 import java.lang.reflect.ParameterizedType;
@@ -24,15 +25,9 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * DependencyResolver v3.1
+ * DependencyResolver v3.2
  *
  * Resolve e cria beans sob demanda, gerenciando o ciclo de vida completo.
- *
- * Suporta inicialização segura via BootSequence:
- * - Construtor vazio para criação sem dependências
- * - Setters para injeção tardia de todas as dependências
- *
- * @version v3.1 (18/05/2026)
  */
 public final class DependencyResolver {
 
@@ -46,21 +41,8 @@ public final class DependencyResolver {
     private CircularDependencyDetector dependencyDetector;
     private BeanMetadataExtractor metadataExtractor;
 
-    // ============================================================
-    // CONSTRUTORES
-    // ============================================================
+    public DependencyResolver() {}
 
-    /**
-     * Construtor vazio — para BootSequence.
-     * Dependências serão injetadas via setters.
-     */
-    public DependencyResolver() {
-        // vazio — dependências chegam via setters
-    }
-
-    /**
-     * Construtor com dependências — compatível com código existente.
-     */
     public DependencyResolver(BeanRegistry beanRegistry, ScopeManager scopeManager,
                               InstanceCreator instanceCreator, LifecycleManager lifecycleManager,
                               LifecycleEventPublisher eventPublisher, CircularDependencyDetector dependencyDetector) {
@@ -73,81 +55,35 @@ public final class DependencyResolver {
         this.beanRegistry.setDependencyResolver(this);
     }
 
-    // ============================================================
-    // SETTERS (BootSequence — INJEÇÃO)
-    // ============================================================
-
-    /** Define o ComponentRegistry e regista este resolver nele. */
-    public void setComponentRegistry(BeanRegistry beanRegistry) {
-        this.beanRegistry = beanRegistry;
-        this.beanRegistry.setDependencyResolver(this);
-    }
-
-    /** Define o ScopeManager após construção. */
-    public void setScopeManager(ScopeManager scopeManager) {
-        this.scopeManager = scopeManager;
-    }
-
-    /**
-     * Define o InstanceCreator após construção.
-     * Este é o setter crítico que elimina o bug "instanceCreator is null".
-     */
-    public void setInstanceCreator(InstanceCreator instanceCreator) {
-        this.instanceCreator = instanceCreator;
-    }
-
-    /** Define o LifecycleManager após construção. */
-    public void setLifecycleManager(LifecycleManager lifecycleManager) {
-        this.lifecycleManager = lifecycleManager;
-    }
-
-    /** Define o LifecycleEventPublisher após construção. */
-    public void setEventPublisher(LifecycleEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
-    }
-
-    /** Define o CircularDependencyDetector após construção. */
-    public void setCircularDependencyDetector(CircularDependencyDetector dependencyDetector) {
-        this.dependencyDetector = dependencyDetector;
-    }
-
-    public void setMetadataExtractor(BeanMetadataExtractor extractor){
-        this.metadataExtractor = extractor;
-    }
-
-    // ============================================================
-    // API PÚBLICA
-    // ============================================================
+    public void setComponentRegistry(BeanRegistry beanRegistry) { this.beanRegistry = beanRegistry; this.beanRegistry.setDependencyResolver(this); }
+    public void setScopeManager(ScopeManager scopeManager) { this.scopeManager = scopeManager; }
+    public void setInstanceCreator(InstanceCreator instanceCreator) { this.instanceCreator = instanceCreator; }
+    public void setLifecycleManager(LifecycleManager lifecycleManager) { this.lifecycleManager = lifecycleManager; }
+    public void setEventPublisher(LifecycleEventPublisher eventPublisher) { this.eventPublisher = eventPublisher; }
+    public void setCircularDependencyDetector(CircularDependencyDetector dependencyDetector) { this.dependencyDetector = dependencyDetector; }
+    public void setMetadataExtractor(BeanMetadataExtractor extractor) { this.metadataExtractor = extractor; }
 
     @SuppressWarnings("unchecked")
-    public <T> T getBean(Class<T> type) {
-        return (T) resolve(type, null);
-    }
+    public <T> T getBean(Class<T> type) { return (T) resolve(type, null); }
 
     @SuppressWarnings("unchecked")
-    public <T> T getBean(Class<T> type, String qualifier) {
-        return (T) resolve(type, qualifier);
-    }
+    public <T> T getBean(Class<T> type, String qualifier) { return (T) resolve(type, qualifier); }
 
     @SuppressWarnings("unchecked")
     public <T> T getBean(String name) {
-        BeanDefinition definition = beanRegistry.getDefinition(name);
-        if (definition == null) throw new BeanNotFoundException("Bean não encontrado: " + name);
-        return (T) resolve(definition.getType(), null);
+        BeanDefinition def = beanRegistry.getDefinition(name);
+        if (def == null) throw new BeanNotFoundException("Bean não encontrado: " + name);
+        return (T) resolve(def.getType(), null);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T getBean(String name, Class<T> type) {
-        return (T) resolve(type, name);
-    }
+    public <T> T getBean(String name, Class<T> type) { return (T) resolve(type, name); }
 
     @SuppressWarnings("unchecked")
     public <T> List<T> getAllBeansOfType(Class<T> type) {
         List<BeanDefinition> definitions = beanRegistry.getAllDefinitionsOfType(type);
         if (definitions.isEmpty()) return Collections.emptyList();
-        return definitions.stream()
-                .map(def -> (T) resolve(def.getType(), null))
-                .collect(Collectors.toList());
+        return definitions.stream().map(def -> (T) resolve(def.getType(), null)).collect(Collectors.toList());
     }
 
     @SuppressWarnings("unchecked")
@@ -168,13 +104,7 @@ public final class DependencyResolver {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T resolve(Type type) {
-        return (T) resolve(type, null);
-    }
-
-    // ============================================================
-    // INTERNO
-    // ============================================================
+    public <T> T resolve(Type type) { return (T) resolve(type, null); }
 
     private Object resolveAndCast(Class<?> type, String qualifierName) {
         if (dependencyDetector.isResolving(type))
@@ -187,11 +117,10 @@ public final class DependencyResolver {
             final Class<?> implType = definition.getType();
             ScopeInterface scope = scopeManager.getScopeHandler(definition.getScopeType().getName());
 
-            @SuppressWarnings({ "unchecked", "rawtypes" })
+            @SuppressWarnings({"unchecked", "rawtypes"})
             Object result = scope.get((Class) implType, () -> {
                 InstanceFactory<?> aotFactory = beanRegistry.getAotFactory(implType);
                 if (aotFactory != null) {
-                    LOGGER.log(Level.FINE, "AOT factory: {0}", implType.getName());
                     return aotFactory.create(this);
                 }
                 if (definition.isFactoryMethod())
@@ -211,8 +140,7 @@ public final class DependencyResolver {
         if (qualifierName != null && !qualifierName.isEmpty()) {
             BeanDefinition def = beanRegistry.getDefinition(qualifierName);
             if (def != null && type.isAssignableFrom(def.getType())) return def;
-            throw new BeanNotFoundException(
-                    "Qualifier '" + qualifierName + "' não encontrado para: " + type.getName());
+            throw new BeanNotFoundException("Qualifier '" + qualifierName + "' não encontrado para: " + type.getName());
         }
         BeanDefinition def = beanRegistry.getDefinition(type);
         if (def != null) return def;
@@ -222,16 +150,12 @@ public final class DependencyResolver {
                 "Múltiplas implementações para " + type.getName() + ". Use @Primary ou @Qualifier.");
 
         if (!type.isInterface() && !java.lang.reflect.Modifier.isAbstract(type.getModifiers())) {
-            String name = Character.toLowerCase(type.getSimpleName().charAt(0))
-                    + type.getSimpleName().substring(1);
-
-
-
-            BeanDefinition newDef = new BeanDefinition(name, type,
-                    com.ossobo.winterfx.di.scopes.enums.ScopeType.SINGLETON,
+            String name = Character.toLowerCase(type.getSimpleName().charAt(0)) + type.getSimpleName().substring(1);
+            BeanDefinition newDef = new BeanDefinition(name, type, ScopeType.SINGLETON,
                     metadataExtractor.extractInjectionPoints(type),
                     metadataExtractor.extractPostConstruct(type),
-                    metadataExtractor.extractPreDestroy(type)  );
+                    metadataExtractor.extractPreDestroy(type),
+                    false, null, Collections.emptyMap());
             beanRegistry.registerDefinition(newDef);
             return newDef;
         }
@@ -250,8 +174,7 @@ public final class DependencyResolver {
             instanceCreator.injectAndPostConstruct(instance);
             return instance;
         } catch (Exception e) {
-            throw new RuntimeException(
-                    "Falha no @Bean " + factoryMethod.getName() + " de " + factoryClass.getName(), e);
+            throw new RuntimeException("Falha no @Bean " + factoryMethod.getName() + " de " + factoryClass.getName(), e);
         }
     }
 
@@ -268,18 +191,13 @@ public final class DependencyResolver {
         Type innerType = dependencyType.getActualTypeArguments()[0];
         if (!(innerType instanceof Class<?> componentType))
             throw new IllegalArgumentException("Coleção requer tipo concreto.");
-        List<BeanDefinition> definitions = beanRegistry.getAllDefinitionsOfType(componentType);
-        List<Object> instances = definitions.stream()
+        List<Object> instances = beanRegistry.getAllDefinitionsOfType(componentType).stream()
                 .map(def -> {
-                    try {
-                        return resolveAndCast(def.getType(), def.getName());
-                    } catch (BeanNotFoundException e) {
-                        return null;
-                    }
+                    try { return resolveAndCast(def.getType(), def.getName()); }
+                    catch (BeanNotFoundException e) { return null; }
                 })
                 .filter(Objects::nonNull).collect(Collectors.toList());
-        if (collectionType.equals(Set.class)) return new HashSet<>(instances);
-        return instances;
+        return collectionType.equals(Set.class) ? new HashSet<>(instances) : instances;
     }
 
     private Class<?> extractRawType(Type type) {
@@ -289,9 +207,7 @@ public final class DependencyResolver {
     }
 
     private String getQualifierValue(java.lang.reflect.Parameter param) {
-        Qualifier qualifier = param
-                .getAnnotation(Qualifier.class);
-        if (qualifier != null && !qualifier.value().isEmpty()) return qualifier.value();
-        return null;
+        Qualifier qualifier = param.getAnnotation(Qualifier.class);
+        return (qualifier != null && !qualifier.value().isEmpty()) ? qualifier.value() : null;
     }
 }

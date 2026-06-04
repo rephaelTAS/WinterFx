@@ -9,17 +9,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ReflectionScanner v2.0
+ * Scanner genérico de reflexão com cache.
  *
- * Scanner genérico de reflection com cache SoftReference.
+ * <p>Responsabilidade: inspecionar classes e retornar metadados brutos
+ * (campos, métodos, construtores, interfaces, anotações).</p>
  *
- * Responsabilidade: inspecionar classes e retornar metadados brutos.
- * NÃO filtra por anotações do framework — isso é responsabilidade
- * do ReflectionCache.
+ * <p>Utiliza {@link SoftReference} para permitir que o GC libere memória
+ * sob pressão.</p>
  *
- * Cache com SoftReference permite que o GC liberte memória sob pressão.
- *
- * @since 2.0
+ * <p>Thread-safe: usa {@link ConcurrentHashMap} para cache.</p>
  */
 public final class ReflectionScanner {
 
@@ -28,14 +26,16 @@ public final class ReflectionScanner {
     private final Map<Class<?>, SoftReference<List<Constructor<?>>>> constructorCache = new ConcurrentHashMap<>();
     private final Map<Class<?>, SoftReference<List<Class<?>>>> interfaceCache = new ConcurrentHashMap<>();
 
-    public ReflectionScanner() {}
-
-    // ===== FIELDS =====
-
+    /**
+     * Obtém todos os campos declarados da classe.
+     */
     public List<Field> getFields(Class<?> type) {
         return getOrLoad(fieldCache, type, t -> Arrays.asList(t.getDeclaredFields()));
     }
 
+    /**
+     * Obtém campos com uma anotação específica.
+     */
     public List<Field> getFieldsWithAnnotation(Class<?> type, Class<? extends Annotation> annotation) {
         List<Field> result = new ArrayList<>();
         for (Field field : getFields(type)) {
@@ -46,12 +46,16 @@ public final class ReflectionScanner {
         return result;
     }
 
-    // ===== METHODS =====
-
+    /**
+     * Obtém todos os métodos declarados da classe.
+     */
     public List<Method> getMethods(Class<?> type) {
         return getOrLoad(methodCache, type, t -> Arrays.asList(t.getDeclaredMethods()));
     }
 
+    /**
+     * Obtém métodos com uma anotação específica.
+     */
     public List<Method> getMethodsWithAnnotation(Class<?> type, Class<? extends Annotation> annotation) {
         List<Method> result = new ArrayList<>();
         for (Method method : getMethods(type)) {
@@ -62,31 +66,37 @@ public final class ReflectionScanner {
         return result;
     }
 
-
-    // ===== CONSTRUCTORS =====
-
+    /**
+     * Obtém todos os construtores declarados da classe.
+     */
     public List<Constructor<?>> getConstructors(Class<?> type) {
         return getOrLoad(constructorCache, type, t -> Arrays.asList(t.getDeclaredConstructors()));
     }
 
-    // ===== INTERFACES =====
-
+    /**
+     * Obtém todas as interfaces implementadas pela classe.
+     */
     public List<Class<?>> getInterfaces(Class<?> type) {
         return getOrLoad(interfaceCache, type, t -> Arrays.asList(t.getInterfaces()));
     }
 
-    // ===== ANNOTATIONS =====
-
+    /**
+     * Verifica se a classe tem uma anotação específica.
+     */
     public boolean hasAnnotation(Class<?> type, Class<? extends Annotation> annotation) {
         return type.isAnnotationPresent(annotation);
     }
 
+    /**
+     * Obtém a anotação de uma classe.
+     */
     public <A extends Annotation> A getAnnotation(Class<?> type, Class<A> annotation) {
         return type.getAnnotation(annotation);
     }
 
-    // ===== LIMPEZA =====
-
+    /**
+     * Limpa todo o cache de reflexão.
+     */
     public void clear() {
         fieldCache.clear();
         methodCache.clear();
@@ -94,15 +104,22 @@ public final class ReflectionScanner {
         interfaceCache.clear();
     }
 
-    // ===== INTERNO =====
-
-    private <K, V> V getOrLoad(Map<K, SoftReference<V>> cache, K key,
-                               java.util.function.Function<K, V> loader) {
+    /**
+     * Carrega ou recupera do cache um valor calculado.
+     */
+    private <K, V> V getOrLoad(
+            Map<K, SoftReference<V>> cache,
+            K key,
+            java.util.function.Function<K, V> loader
+    ) {
         SoftReference<V> ref = cache.get(key);
         if (ref != null) {
             V value = ref.get();
-            if (value != null) return value;
+            if (value != null) {
+                return value;
+            }
         }
+
         V loaded = loader.apply(key);
         cache.put(key, new SoftReference<>(loaded));
         return loaded;

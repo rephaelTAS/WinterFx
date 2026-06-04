@@ -7,14 +7,13 @@
 
     <groupId>com.ossobo</groupId>
     <artifactId>WinterFx</artifactId>
-    <version>10.0.5</version>
+    <version>13.1.4</version>
     <packaging>jar</packaging>
 
     <name>WinterFx</name>
     <description>Framework JavaFX moderno com injeção automática de views, imagens e dependências via anotações</description>
     <url>https://github.com/rephaelTAS/WinterFx</url>
 
-    <!-- Licença -->
     <licenses>
         <license>
             <name>MIT License</name>
@@ -22,7 +21,6 @@
         </license>
     </licenses>
 
-    <!-- Informações do desenvolvedor -->
     <developers>
         <developer>
             <name>Rafael Tavares</name>
@@ -32,22 +30,17 @@
         </developer>
     </developers>
 
-    <!-- ===== PROPRIEDADES CENTRALIZADAS ===== -->
     <properties>
-        <!-- Build -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
         <java.version>25</java.version>
 
-        <!-- JavaFX -->
-        <javafx.version>25.0.3</javafx.version>
+        <javafx.version>25.0.2</javafx.version>
 
-        <!-- Testing -->
         <junit.version>5.10.2</junit.version>
         <mockito.version>5.11.0</mockito.version>
         <testfx.version>4.0.18</testfx.version>
 
-        <!-- Utilities -->
         <reflections.version>0.10.2</reflections.version>
         <classgraph.version>4.8.168</classgraph.version>
         <guava.version>33.2.1-jre</guava.version>
@@ -55,7 +48,6 @@
         <javassist.version>3.29.2-GA</javassist.version>
         <slf4j.version>2.0.16</slf4j.version>
 
-        <!-- UI Libraries -->
         <controlsfx.version>11.2.0</controlsfx.version>
         <formsfx.version>11.7.0</formsfx.version>
         <validatorfx.version>0.4.0</validatorfx.version>
@@ -63,16 +55,13 @@
         <bootstrapfx.version>0.4.0</bootstrapfx.version>
         <tilesfx.version>21.0.9</tilesfx.version>
 
-        <!-- Build Plugins -->
         <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
         <maven.source.plugin.version>3.3.0</maven.source.plugin.version>
         <maven.javadoc.plugin.version>3.6.0</maven.javadoc.plugin.version>
         <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
-        <maven.shade.plugin.version>3.5.1</maven.shade.plugin.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     </properties>
 
-    <!-- ===== REPOSITÓRIOS ===== -->
     <repositories>
         <repository>
             <id>central</id>
@@ -84,24 +73,20 @@
         </repository>
     </repositories>
 
-    <!-- ===== DEPENDÊNCIAS ===== -->
     <dependencies>
 
-        <!-- ==================== CLASSGRAPH (SCAN DE CLASSES) ==================== -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>${classgraph.version}</version>
         </dependency>
 
-        <!-- ==================== REFLECTIONS (SCAN DE CLASSES) ==================== -->
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
             <version>${reflections.version}</version>
         </dependency>
 
-        <!-- ===== JAVAFX CORE (PROVIDED) ===== -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -127,7 +112,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- ===== JAVAFX MEDIA ===== -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-media</artifactId>
@@ -135,7 +119,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ===== JAVAFX OPCIONAL ===== -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-web</artifactId>
@@ -149,7 +132,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ===== LOGGING ===== -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -162,7 +144,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- ===== UTILITIES ===== -->
         <dependency>
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
@@ -179,7 +160,6 @@
             <version>${gson.version}</version>
         </dependency>
 
-        <!-- ===== ICONS (CORE) ===== -->
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-javafx</artifactId>
@@ -191,14 +171,12 @@
             <version>${ikonli.version}</version>
         </dependency>
 
-        <!-- ===== UI COMPONENTS (CORE) ===== -->
         <dependency>
             <groupId>org.kordamp.bootstrapfx</groupId>
             <artifactId>bootstrapfx-core</artifactId>
             <version>${bootstrapfx.version}</version>
         </dependency>
 
-        <!-- ===== UI COMPONENTS (OPCIONAIS) ===== -->
         <dependency>
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
@@ -238,7 +216,6 @@
             </exclusions>
         </dependency>
 
-        <!-- ===== ICON PACKS OPCIONAIS ===== -->
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-fontawesome5-pack</artifactId>
@@ -258,7 +235,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ===== TESTING ===== -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -311,7 +287,6 @@
         </dependency>
     </dependencies>
 
-    <!-- ===== DISTRIBUTION MANAGEMENT ===== -->
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -320,7 +295,6 @@
         </repository>
     </distributionManagement>
 
-    <!-- ===== BUILD CONFIGURATION ===== -->
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
 
@@ -334,7 +308,6 @@
         </resources>
 
         <plugins>
-            <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -350,7 +323,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Source Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -366,7 +338,6 @@
                 </executions>
             </plugin>
 
-            <!-- Surefire Plugin (Testes) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -385,7 +356,6 @@
                 </configuration>
             </plugin>
 
-            <!-- JavaDoc Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -411,7 +381,6 @@
                 </configuration>
             </plugin>
 
-            <!-- JAR Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -428,9 +397,7 @@
         </plugins>
     </build>
 
-    <!-- ===== PROFILES ===== -->
     <profiles>
-        <!-- Profile para desenvolvimento -->
         <profile>
             <id>dev</id>
             <activation>
@@ -450,7 +417,6 @@
             </build>
         </profile>
 
-        <!-- Profile para produção -->
         <profile>
             <id>release</id>
             <build>
