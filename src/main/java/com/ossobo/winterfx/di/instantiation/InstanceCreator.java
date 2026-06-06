@@ -1,5 +1,7 @@
 package com.ossobo.winterfx.di.instantiation;
 
+import com.ossobo.winterfx.anotations.Controller;
+import com.ossobo.winterfx.di.aop.ProxyManager;
 import com.ossobo.winterfx.di.exceptions.DependencyResolutionException;
 import com.ossobo.winterfx.di.injection.InjectionManager;
 import com.ossobo.winterfx.di.lifecycle.LifecycleManager;
@@ -9,6 +11,7 @@ import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
 import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
+import com.ossobo.winterfx.scanner.ReflectionScanner;
 import com.ossobo.winterfx.scanner.models.BeanDefinition;
 import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.di.aot.InstanceFactory;
@@ -24,16 +27,22 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * InstanceCreator v4.0
+ * InstanceCreator v4.3
  *
  * Responsabilidade única: criar instâncias de beans.
  *
- * Pipeline (ordem correta):
- * 1. AOT Factory? → cria com DependencyResolver
- * 2. Estratégia de instanciação → target real
- * 3. Early reference → SingletonScope
- * 4. Injeção (@Inject, @Value) → target real
- * 5. @PostConstruct → target real
+ * <p>Pipeline (ordem correta):</p>
+ * <ol>
+ *   <li>AOT Factory? → cria com DependencyResolver</li>
+ *   <li>Estratégia de instanciação → target real</li>
+ *   <li>Early reference → SingletonScope (target real)</li>
+ *   <li>Injeção (@Inject, @Value) → target real</li>
+ *   <li>@PostConstruct → target real</li>
+ *   <li>Proxy AOP → envolve o target real (exceto Controllers)</li>
+ * </ol>
+ *
+ * <p>Controllers NÃO recebem proxy — o FXMLService gerencia as anotações
+ * dos Controllers via registerAllHandlers().</p>
  */
 public final class InstanceCreator {
 
@@ -49,12 +58,15 @@ public final class InstanceCreator {
     private LifecycleEventPublisher eventPublisher;
     private InstantiationStrategyManager strategyManager;
     private BeanMetadataExtractor metadataExtractor;
+    private ProxyManager proxyManager;
 
     // ============================================================
     // CONSTRUTORES
     // ============================================================
 
-    public InstanceCreator() {}
+    public InstanceCreator() {
+        this.proxyManager = new ProxyManager(new ReflectionScanner());
+    }
 
     public InstanceCreator(ReflectionCache reflectionCache,
                            ReflectionProcessor reflectionProcessor,
@@ -74,10 +86,11 @@ public final class InstanceCreator {
         this.eventPublisher = eventPublisher;
         this.strategyManager = strategyManager;
         this.metadataExtractor = metadataExtractor;
+        this.proxyManager = new ProxyManager(new ReflectionScanner());
     }
 
     // ============================================================
-    // SETTERS (BootSequence — INJEÇÃO)
+    // SETTERS
     // ============================================================
 
     public void setReflectionCache(ReflectionCache reflectionCache) { this.reflectionCache = reflectionCache; }
@@ -90,6 +103,7 @@ public final class InstanceCreator {
     public void setEventPublisher(LifecycleEventPublisher eventPublisher) { this.eventPublisher = eventPublisher; }
     public void setStrategyManager(InstantiationStrategyManager strategyManager) { this.strategyManager = strategyManager; }
     public void setMetadataExtractor(BeanMetadataExtractor metadataExtractor) { this.metadataExtractor = metadataExtractor; }
+    public void setProxyManager(ProxyManager proxyManager) { this.proxyManager = proxyManager; }
 
     // ============================================================
     // CRIAÇÃO PRINCIPAL
@@ -105,26 +119,43 @@ public final class InstanceCreator {
         try {
             BeanDefinition definition = beanRegistry.getDefinition(type);
 
+            // 1. AOT Factory
             if (definition != null) {
                 InstanceFactory<T> aotFactory = (InstanceFactory<T>) beanRegistry.getAotFactory(type);
                 if (aotFactory != null) {
                     T instance = aotFactory.create(dependencyResolver);
-                    finishInstance(instance);
-                    return instance;
+                    injectionManager.inject(instance);
+                    lifecycleManager.invokePostConstruct(instance);
+                    return applyProxy(instance);
                 }
             }
 
+            // 2. Registro on-the-fly
             if (definition == null) {
                 definition = registerOnTheFly(type);
             }
 
+            // 3. Criar target real
             T instance = (T) createWithStrategy(definition);
-            finishInstance(instance);
+
+            // 4. Early reference
+            registerEarlyReference(type, instance);
+
+            // 5. Injeção + @PostConstruct no target real
+            injectionManager.inject(instance);
+            lifecycleManager.invokePostConstruct(instance);
+
+            // 6. Proxy AOP (exceto Controllers)
+            T proxied = applyProxy(instance);
 
             eventPublisher.publishEvent(type, null,
-                    DependencyLifecycleListener.LifecycleEventType.AFTER_POST_CONSTRUCT, instance);
+                    DependencyLifecycleListener.LifecycleEventType.AFTER_POST_CONSTRUCT, proxied);
 
-            return instance;
+            if (proxied != instance) {
+                LOGGER.log(Level.FINE, "🔷 Proxy AOP aplicado: {0}", type.getName());
+            }
+
+            return proxied;
 
         } catch (DependencyResolutionException e) {
             throw e;
@@ -137,8 +168,40 @@ public final class InstanceCreator {
 
     public Object injectAndPostConstruct(Object instance) {
         if (instance == null) return null;
-        finishInstance(instance);
-        return instance;
+        injectionManager.inject(instance);
+        lifecycleManager.invokePostConstruct(instance);
+        return applyProxy(instance);
+    }
+
+    // ============================================================
+    // PROXY AOP
+    // ============================================================
+
+    /**
+     * Aplica proxy AOP ao bean.
+     *
+     * <p><b>NÃO aplica proxy em Controllers</b> — o FXMLService já gerencia
+     * as anotações dos Controllers via registerAllHandlers().</p>
+     *
+     * <p>Estratégia para os demais beans:</p>
+     * <ul>
+     *   <li>Se tiver interface → Proxy JDK</li>
+     *   <li>Se NÃO tiver interface → Proxy ByteBuddy</li>
+     *   <li>Se não puder ser proxyado → retorna instância original</li>
+     * </ul>
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T applyProxy(T instance) {
+        if (proxyManager == null || instance == null) return instance;
+
+        // 🔥 NÃO aplica proxy em Controllers!
+        // O FXMLService já gerencia as anotações dos Controllers.
+        if (instance.getClass().isAnnotationPresent(Controller.class)) {
+            LOGGER.log(Level.FINE, "🎮 Controller detectado: {0} → sem proxy", instance.getClass().getSimpleName());
+            return instance;
+        }
+
+        return (T) proxyManager.createProxyIfNecessary(instance);
     }
 
     // ============================================================
@@ -157,18 +220,6 @@ public final class InstanceCreator {
         }
     }
 
-    private void finishInstance(Object instance) {
-        if (instance == null) return;
-        Class<?> type = instance.getClass();
-        registerEarlyReference(type, instance);
-        injectionManager.inject(instance);
-        lifecycleManager.invokePostConstruct(instance);
-    }
-
-    // ============================================================
-    // EARLY REFERENCE
-    // ============================================================
-
     @SuppressWarnings("unchecked")
     private <T> void registerEarlyReference(Class<?> type, T instance) {
         SingletonScope singletonScope = scopeManager.getSingletonScope();
@@ -176,10 +227,6 @@ public final class InstanceCreator {
             singletonScope.putEarly((Class<T>) type, instance);
         }
     }
-
-    // ============================================================
-    // REGISTO ON-THE-FLY
-    // ============================================================
 
     private BeanDefinition registerOnTheFly(Class<?> type) {
         String name = Character.toLowerCase(type.getSimpleName().charAt(0))

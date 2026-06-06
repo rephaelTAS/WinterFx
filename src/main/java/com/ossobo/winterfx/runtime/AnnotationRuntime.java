@@ -1,7 +1,7 @@
 package com.ossobo.winterfx.runtime;
 
-import com.ossobo.winterfx.runtime.handler.HandlerRegistry;
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
+import com.ossobo.winterfx.runtime.handler.HandlerRegistry;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -10,24 +10,9 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * Motor central de processamento de anotações runtime do WinterFX.
- *
- * <p>Único ponto de entrada para invocação de métodos anotados.
- * Chamado pelo {@code FXMLService} (botões FXML) e diretamente
- * para chamadas internas.</p>
- *
- * <p>Fluxo de execução:</p>
- * <ol>
- *   <li>Encontra o método por reflexão (com cache)</li>
- *   <li>Executa handlers "before"</li>
- *   <li>Invoca o método real</li>
- *   <li>Executa handlers "after" (sucesso ou erro)</li>
- * </ol>
- */
 public final class AnnotationRuntime {
 
-    private static final ConcurrentMap<MethodKey, Method> METHOD_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<MethodKey, MethodResolution> METHOD_CACHE = new ConcurrentHashMap<>();
     private static final HandlerRegistry REGISTRY = new HandlerRegistry();
 
     private AnnotationRuntime() {}
@@ -50,58 +35,99 @@ public final class AnnotationRuntime {
     }
 
     public static Object dispatch(Object target, String methodName, Object... args) {
-        Method method = findMethod(target.getClass(), methodName, args);
-        method.setAccessible(true);
+        Objects.requireNonNull(target, "target não pode ser nulo — proxy ainda não inicializado");
+        Objects.requireNonNull(methodName, "methodName não pode ser nulo");
 
         Object[] safeArgs = args != null ? args : new Object[0];
-        AnnotationContext context = new AnnotationContext(target, method, safeArgs, null, null);
+        MethodResolution resolution = findMethod(target.getClass(), methodName, safeArgs);
 
-        REGISTRY.executeBefore(context);
+        if (resolution.status() != ResolutionStatus.FOUND) {
+            throw new MethodResolutionException(resolution.status(), resolution.detail());
+        }
+
+        return invokeResolved(target, methodName, safeArgs, resolution.method());
+    }
+
+    public static MethodResolution resolveMethod(Class<?> type, String methodName, Object... args) {
+        Objects.requireNonNull(type, "type não pode ser nulo");
+        Objects.requireNonNull(methodName, "methodName não pode ser nulo");
+        Object[] safeArgs = args != null ? args : new Object[0];
+        return findMethod(type, methodName, safeArgs);
+    }
+
+    private static Object invokeResolved(Object target, String methodName, Object[] safeArgs, Method method) {
+        AnnotationContext beforeContext = new AnnotationContext(target, method, safeArgs, null, null);
+        if (REGISTRY.supportsBefore(method)) {
+            REGISTRY.executeBefore(beforeContext);
+        }
 
         try {
             Object result = method.invoke(target, safeArgs);
-            context = new AnnotationContext(target, method, safeArgs, result, null);
-            REGISTRY.executeAfter(context);
+
+            AnnotationContext afterContext = new AnnotationContext(target, method, safeArgs, result, null);
+            if (REGISTRY.supportsAfter(method)) {
+                REGISTRY.executeAfter(afterContext);
+            }
+
             return result;
 
         } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause();
-            context = new AnnotationContext(target, method, safeArgs, null, cause);
-            REGISTRY.executeError(context);
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            AnnotationContext errorContext = new AnnotationContext(target, method, safeArgs, null, cause);
+
+            if (REGISTRY.supportsError(method)) {
+                REGISTRY.executeError(errorContext);
+            }
+
             if (cause instanceof RuntimeException re) throw re;
             throw new RuntimeException("Erro ao invocar " + methodName + ": " + cause.getMessage(), cause);
 
         } catch (Exception e) {
-            context = new AnnotationContext(target, method, safeArgs, null, e);
-            REGISTRY.executeError(context);
+            AnnotationContext errorContext = new AnnotationContext(target, method, safeArgs, null, e);
+
+            if (REGISTRY.supportsError(method)) {
+                REGISTRY.executeError(errorContext);
+            }
+
             throw new RuntimeException("Erro ao invocar " + methodName, e);
         }
     }
 
-    private static Method findMethod(Class<?> type, String name, Object[] args) {
-        MethodKey key = new MethodKey(type, name, args);
-        Method cached = METHOD_CACHE.get(key);
+    private static MethodResolution findMethod(Class<?> type, String name, Object[] args) {
+        MethodKey key = MethodKey.of(type, name, args);
+        MethodResolution cached = METHOD_CACHE.get(key);
         if (cached != null) return cached;
 
-        Class<?> current = type;
-        while (current != null) {
+        boolean nameFound = false;
+
+        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
             for (Method method : current.getDeclaredMethods()) {
                 if (!method.getName().equals(name)) continue;
+                nameFound = true;
                 if (isCompatible(method, args)) {
                     method.setAccessible(true);
-                    METHOD_CACHE.putIfAbsent(key, method);
-                    return method;
+                    MethodResolution resolution = new MethodResolution(method, ResolutionStatus.FOUND, null);
+                    METHOD_CACHE.putIfAbsent(key, resolution);
+                    return resolution;
                 }
             }
-            current = current.getSuperclass();
         }
-        throw new IllegalArgumentException("Método não encontrado: " + name + " em " + type.getName());
+
+        MethodResolution resolution = nameFound
+                ? new MethodResolution(null, ResolutionStatus.SIGNATURE_MISMATCH,
+                "Método encontrado, mas assinatura incompatível: " + name + " em " + type.getName())
+                : new MethodResolution(null, ResolutionStatus.NAME_NOT_FOUND,
+                "Método não encontrado: " + name + " em " + type.getName());
+
+        METHOD_CACHE.putIfAbsent(key, resolution);
+        return resolution;
     }
 
     private static boolean isCompatible(Method method, Object[] args) {
         Class<?>[] paramTypes = method.getParameterTypes();
         int argCount = args == null ? 0 : args.length;
         if (paramTypes.length != argCount) return false;
+
         for (int i = 0; i < paramTypes.length; i++) {
             if (args[i] != null && !isAssignable(paramTypes[i], args[i].getClass())) return false;
         }
@@ -124,18 +150,12 @@ public final class AnnotationRuntime {
                 || (primitive == char.class && wrapper == Character.class);
     }
 
-    private static final class MethodKey {
-        private final Class<?> type;
-        private final String name;
-        private final Class<?>[] argTypes;
-
-        MethodKey(Class<?> type, String name, Object[] args) {
-            this.type = type;
-            this.name = name;
-            this.argTypes = toArgTypes(args);
+    private record MethodKey(Class<?> type, String name, Class<?>[] argTypes) {
+        static MethodKey of(Class<?> type, String name, Object[] args) {
+            return new MethodKey(type, name, toTypes(args));
         }
 
-        private Class<?>[] toArgTypes(Object[] args) {
+        private static Class<?>[] toTypes(Object[] args) {
             if (args == null || args.length == 0) return new Class<?>[0];
             Class<?>[] types = new Class<?>[args.length];
             for (int i = 0; i < args.length; i++) {
@@ -156,4 +176,6 @@ public final class AnnotationRuntime {
             return Objects.hash(type, name) * 31 + Arrays.hashCode(argTypes);
         }
     }
+
+    public record MethodResolution(Method method, ResolutionStatus status, String detail) {}
 }

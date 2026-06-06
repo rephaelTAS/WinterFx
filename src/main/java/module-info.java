@@ -16,6 +16,7 @@ module com.ossobo.winterfx {
     requires org.kordamp.ikonli.core;
     requires org.kordamp.bootstrapfx.core;
     requires org.checkerframework.checker.qual;
+    requires net.bytebuddy;
 
     exports com.ossobo.winterfx.bootstrap;
     exports com.ossobo.winterfx.exceptions;
@@ -53,8 +54,8 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.notifications.registry;
     exports com.ossobo.winterfx.notifications.core;
 
-    exports com.ossobo.winterfx.imagemanager.anotations;  // 🆕
-    exports com.ossobo.winterfx.view.floatingwindow.anotations;  // 🆕
+    exports com.ossobo.winterfx.imagemanager.anotations;
+    exports com.ossobo.winterfx.view.floatingwindow.anotations;
     exports com.ossobo.winterfx.notifications.anotations;
 
     opens com.ossobo.winterfx.view to javafx.fxml;

@@ -3,9 +3,12 @@ package com.ossobo.winterfx.view.loader;
 import com.ossobo.winterfx.di.DiContainer;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
 import com.ossobo.winterfx.runtime.AnnotationRuntime;
+import com.ossobo.winterfx.runtime.MethodResolutionException;
+import com.ossobo.winterfx.runtime.ResolutionStatus;
 import com.ossobo.winterfx.view.exceptios.ViewEngineException;
 import com.ossobo.winterfx.view.refresh.RefreshableController;
 
+import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -13,34 +16,21 @@ import javafx.scene.control.ButtonBase;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-/**
- * FXMLService v5.0
- *
- * Carrega FXML e gerencia handlers de botões.
- * Delega o processamento de anotações para o {@link AnnotationRuntime}.
- *
- * <p>Fluxo:</p>
- * <ol>
- *   <li>Obtém controller do {@code DiContainer}</li>
- *   <li>Carrega FXML e injeta campos {@code @FXML}</li>
- *   <li>Registra handlers nos botões</li>
- *   <li>Botão clicado → {@code AnnotationRuntime.dispatch()}</li>
- * </ol>
- *
- * <p>O desenvolvedor apenas anota os métodos. O WinterFX faz o resto.</p>
- */
 public final class FXMLService {
+
+    private static final Logger LOGGER = Logger.getLogger(FXMLService.class.getName());
 
     private final DiContainer diContainer;
 
     public FXMLService(DiContainer diContainer) {
         this.diContainer = diContainer;
     }
-
-    // ==================== MÉTODOS PÚBLICOS ====================
 
     public <T> LoadedView<T> load(ViewDescriptor descriptor, Class<T> controllerType) {
         return loadInternal(descriptor, controllerType, false, null);
@@ -60,8 +50,6 @@ public final class FXMLService {
         return loadInternal(descriptor, controllerType, true, configurator);
     }
 
-    // ==================== INTERNO ====================
-
     private <T> LoadedView<T> loadInternal(ViewDescriptor descriptor, Class<T> controllerType,
                                            boolean forceFresh, Consumer<T> configurator) {
         try {
@@ -71,6 +59,7 @@ public final class FXMLService {
             if (controllerClass == null || controllerClass == void.class) {
                 controllerClass = controllerType;
             }
+
             Object diController = diContainer.getBean(controllerClass);
 
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
@@ -82,8 +71,7 @@ public final class FXMLService {
             if (controller != null) {
                 diContainer.injectDependencies(controller);
 
-                if (configurator != null && controllerType != null
-                        && controllerType.isInstance(controller)) {
+                if (configurator != null && controllerType != null && controllerType.isInstance(controller)) {
                     configurator.accept(controllerType.cast(controller));
                 }
 
@@ -101,28 +89,78 @@ public final class FXMLService {
         }
     }
 
-    // ==================== REGISTRO DE HANDLERS ====================
-
-    /**
-     * Registra UM handler por botão.
-     * Quando o botão é clicado, delega para {@link AnnotationRuntime#dispatch}.
-     */
     private void registerAllHandlers(Parent root, Object controller) {
+        boolean isProxy = controller.getClass().getName().contains("ByteBuddy")
+                || Proxy.isProxyClass(controller.getClass());
+
         for (Method method : controller.getClass().getDeclaredMethods()) {
             if (!hasRuntimeAnnotations(method)) continue;
 
             String fxId = method.getName();
             Node node = root.lookup("#" + fxId);
 
-            if (node instanceof ButtonBase button) {
-                button.setOnAction(e -> {
-                    AnnotationRuntime.dispatch(controller, method.getName(), e);
-                });
+            if (!(node instanceof ButtonBase button)) continue;
+
+            button.setOnAction(event -> {
+                try {
+                    if (isProxy) {
+                        tryInvokeControllerMethod(controller, method, event);
+                    } else {
+                        dispatchWithFallback(controller, method.getName(), event);
+                    }
+                } catch (MethodResolutionException ex) {
+                    throw new RuntimeException(buildHandlerErrorMessage(method.getName()) + ": " + ex.getMessage(), ex);
+                } catch (Exception ex) {
+                    throw new RuntimeException(buildHandlerErrorMessage(method.getName()), ex);
+                }
+            });
+        }
+    }
+
+    private void dispatchWithFallback(Object controller, String methodName, ActionEvent event) {
+        try {
+            AnnotationRuntime.dispatch(controller, methodName, event);
+        } catch (MethodResolutionException firstFailure) {
+            if (!firstFailure.isSignatureMismatch()) {
+                throw firstFailure;
+            }
+
+            try {
+                AnnotationRuntime.dispatch(controller, methodName);
+                LOGGER.log(Level.WARNING,
+                        "FXMLService: fallback sem ActionEvent usado para {0}. Considere ajustar a assinatura.",
+                        methodName);
+            } catch (MethodResolutionException secondFailure) {
+                throw new IllegalStateException(
+                        "Falha nas duas tentativas para " + methodName + ": [com evento] "
+                                + firstFailure.getMessage() + " | [sem evento] " + secondFailure.getMessage(),
+                        secondFailure
+                );
             }
         }
     }
 
-    /** Verifica se o método possui pelo menos uma anotação runtime. */
+    private void tryInvokeControllerMethod(Object controller, Method method, ActionEvent event) throws Exception {
+        method.setAccessible(true);
+
+        Class<?>[] params = method.getParameterTypes();
+        if (params.length == 0) {
+            method.invoke(controller);
+            return;
+        }
+
+        if (params.length == 1 && event != null && params[0].isAssignableFrom(event.getClass())) {
+            method.invoke(controller, event);
+            return;
+        }
+
+        throw new IllegalArgumentException("Assinatura incompatível para " + method.getName());
+    }
+
+    private String buildHandlerErrorMessage(String methodName) {
+        return "Erro ao invocar handler " + methodName + " via FXMLService";
+    }
+
     private boolean hasRuntimeAnnotations(Method method) {
         return method.isAnnotationPresent(com.ossobo.winterfx.imagemanager.anotations.SwapImage.class)
                 || method.isAnnotationPresent(com.ossobo.winterfx.view.anotations.SwapFxml.class)
