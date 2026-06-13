@@ -5,6 +5,11 @@ module com.ossobo.winterfx {
     requires transitive javafx.base;
     requires transitive javafx.media;
 
+
+    requires org.objectweb.asm;
+    requires org.objectweb.asm.tree;
+    requires org.objectweb.asm.commons;
+
     requires org.slf4j;
     requires org.reflections;
     requires io.github.classgraph;
@@ -17,6 +22,7 @@ module com.ossobo.winterfx {
     requires org.kordamp.bootstrapfx.core;
     requires org.checkerframework.checker.qual;
     requires net.bytebuddy;
+    requires java.instrument;
 
     exports com.ossobo.winterfx.bootstrap;
     exports com.ossobo.winterfx.exceptions;
@@ -57,6 +63,7 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.imagemanager.anotations;
     exports com.ossobo.winterfx.view.floatingwindow.anotations;
     exports com.ossobo.winterfx.notifications.anotations;
+    exports com.ossobo.winterfx.view.controller;
 
     opens com.ossobo.winterfx.view to javafx.fxml;
     opens com.ossobo.winterfx.view.loader to javafx.fxml;
@@ -69,7 +76,13 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.view.floatingwindow.enums;
     exports com.ossobo.winterfx.notifications.enums;
     exports com.ossobo.winterfx.view.enums;
-    exports com.ossobo.winterfx.view.design.enums;
     exports com.ossobo.winterfx.imagemanager.enums;
     exports com.ossobo.winterfx.scanner;
+
+
+    exports com.ossobo.winterfx.di.scopes.implementations;
+    exports com.ossobo.winterfx.di.lifecycle;
+    exports com.ossobo.winterfx.runtime;
+    exports com.ossobo.winterfx.runtime.handler;
+    exports com.ossobo.winterfx.intercept;
 }

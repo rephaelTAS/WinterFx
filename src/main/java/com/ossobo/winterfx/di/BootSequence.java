@@ -135,8 +135,6 @@ public final class BootSequence {
         // ============================================================
         // instanceCreator
         // ============================================================
-        instanceCreator.setReflectionCache(reflectionCache);
-        instanceCreator.setReflectionProcessor(reflectionProcessor);
         instanceCreator.setDependencyResolver(dependencyResolver);
         instanceCreator.setInjectionManager(injectionManager);
         instanceCreator.setLifecycleManager(lifecycleManager);

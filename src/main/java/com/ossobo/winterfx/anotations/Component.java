@@ -5,8 +5,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Component {
-    String value() default ""; // Para dar um nome específico ao bean, se necessário
+    String value() default "";
+    boolean proxy() default true;  // ← NOVO
 }

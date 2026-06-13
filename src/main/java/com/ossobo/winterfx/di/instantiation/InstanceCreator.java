@@ -1,17 +1,20 @@
+// Classe InstanceCreator v2.2 - 2026-06-12
+// Cria instâncias de beans com injeção, lifecycle e proxy WinterFX.
+// Respeita atributo proxy=false nas anotações @Controller, @Service, @Repository, @Component.
 package com.ossobo.winterfx.di.instantiation;
 
+import com.ossobo.winterfx.anotations.Component;
 import com.ossobo.winterfx.anotations.Controller;
-import com.ossobo.winterfx.di.aop.ProxyManager;
+import com.ossobo.winterfx.anotations.Repository;
+import com.ossobo.winterfx.anotations.Service;
 import com.ossobo.winterfx.di.exceptions.DependencyResolutionException;
 import com.ossobo.winterfx.di.injection.InjectionManager;
 import com.ossobo.winterfx.di.lifecycle.LifecycleManager;
 import com.ossobo.winterfx.di.lifecycle.events.LifecycleEventPublisher;
 import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener;
-import com.ossobo.winterfx.di.reflection.ReflectionCache;
-import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
+import com.ossobo.winterfx.runtime.WinterFXProxyFactory;
 import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
-import com.ossobo.winterfx.scanner.ReflectionScanner;
 import com.ossobo.winterfx.scanner.models.BeanDefinition;
 import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.di.aot.InstanceFactory;
@@ -27,30 +30,23 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * InstanceCreator v4.3
+ * Cria instâncias de beans gerenciados pelo container WinterFX.
  *
- * Responsabilidade única: criar instâncias de beans.
+ * <p><b>Fluxo:</b> Resolve definição → Cria instância → Injeta dependências →
+ * Invoca @PostConstruct → Aplica proxy WinterFX → Publica evento.</p>
  *
- * <p>Pipeline (ordem correta):</p>
- * <ol>
- *   <li>AOT Factory? → cria com DependencyResolver</li>
- *   <li>Estratégia de instanciação → target real</li>
- *   <li>Early reference → SingletonScope (target real)</li>
- *   <li>Injeção (@Inject, @Value) → target real</li>
- *   <li>@PostConstruct → target real</li>
- *   <li>Proxy AOP → envolve o target real (exceto Controllers)</li>
- * </ol>
+ * <p><b>Proxy:</b> Respeita o atributo {@code proxy} das anotações
+ * {@code @Controller}, {@code @Service}, {@code @Repository} e {@code @Component}.
+ * Controllers com {@code proxy=false} retornam a instância original,
+ * permitindo que o {@code FXMLService} injete campos {@code @FXML}
+ * antes de aplicar o proxy.</p>
  *
- * <p>Controllers NÃO recebem proxy — o FXMLService gerencia as anotações
- * dos Controllers via registerAllHandlers().</p>
+ * @version 2.2 - Suporte a @Controller(proxy=false), remoção de extractOriginal()
  */
 public final class InstanceCreator {
 
     private static final Logger LOGGER = Logger.getLogger(InstanceCreator.class.getName());
 
-    private ReflectionCache reflectionCache;
-    private ReflectionProcessor reflectionProcessor;
-    private DependencyResolver dependencyResolver;
     private InjectionManager injectionManager;
     private LifecycleManager lifecycleManager;
     private ScopeManager scopeManager;
@@ -58,27 +54,19 @@ public final class InstanceCreator {
     private LifecycleEventPublisher eventPublisher;
     private InstantiationStrategyManager strategyManager;
     private BeanMetadataExtractor metadataExtractor;
-    private ProxyManager proxyManager;
+    private DependencyResolver dependencyResolver;
 
-    // ============================================================
-    // CONSTRUTORES
-    // ============================================================
+    // ==================== CONSTRUTORES ====================
 
-    public InstanceCreator() {
-        this.proxyManager = new ProxyManager(new ReflectionScanner());
-    }
+    public InstanceCreator() {}
 
-    public InstanceCreator(ReflectionCache reflectionCache,
-                           ReflectionProcessor reflectionProcessor,
-                           InjectionManager injectionManager,
+    public InstanceCreator(InjectionManager injectionManager,
                            LifecycleManager lifecycleManager,
                            ScopeManager scopeManager,
                            BeanRegistry beanRegistry,
                            LifecycleEventPublisher eventPublisher,
                            InstantiationStrategyManager strategyManager,
                            BeanMetadataExtractor metadataExtractor) {
-        this.reflectionCache = reflectionCache;
-        this.reflectionProcessor = reflectionProcessor;
         this.injectionManager = injectionManager;
         this.lifecycleManager = lifecycleManager;
         this.scopeManager = scopeManager;
@@ -86,15 +74,10 @@ public final class InstanceCreator {
         this.eventPublisher = eventPublisher;
         this.strategyManager = strategyManager;
         this.metadataExtractor = metadataExtractor;
-        this.proxyManager = new ProxyManager(new ReflectionScanner());
     }
 
-    // ============================================================
-    // SETTERS
-    // ============================================================
+    // ==================== SETTERS ====================
 
-    public void setReflectionCache(ReflectionCache reflectionCache) { this.reflectionCache = reflectionCache; }
-    public void setReflectionProcessor(ReflectionProcessor reflectionProcessor) { this.reflectionProcessor = reflectionProcessor; }
     public void setDependencyResolver(DependencyResolver dependencyResolver) { this.dependencyResolver = dependencyResolver; }
     public void setInjectionManager(InjectionManager injectionManager) { this.injectionManager = injectionManager; }
     public void setLifecycleManager(LifecycleManager lifecycleManager) { this.lifecycleManager = lifecycleManager; }
@@ -103,12 +86,15 @@ public final class InstanceCreator {
     public void setEventPublisher(LifecycleEventPublisher eventPublisher) { this.eventPublisher = eventPublisher; }
     public void setStrategyManager(InstantiationStrategyManager strategyManager) { this.strategyManager = strategyManager; }
     public void setMetadataExtractor(BeanMetadataExtractor metadataExtractor) { this.metadataExtractor = metadataExtractor; }
-    public void setProxyManager(ProxyManager proxyManager) { this.proxyManager = proxyManager; }
 
-    // ============================================================
-    // CRIAÇÃO PRINCIPAL
-    // ============================================================
+    // ==================== CRIAÇÃO PRINCIPAL ====================
 
+    /**
+     * Cria uma instância completa do bean: estratégia → injeção → lifecycle → proxy.
+     *
+     * @param type Classe do bean
+     * @return Instância pronta (com ou sem proxy, conforme anotação)
+     */
     @SuppressWarnings("unchecked")
     public <T> T createInstance(Class<T> type) {
         eventPublisher.publishEvent(type, null,
@@ -119,7 +105,7 @@ public final class InstanceCreator {
         try {
             BeanDefinition definition = beanRegistry.getDefinition(type);
 
-            // 1. AOT Factory
+            // Caminho 1: Factory AOT
             if (definition != null) {
                 InstanceFactory<T> aotFactory = (InstanceFactory<T>) beanRegistry.getAotFactory(type);
                 if (aotFactory != null) {
@@ -130,29 +116,24 @@ public final class InstanceCreator {
                 }
             }
 
-            // 2. Registro on-the-fly
+            // Caminho 2: Registro on-the-fly
             if (definition == null) {
                 definition = registerOnTheFly(type);
             }
 
-            // 3. Criar target real
+            // Caminho 3: Estratégia padrão
             T instance = (T) createWithStrategy(definition);
-
-            // 4. Early reference
             registerEarlyReference(type, instance);
-
-            // 5. Injeção + @PostConstruct no target real
             injectionManager.inject(instance);
             lifecycleManager.invokePostConstruct(instance);
 
-            // 6. Proxy AOP (exceto Controllers)
             T proxied = applyProxy(instance);
 
             eventPublisher.publishEvent(type, null,
                     DependencyLifecycleListener.LifecycleEventType.AFTER_POST_CONSTRUCT, proxied);
 
             if (proxied != instance) {
-                LOGGER.log(Level.FINE, "🔷 Proxy AOP aplicado: {0}", type.getName());
+                LOGGER.log(Level.FINE, "Proxy WinterFX aplicado: {0}", type.getName());
             }
 
             return proxied;
@@ -166,6 +147,9 @@ public final class InstanceCreator {
         }
     }
 
+    /**
+     * Aplica injeção, lifecycle e proxy a uma instância já existente.
+     */
     public Object injectAndPostConstruct(Object instance) {
         if (instance == null) return null;
         injectionManager.inject(instance);
@@ -173,40 +157,78 @@ public final class InstanceCreator {
         return applyProxy(instance);
     }
 
-    // ============================================================
-    // PROXY AOP
-    // ============================================================
+    // ==================== PROXY ====================
 
     /**
-     * Aplica proxy AOP ao bean.
+     * Aplica proxy WinterFX à instância, respeitando as anotações.
      *
-     * <p><b>NÃO aplica proxy em Controllers</b> — o FXMLService já gerencia
-     * as anotações dos Controllers via registerAllHandlers().</p>
+     * <p><b>Ordem de verificação:</b></p>
+     * <ol>
+     *   <li>{@code @Controller(proxy=false)} → retorna original</li>
+     *   <li>{@code @Service(proxy=false)} → retorna original</li>
+     *   <li>{@code @Repository(proxy=false)} → retorna original</li>
+     *   <li>{@code @Component(proxy=false)} → retorna original</li>
+     *   <li>Caso contrário → aplica proxy</li>
+     * </ol>
      *
-     * <p>Estratégia para os demais beans:</p>
-     * <ul>
-     *   <li>Se tiver interface → Proxy JDK</li>
-     *   <li>Se NÃO tiver interface → Proxy ByteBuddy</li>
-     *   <li>Se não puder ser proxyado → retorna instância original</li>
-     * </ul>
+     * <p>Controllers FXML com {@code proxy=false} permitem que o
+     * {@code FXMLLoader} injete campos {@code @FXML} diretamente
+     * na instância original. O proxy é aplicado depois pelo
+     * {@code FXMLService}.</p>
      */
     @SuppressWarnings("unchecked")
     private <T> T applyProxy(T instance) {
-        if (proxyManager == null || instance == null) return instance;
+        if (instance == null) return null;
 
-        // 🔥 NÃO aplica proxy em Controllers!
-        // O FXMLService já gerencia as anotações dos Controllers.
-        if (instance.getClass().isAnnotationPresent(Controller.class)) {
-            LOGGER.log(Level.FINE, "🎮 Controller detectado: {0} → sem proxy", instance.getClass().getSimpleName());
+        Class<?> clazz = instance.getClass();
+
+        // Verifica @Controller — proxy=false retorna original
+        if (clazz.isAnnotationPresent(Controller.class)) {
+            Controller ann = clazz.getAnnotation(Controller.class);
+            if (!ann.proxy()) {
+                LOGGER.fine(() -> "Controller sem proxy: " + clazz.getSimpleName());
+                return instance;
+            }
+        }
+
+        // Verifica @Service — proxy=false retorna original
+        if (clazz.isAnnotationPresent(Service.class)) {
+            Service ann = clazz.getAnnotation(Service.class);
+            if (!ann.proxy()) {
+                LOGGER.fine(() -> "Service sem proxy: " + clazz.getSimpleName());
+                return instance;
+            }
+        }
+
+        // Verifica @Repository — proxy=false retorna original
+        if (clazz.isAnnotationPresent(Repository.class)) {
+            Repository ann = clazz.getAnnotation(Repository.class);
+            if (!ann.proxy()) {
+                LOGGER.fine(() -> "Repository sem proxy: " + clazz.getSimpleName());
+                return instance;
+            }
+        }
+
+        // Verifica @Component genérico — proxy=false retorna original
+        if (clazz.isAnnotationPresent(Component.class)) {
+            Component ann = clazz.getAnnotation(Component.class);
+            if (!ann.proxy()) {
+                LOGGER.fine(() -> "Component sem proxy: " + clazz.getSimpleName());
+                return instance;
+            }
+        }
+
+        // Obtém proxyFactory do InjectionManager
+        WinterFXProxyFactory pf = injectionManager != null ? injectionManager.getProxyFactory() : null;
+        if (pf == null) {
+            LOGGER.warning("ProxyFactory não disponível — bean sem proxy: " + clazz.getName());
             return instance;
         }
 
-        return (T) proxyManager.createProxyIfNecessary(instance);
+        return (T) pf.wrap(instance);
     }
 
-    // ============================================================
-    // PIPELINE INTERNO
-    // ============================================================
+    // ==================== ESTRATÉGIA ====================
 
     private Object createWithStrategy(BeanDefinition definition) {
         InstantiationStrategy strategy = strategyManager.getStrategy(definition);
@@ -220,6 +242,8 @@ public final class InstanceCreator {
         }
     }
 
+    // ==================== REGISTRO ANTECIPADO ====================
+
     @SuppressWarnings("unchecked")
     private <T> void registerEarlyReference(Class<?> type, T instance) {
         SingletonScope singletonScope = scopeManager.getSingletonScope();
@@ -227,6 +251,8 @@ public final class InstanceCreator {
             singletonScope.putEarly((Class<T>) type, instance);
         }
     }
+
+    // ==================== REGISTRO ON-THE-FLY ====================
 
     private BeanDefinition registerOnTheFly(Class<?> type) {
         String name = Character.toLowerCase(type.getSimpleName().charAt(0))

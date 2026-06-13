@@ -2,11 +2,11 @@ package com.ossobo.winterfx.resources.loader;
 
 import com.ossobo.winterfx.resources.descriptor.ImageDescriptor;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.view.design.enums.CssMode;
 import com.ossobo.winterfx.resources.excecoes.ResourceLoadException;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.resources.resolver.ResourceResolver;
 
+import com.ossobo.winterfx.view.enums.CssMode;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;

@@ -2,6 +2,8 @@ package com.ossobo.winterfx.view;
 
 import com.ossobo.winterfx.di.DiContainer;
 import com.ossobo.winterfx.notifications.enums.AlertType;
+import com.ossobo.winterfx.runtime.HandlerRegistry;
+import com.ossobo.winterfx.runtime.WinterFXProxyFactory;
 import com.ossobo.winterfx.view.floatingwindow.anotations.FloatingWindow;
 import com.ossobo.winterfx.view.anotations.InjectView;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
@@ -51,10 +53,12 @@ public class StageManager {
     // =============================================
 
     private final ResourceRegistry registry;
-    private final FXMLService fxmlService;
+    private FXMLService fxmlService;
     private final StyleManager styleManager;
     private final RefreshManager refreshManager;
     private final DiContainer diContainer;
+    private final WinterFXProxyFactory winterFXProxyFactory;
+    private final HandlerRegistry handlerRegistry;
 
     // =============================================
     // CACHES
@@ -70,13 +74,21 @@ public class StageManager {
     // CONSTRUTOR
     // =============================================
 
-    public StageManager(ResourceRegistry registry) {
+    public StageManager(ResourceRegistry registry,
+                        DiContainer diContainer,
+                        StyleManager styleManager,
+                        WinterFXProxyFactory proxyFactory,
+                        HandlerRegistry handlerRegistry) {
         this.registry = registry;
-        this.diContainer = DiContainer.getInstance();
-        this.fxmlService = new FXMLService(diContainer);
-        this.styleManager = StyleManager.getInstance();
+        this.diContainer = diContainer;
+        this.styleManager = styleManager;
+        this.handlerRegistry = handlerRegistry;
+        this.winterFXProxyFactory = proxyFactory;
         this.refreshManager = new RefreshManager();
-        LOGGER.info("🎬 StageManager v5.3 inicializado");
+    }
+
+    public void setFxmlService(FXMLService fxmlService){
+        this.fxmlService = fxmlService;
     }
 
     // =============================================
@@ -458,5 +470,9 @@ public class StageManager {
     private ViewDescriptor getDescriptor(String viewId) {
         return registry.findViewById(viewId)
                 .orElseThrow(() -> new IllegalArgumentException("View não registrada: '" + viewId + "'"));
+    }
+
+    public ViewDescriptor swapFxml(String viewId){
+        return getDescriptor(viewId);
     }
 }

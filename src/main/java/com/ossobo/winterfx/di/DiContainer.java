@@ -12,6 +12,7 @@ import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
 import com.ossobo.winterfx.di.resolver.methods.CircularDependencyDetector;
+import com.ossobo.winterfx.runtime.BeanPostProcessor;
 import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
 import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.scanner.ReflectionScanner;
@@ -36,6 +37,8 @@ public final class DiContainer {
 
     private static final Logger LOGGER = Logger.getLogger(DiContainer.class.getName());
     private static volatile DiContainer INSTANCE;
+
+    private final List<BeanPostProcessor> beanPostProcessors = new ArrayList<>();
 
     private ScopeManager scopeManager;
     private ReflectionScanner reflectionScanner;
@@ -200,4 +203,13 @@ public final class DiContainer {
 
     public InjectionManager getInjectionManager() { return injectionManager; }
     public ReflectionCache getReflectionCache() { return reflectionCache; }
+
+    public void registerBeanPostProcessor(BeanPostProcessor processor) {
+        beanPostProcessors.add(processor);
+    }
+
+    // Adicione este getter:
+    public List<BeanPostProcessor> getBeanPostProcessors() {
+        return Collections.unmodifiableList(beanPostProcessors);
+    }
 }

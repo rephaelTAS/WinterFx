@@ -1,3 +1,4 @@
+// InjectionManager.java - v3.2 completo
 package com.ossobo.winterfx.di.injection;
 
 import com.ossobo.winterfx.di.configuration.ConfigurationManager;
@@ -7,6 +8,7 @@ import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
 import com.ossobo.winterfx.imagemanager.ImageManager;
+import com.ossobo.winterfx.runtime.WinterFXProxyFactory;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.view.floatingwindow.FloatingWindowManager;
@@ -15,7 +17,7 @@ import com.ossobo.winterfx.view.loader.FXMLService;
 import java.util.logging.Logger;
 
 /**
- * InjectionManager v3.1
+ * InjectionManager v3.2
  *
  * Responsabilidade única: injetar dependências em instâncias já criadas.
  *
@@ -30,11 +32,13 @@ import java.util.logging.Logger;
  * - @Qualifier para escolher implementação específica
  * - Coleções (List<Interface>, Set<Interface>)
  *
- * @version v3.1 (18/05/2026)
+ * @version v3.2 (12/06/2026) - Adicionado WinterFXProxyFactory
  */
 public final class InjectionManager {
 
     private static final Logger LOGGER = Logger.getLogger(InjectionManager.class.getName());
+
+    // ==================== DEPENDÊNCIAS ====================
 
     private ReflectionCache reflectionCache;
     private ReflectionProcessor reflectionProcessor;
@@ -46,27 +50,24 @@ public final class InjectionManager {
     private FXMLService fxmlService;
     private StageManager stageManager;
     private FloatingWindowManager floatingWindowManager;
+    private WinterFXProxyFactory proxyFactory;  // 🔥 NOVO
 
+    // ==================== INJECTORS ====================
 
-    // 🆕 Injectors como campos — criados UMA vez, reutilizados sempre
     private ValueInjector valueInjector;
     private FieldInjector fieldInjector;
     private MethodInjector methodInjector;
     private ViewInjector viewInjector;
     private ImageInjector imageInjector;
-    private  FloatingWindowInjector floatingWindowInjector;
+    private FloatingWindowInjector floatingWindowInjector;
 
-
-    // ============================================================
-    // CONSTRUTORES
-    // ============================================================
+    // ==================== CONSTRUTORES ====================
 
     /**
      * Construtor vazio — para BootSequence.
      * Dependências serão injetadas via setters.
      */
     public InjectionManager() {
-        // vazio — dependências chegam via setters
     }
 
     /**
@@ -82,42 +83,28 @@ public final class InjectionManager {
         this.eventPublisher = eventPublisher;
     }
 
-    // ============================================================
-    // SETTERS (BootSequence — INJEÇÃO)
-    // ============================================================
+    // ==================== SETTERS ====================
 
-    /**
-     * Define o ReflectionCache após construção.
-     */
+    public void setProxyFactory(WinterFXProxyFactory proxyFactory) {
+        this.proxyFactory = proxyFactory;
+    }
+
     public void setReflectionCache(ReflectionCache reflectionCache) {
         this.reflectionCache = reflectionCache;
     }
 
-    /**
-     * Define o ReflectionProcessor após construção.
-     */
     public void setReflectionProcessor(ReflectionProcessor reflectionProcessor) {
         this.reflectionProcessor = reflectionProcessor;
     }
 
-    /**
-     * Define o DependencyResolver após construção.
-     * Usado pelo BootSequence na fase de INJEÇÃO.
-     */
     public void setDependencyResolver(DependencyResolver dependencyResolver) {
         this.dependencyResolver = dependencyResolver;
     }
 
-    /**
-     * Define o ConfigurationManager após construção.
-     */
     public void setConfigurationManager(ConfigurationManager configurationManager) {
         this.configurationManager = configurationManager;
     }
 
-    /**
-     * Define o LifecycleEventPublisher após construção.
-     */
     public void setEventPublisher(LifecycleEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
@@ -158,18 +145,21 @@ public final class InjectionManager {
         this.floatingWindowManager = floatingWindowManager;
     }
 
-    public void setStageManager(StageManager stageManager){
+    public void setStageManager(StageManager stageManager) {
         this.stageManager = stageManager;
     }
 
-    // ============================================================
-    // INICIALIZAÇÃO DOS INJECTORS (chamado após todos os setters)
-    // ============================================================
+    // ==================== GETTERS ====================
+
+    public WinterFXProxyFactory getProxyFactory() {
+        return proxyFactory;
+    }
+
+    // ==================== INICIALIZAÇÃO ====================
 
     /**
      * Inicializa injectors do DI (dependências já disponíveis no BootSequence).
      */
-// Apenas o método initCoreInjectors muda:
     public void initCoreInjectors() {
         this.valueInjector = new ValueInjector(reflectionCache, reflectionProcessor, configurationManager);
         this.fieldInjector = new FieldInjector(reflectionCache, reflectionProcessor, dependencyResolver, stageManager);
@@ -193,15 +183,16 @@ public final class InjectionManager {
         initResourceInjectors();
     }
 
-    // ============================================================
-    // INJEÇÃO PRINCIPAL (agora SIMPLES!)
-    // ============================================================
+    // ==================== INJEÇÃO PRINCIPAL ====================
 
+    /**
+     * Injeta dependências na instância fornecida.
+     * Ordem: @Value → @Inject campos → @Inject métodos → @InjectView → @InjectImage → @FloatingWindow
+     */
     public void inject(Object instance) {
         if (instance == null) return;
         Class<?> type = instance.getClass();
 
-        // 🆕 Usa os campos — sem criar objetos novos
         valueInjector.inject(instance, type);
         fieldInjector.inject(instance, type);
         methodInjector.inject(instance, type);

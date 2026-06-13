@@ -1,4 +1,4 @@
-package com.ossobo.winterfx.runtime.handler.after;
+package com.ossobo.winterfx.runtime.handler;
 
 import com.ossobo.winterfx.bootstrap.WinterApplication;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
@@ -6,19 +6,23 @@ import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.view.anotations.NewScene;
 import com.ossobo.winterfx.view.loader.LoadedView;
-import com.ossobo.winterfx.runtime.handler.AnnotationContext;
-import com.ossobo.winterfx.runtime.handler.AnnotationHandler;
-
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.List;
+import java.util.logging.Level;
 
-/** Handler para @NewScene — executado DEPOIS do método (sucesso). */
 public class NewSceneHandler implements AnnotationHandler<NewScene> {
+
+    @Override
+    public boolean supports(Annotation annotation) {
+        return annotation instanceof NewScene;
+    }
 
     @Override
     public Class<NewScene> getAnnotationType() {

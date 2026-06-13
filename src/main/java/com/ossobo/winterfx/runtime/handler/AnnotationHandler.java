@@ -12,6 +12,8 @@ import java.lang.annotation.Annotation;
  */
 public interface AnnotationHandler<A extends Annotation> {
 
+    boolean supports(Annotation annotation);
+
     /** @return A classe da anotação que este handler processa */
     Class<A> getAnnotationType();
 
