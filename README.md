@@ -299,8 +299,39 @@ public class LoginController implements WinterFXController {
     }
 }
 ```
+---
+
+6. CONFIGURAÇÃO (application.properties)
+properties
+# Configurações da aplicação
+app.name=Sistema de Vendas
+app.version=1.0.0
+app.port=8080
+
+# Banco de dados
+db.url=jdbc:mysql://localhost:3306/vendas
+db.user=root
+db.password=123456
+
+# Tema
+app.theme=dark
+app.language=pt-BR
+Usando @Value:
+
+java
+@Service
+public class ConfigService {
+
+    @Value("${app.name}")
+    private String appName;
+
+    @Value("${db.url:jdbc:mysql://localhost:3306/default}")
+    private String dbUrl;
+}
+
 
 ---
+
 
 # 📄 FXML - Regras Fundamentais
 
