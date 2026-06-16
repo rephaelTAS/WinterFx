@@ -1,48 +1,83 @@
-🏔️ WinterFX
-Modern JavaFX Framework - Menos boilerplate. Mais produtividade.
+# 🏔️ WinterFX
 
-https://img.shields.io/badge/Java-25+-blue.svg
-https://img.shields.io/badge/JavaFX-25.0.3-blue.svg
-https://img.shields.io/badge/License-MIT-green.svg
-https://img.shields.io/badge/Maven-3.9+-orange.svg
+> **Modern JavaFX Framework**
+>
+> **Menos boilerplate. Mais produtividade.**
 
-📖 Índice
-Visão Geral
+![Java](https://img.shields.io/badge/Java-25+-blue.svg)
+![JavaFX](https://img.shields.io/badge/JavaFX-25.0.3-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Maven](https://img.shields.io/badge/Maven-3.9+-orange.svg)
 
-Principais Recursos
+---
 
-Instalação
+## ✨ Por que WinterFX?
 
-Quick Start
+Desenvolver aplicações JavaFX normalmente exige muito código repetitivo:
 
-Arquitetura
+* Carregamento manual de FXML
+* Registro de Controllers
+* Navegação entre telas
+* Injeção de dependências
+* Configuração de notificações
+* Troca dinâmica de views
+* Gerenciamento de janelas auxiliares
 
-Criando um Controller
+O **WinterFX** elimina essa complexidade utilizando uma abordagem inspirada no ecossistema Spring, baseada em:
 
-FXML - Regras Fundamentais
+* Anotações
+* Convenções
+* Descoberta automática de componentes
+* Interceptação declarativa
+* Configuração mínima
 
-Anotações de Interceptação
+### Comparação Rápida
 
-Pipeline de Execução
+| JavaFX Puro                 | WinterFX                 |
+| --------------------------- | ------------------------ |
+| FXMLLoader manual           | Automático               |
+| ControllerFactory manual    | Automático               |
+| Navegação manual            | `@NewScene`              |
+| Troca de conteúdo manual    | `@SwapFxml`              |
+| Notificações manuais        | `@OnSuccess`, `@OnError` |
+| Injeção manual              | `@Inject`                |
+| Registro manual de recursos | Automático               |
 
-Injeção de Dependências
+---
 
-Navegação
+# 📖 Índice
 
-Notificações
+* Visão Geral
+* Principais Recursos
+* Instalação
+* Exemplo em 30 Segundos
+* Quick Start
+* Arquitetura
+* Criando um Controller
+* FXML - Regras Fundamentais
+* Anotações de Interceptação
+* Pipeline de Execução
+* Injeção de Dependências
+* Navegação
+* Notificações
+* Imagens
+* Janelas Flutuantes
+* Combinações Avançadas
+* Convenções e Boas Práticas
+* Estrutura de Projeto
+* FAQ
+* Dependências
+* Roadmap
+* Licença
+* Autor
 
-Imagens
+---
 
-Convenções e Boas Práticas
+# 📖 Visão Geral
 
-FAQ
+WinterFX é um framework moderno para JavaFX inspirado na simplicidade e produtividade do Spring Framework.
 
-Licença
-
-Autor
-
-📖 Visão Geral
-WinterFX é um framework para JavaFX inspirado na simplicidade e produtividade do ecossistema Spring. Ele elimina tarefas repetitivas relacionadas a:
+Ele elimina tarefas repetitivas relacionadas a:
 
 ✅ Carregamento de FXML
 
@@ -58,54 +93,109 @@ WinterFX é um framework para JavaFX inspirado na simplicidade e produtividade d
 
 ✅ Navegação entre Views
 
-✅ Interceptação de Anotações
+✅ Interceptação por Anotações
 
 Tudo utilizando uma abordagem baseada em anotações e convenções.
 
-✨ Principais Recursos
-Recurso	Descrição
-🎯 Dependency Injection	Container DI integrado com suporte a Singleton, Prototype e Thread Scope
-📋 View Registry	Registro centralizado de Views via @RegisterView
-🖼️ Image Manager	Registro e cache automático de imagens com fallback
-🔄 Dynamic View Swap	Troca dinâmica de FXML com @SwapFxml
-🪟 Floating Windows	Gerenciamento de janelas desacopladas com @FloatingWindow
-🔔 Notifications	Sistema de notificações com temporizadores automáticos
-🎨 CSS Integration	Aplicação automática de estilos
-⚡ Auto Discovery	Descoberta automática de componentes via ClassGraph
-🧵 Thread Safe	Estruturas concorrentes seguras
-🔄 Pipeline Condicional	Handlers de sucesso/erro mutuamente exclusivos
-📦 Zero Configuração	Funciona out-of-the-box
-🚀 Instalação
-Maven
-xml
+---
+
+# ✨ Principais Recursos
+
+| Recurso                 | Descrição                                            |
+| ----------------------- | ---------------------------------------------------- |
+| 🎯 Dependency Injection | Container DI com Singleton, Prototype e Thread Scope |
+| 📋 View Registry        | Registro centralizado de views                       |
+| 🖼️ Image Manager       | Cache e carregamento automático de imagens           |
+| 🔄 Dynamic View Swap    | Troca dinâmica de FXML                               |
+| 🪟 Floating Windows     | Janelas desacopladas                                 |
+| 🔔 Notifications        | Sistema completo de notificações                     |
+| 🎨 CSS Integration      | Aplicação automática de CSS                          |
+| ⚡ Auto Discovery        | Descoberta automática via ClassGraph                 |
+| 🧵 Thread Safe          | Estruturas concorrentes seguras                      |
+| 🔄 Pipeline Condicional | Fluxos de sucesso e erro exclusivos                  |
+| 📦 Zero Configuration   | Funciona imediatamente                               |
+| 🔍 Busca Recursiva      | Localiza botões em qualquer profundidade do FXML     |
+
+---
+
+# 🚀 Exemplo em 30 Segundos
+
+## Controller
+
+```java
+@Controller(proxy = false)
+@RegisterView(
+    id = "login",
+    fxml = "/fxml/login.fxml"
+)
+public class LoginController implements WinterFXController {
+
+    @Inject
+    private UsuarioService service;
+
+    @OnSuccess(descricao = "Login realizado!")
+    @NewScene(view = "dashboard")
+    public void handleLogin(ActionEvent event) {
+        service.login();
+    }
+}
+```
+
+## FXML
+
+```xml
+<Button fx:id="handleLogin" text="Entrar"/>
+```
+
+## O que acontece?
+
+✅ Controller carregado automaticamente
+
+✅ Serviço injetado automaticamente
+
+✅ Botão vinculado automaticamente
+
+✅ Notificação exibida automaticamente
+
+✅ Navegação automática
+
+---
+
+# 🚀 Instalação
+
+## Maven
+
+```xml
 <dependency>
     <groupId>com.ossobo</groupId>
     <artifactId>winterfx</artifactId>
     <version>13.1.4</version>
 </dependency>
-Gradle
-gradle
+```
+
+## Gradle
+
+```gradle
 implementation 'com.ossobo:winterfx:13.1.4'
-⚡ Quick Start
-Aplicação Principal (Recomendado)
-java
-package com.ossobo.seuprojeto;
+```
 
-import com.ossobo.winterfx.bootstrap.WinterApplication;
-import javafx.application.Application;
-import javafx.stage.Stage;
+---
 
+# ⚡ Quick Start
+
+## Aplicação Principal
+
+```java
 public class MainApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        // Configura WinterFX
-        WinterApplication winter = new WinterApplication()
-            .withScanPackages("com.ossobo.seuprojeto")
-            .withMainView("login")
-            .withDiagnostics(true);
 
-        // Inicializa e inicia a aplicação
+        WinterApplication winter = new WinterApplication()
+                .withScanPackages("com.ossobo.seuprojeto")
+                .withMainView("login")
+                .withDiagnostics(true);
+
         winter.initializeWithProgress(null);
         winter.autoStart(primaryStage);
     }
@@ -114,582 +204,521 @@ public class MainApp extends Application {
         launch(args);
     }
 }
-Sem Splash (Padrão - UMA LINHA)
-java
-public class Main extends Application {
-    @Override
-    public void start(Stage primaryStage) {
-        WinterApplication.getInstance().autoStart(primaryStage);
-    }
+```
 
-    public static void main(String[] args) {
-        WinterApplication.run(Main.class);  // ← UMA LINHA!
-    }
+## Inicialização Simplificada
+
+```java
+public static void main(String[] args) {
+    WinterApplication.run(Main.class);
 }
-Com Splash (Opcional)
-java
-public class Main extends Application {
-    @Override
-    public void start(Stage primaryStage) {
-        SplashScreenLoader.showSplashScreen(primaryStage, () -> {
-            mostrarLogin(primaryStage);
-        });
+```
 
-        WinterApplication.getInstance().initializeWithProgress(progress -> {
-            Platform.runLater(() -> {
-                SplashScreenLoader.updateProgress(progress, "Carregando...");
-                if (progress >= 1.0) SplashScreenLoader.completeLoading();
-            });
-        });
-    }
+---
 
-    public static void main(String[] args) {
-        Application.launch(Main.class);
-    }
-}
-🏗️ Arquitetura
-text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         WINTERFX v5.3                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │              CONTROLLERS (FXML)                                     │ │
-│  │  • Implementam WinterFXController                                   │ │
-│  │  • Usam WinterFXController.execute() para interceptação             │ │
-│  │  • NÃO usam proxy (evita problemas com @FXML)                       │ │
-│  │  • @FXML funciona perfeitamente                                     │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │              SERVIÇOS E REPOSITÓRIOS                                │ │
-│  │  • Usam ByteBuddy Proxy (automático)                                │ │
-│  │  • Anotados com @Service ou @Repository                             │ │
-│  │  • NÃO precisam de interface                                        │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │              PIPELINE DE INTERCEPTAÇÃO                              │ │
-│  │  • FASE BEFORE: handlers que executam ANTES (@OnConfirmation)       │ │
-│  │  • EXECUÇÃO: método original                                        │ │
-│  │  • FASE AFTER (condicional):                                        │ │
-│  │    - Sucesso: @OnSuccess, @NewScene, @SwapFxml                      │ │
-│  │    - Erro: @OnError, @OnException                                    │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-📝 Criando um Controller
-Estrutura Básica
-java
-package com.ossobo.seuprojeto.controllers.login;
+# 🏗️ Arquitetura
 
-import com.ossobo.winterfx.anotations.Controller;
-import com.ossobo.winterfx.anotations.Inject;
-import com.ossobo.winterfx.view.anotations.RegisterView;
-import com.ossobo.winterfx.view.controller.WinterFXController;
-import com.ossobo.winterfx.notifications.anotations.OnError;
-import com.ossobo.winterfx.notifications.anotations.OnSuccess;
-import com.ossobo.winterfx.view.anotations.NewScene;
-import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
-import javafx.scene.control.TextField;
+```text
+CONTROLLERS
+ ├─ Implementam WinterFXController
+ ├─ Sem Proxy
+ └─ Compatibilidade total com @FXML
 
-@Controller(proxy = false)  // ← IMPORTANTE: SEM proxy!
+SERVIÇOS E REPOSITÓRIOS
+ ├─ Proxy automático ByteBuddy
+ ├─ @Service
+ └─ @Repository
+
+PIPELINE
+ ├─ BEFORE
+ │   ├─ @OnCritical
+ │   └─ @OnConfirmation
+ │
+ ├─ EXECUTION
+ │   └─ Método original
+ │
+ └─ AFTER
+     ├─ Sucesso
+     │   ├─ @OnInfo
+     │   ├─ @OnWarning
+     │   ├─ @OnSuccess
+     │   ├─ @SwapImage
+     │   ├─ @SwapFxml
+     │   └─ @NewScene
+     │
+     └─ Erro
+         ├─ @OnError
+         └─ @OnException
+```
+
+---
+
+# 📝 Criando um Controller
+
+## Estrutura Básica
+
+```java
+@Controller(proxy = false)
 @RegisterView(
     id = "login",
-    fxml = "/com/ossobo/seuprojeto/fxmls/login/login.fxml",
-    title = "Login",
-    primaryCss = "/com/ossobo/seuprojeto/css/login.css"
+    fxml = "/fxml/login.fxml",
+    title = "Login"
 )
-public class LoginController implements WinterFXController {  // ← Implementa a interface
+public class LoginController implements WinterFXController {
 
-    // ========== CAMPOS @FXML (injetados pelo JavaFX) ==========
-    
-    @FXML private TextField usuarioField;
-    @FXML private TextField senhaField;
-    
-    // ========== SERVIÇOS INJETADOS ==========
-    
-    @Inject private UsuarioService usuarioService;
-    
-    // ========== MÉTODOS DE BOTÃO ==========
-    // REGRAS:
-    // 1. Nome = fx:id do botão no FXML
-    // 2. Deve ter ActionEvent como parâmetro
-    // 3. NÃO usar @FXML (opcional)
-    // 4. NÃO usar onAction no FXML
-    
-    @OnError(titulo = "Erro", descricao = "Campos obrigatórios")
-    @OnSuccess(descricao = "Login realizado com sucesso!")
-    @NewScene(view = "main", title = "Dashboard", centered = true)
+    @FXML
+    private TextField usuarioField;
+
+    @FXML
+    private TextField senhaField;
+
+    @Inject
+    private UsuarioService usuarioService;
+
+    @OnError(
+        titulo = "Erro",
+        descricao = "Campos obrigatórios"
+    )
+    @OnSuccess(
+        descricao = "Login realizado com sucesso!"
+    )
+    @NewScene(
+        view = "main",
+        centered = true
+    )
     public void handleLogin(ActionEvent event) {
-        String usuario = usuarioField.getText();
-        String senha = senhaField.getText();
-        
-        if (usuario.isEmpty() || senha.isEmpty()) {
-            throw new IllegalArgumentException("Preencha todos os campos");
+
+        if(usuarioField.getText().isBlank()) {
+            throw new IllegalArgumentException();
         }
-        
-        if (!usuarioService.autenticar(usuario, senha)) {
-            throw new RuntimeException("Usuário ou senha inválidos");
-        }
-        
-        // Se chegou aqui → sucesso!
-        // @OnSuccess + @NewScene executam automaticamente
+
+        usuarioService.autenticar(
+                usuarioField.getText(),
+                senhaField.getText()
+        );
     }
 }
-📄 FXML - Regras Fundamentais
-⚠️ REGRAS DE OURO
-Regra	Exemplo
-✅ NUNCA usar onAction	<Button fx:id="handleLogin" />
-✅ fx:id = nome do método	<Button fx:id="handleLogin" /> → handleLogin(ActionEvent)
-✅ Método tem ActionEvent	public void handleLogin(ActionEvent event)
-✅ NUNCA usar @FXML em métodos de botão	public void handleLogin(ActionEvent event)
-❌ O QUE NÃO FAZER
-xml
-<!-- ❌ NUNCA usar onAction -->
-<Button fx:id="handleLogin" onAction="#handleLogin" text="Entrar" />
+```
 
-<!-- ❌ NUNCA usar fx:id diferente do método -->
-<Button fx:id="btnLogin" text="Entrar" />  <!-- Método se chama handleLogin -->
-✅ FXML CORRETO
-xml
-<?xml version="1.0" encoding="UTF-8"?>
+---
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+# 📄 FXML - Regras Fundamentais
 
-<!--
-    login.fxml - WinterFX v5.3
-    ✅ SEM onAction nos botões
-    ✅ fx:id = nome do método no controller
--->
+## ✅ Regras de Ouro
 
-<AnchorPane xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            prefHeight="400.0" prefWidth="300.0">
+| Regra                       | Exemplo                         |
+| --------------------------- | ------------------------------- |
+| Nunca usar `onAction`       | `<Button fx:id="handleLogin"/>` |
+| `fx:id` = método            | `handleLogin(ActionEvent)`      |
+| Método recebe ActionEvent   | Obrigatório                     |
+| Não usar `@FXML` em métodos | Recomendado                     |
+| Busca recursiva             | Funciona em qualquer nível      |
 
-    <VBox spacing="10" AnchorPane.centerX="0.0" AnchorPane.centerY="0.0">
-        
-        <!-- ✅ fx:id = handleLogin → método handleLogin(ActionEvent) no controller -->
-        <TextField fx:id="usuarioField" promptText="Usuário" />
-        <TextField fx:id="senhaField" promptText="Senha" />
-        
-        <!-- ✅ SEM onAction! -->
-        <Button fx:id="handleLogin" text="Entrar" />
-        
-    </VBox>
-</AnchorPane>
-📍 Botões em Qualquer Profundidade
-O WinterFX encontra botões em TODOS os níveis do FXML!
+## ❌ Não Faça
 
-xml
-<AnchorPane>
-    <VBox>
-        <GridPane>
-            <BorderPane>
-                <BorderPane.center>
-                    <!-- ✅ Encontrado! Busca recursiva -->
-                    <Button fx:id="btn_dashboard" text="Dashboard" />
-                </BorderPane.center>
-            </BorderPane>
-        </GridPane>
-    </VBox>
-</AnchorPane>
+```xml
+<Button
+    fx:id="handleLogin"
+    onAction="#handleLogin"/>
+```
 
-<!-- SplitPane -->
-<SplitPane>
-    <Button fx:id="btn_catalogo" text="Catálogo" />  <!-- ✅ Encontrado! -->
-</SplitPane>
+## ✅ Faça
 
-<!-- ScrollPane -->
-<ScrollPane>
-    <Button fx:id="btn_estoque" text="Estoque" />  <!-- ✅ Encontrado! -->
-</ScrollPane>
+```xml
+<Button
+    fx:id="handleLogin"
+    text="Entrar"/>
+```
 
-<!-- TabPane -->
-<TabPane>
-    <Tab text="Aba 1">
-        <Button fx:id="btn_config" text="Config" />  <!-- ✅ Encontrado! -->
-    </Tab>
-</TabPane>
-🎯 Anotações de Interceptação
-Lista Completa
-Anotação	Fase	Executa em	Descrição
-@OnConfirmation	BEFORE	Sempre	Exibe diálogo de confirmação
-@OnCritical	BEFORE	Sempre	Exibe alerta crítico (bloqueante)
-@OnInfo	AFTER	Sucesso	Notificação informativa
-@OnWarning	AFTER	Sucesso	Notificação de aviso
-@OnSuccess	AFTER	Sucesso	Notificação de sucesso
-@OnError	AFTER	Erro	Notificação de erro
-@OnException	AFTER	Erro	Processamento de exceção
-@NewScene	AFTER	Sucesso	Navega para nova tela
-@SwapFxml	AFTER	Sucesso	Troca conteúdo de container
-@SwapImage	AFTER	Sucesso	Troca imagem
-⚠️ MUTUAMENTE EXCLUSIVOS
-java
-// ❌ NUNCA executam juntos!
-@OnSuccess(...)
-@OnError(...)
-public void metodo() { ... }
+---
 
-// ✅ Se sucesso → @OnSuccess
-// ✅ Se erro → @OnError
-// ✅ NUNCA ambos!
-Exemplos de Uso
-@OnConfirmation
-java
-@OnConfirmation(titulo = "Confirmar Exclusão", descricao = "Deseja realmente excluir este item?")
-@OnSuccess(descricao = "Item excluído com sucesso!")
-@OnError(titulo = "Erro", descricao = "Falha ao excluir item")
-public void handleDelete(ActionEvent event) {
-    service.delete(item);
-}
-@OnCritical
-java
-@OnCritical(titulo = "⚠️ AÇÃO CRÍTICA", descricao = "Esta operação NÃO pode ser desfeita!")
-@OnSuccess(descricao = "Reset concluído!")
-public void handleReset(ActionEvent event) {
-    service.resetSystem();
-}
-@OnSuccess / @OnError
-java
-@OnSuccess(titulo = "Sucesso", descricao = "Operação concluída!")
-@OnError(titulo = "Erro", descricao = "Falha na operação")
-public void salvar(ActionEvent event) {
-    service.save(data);
-}
-@OnException
-java
-@OnException(titulo = "Erro no Sistema")
-public void processar(ActionEvent event) {
-    repository.save(data);
-}
-@OnInfo / @OnWarning
-java
-@OnInfo(titulo = "Carregamento", descricao = "Dados carregados com sucesso")
-@OnWarning(titulo = "Dados Incompletos", descricao = "Alguns campos opcionais não preenchidos")
-public void loadData(ActionEvent event) {
-    // Código
-}
-🔄 Pipeline de Execução
-text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    PIPELINE DE INTERCEPTAÇÃO                            │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ FASE BEFORE (interrompível)                                        │ │
-│  │ • @OnConfirmation → exibe diálogo; interrompe se cancelado         │ │
-│  │ • @OnCritical → exibe alerta; interrompe se não aceitar            │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                              │                                           │
-│                              ▼                                           │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ EXECUÇÃO DO MÉTODO                                                  │ │
-│  │ • Captura resultado ou exceção                                     │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                              │                                           │
-│              ┌───────────────┴───────────────┐                          │
-│              ▼                               ▼                          │
-│  ┌─────────────────────────┐   ┌─────────────────────────────────────┐ │
-│  │ ERRO (isErrorOnly)       │   │ SUCESSO (isSuccessOnly)             │ │
-│  │ • @OnError               │   │ • @OnInfo                           │ │
-│  │ • @OnException           │   │ • @OnWarning                        │ │
-│  └─────────────────────────┘   │ • @OnSuccess                        │ │
-│                                │ • @NewScene                         │ │
-│                                │ • @SwapFxml                         │ │
-│                                │ • @SwapImage                        │ │
-│                                └─────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-Ordens de Execução
-BEFORE:
+# 🎯 Anotações de Interceptação
 
-@OnCritical (se existir)
+| Anotação        | Fase   | Executa |
+| --------------- | ------ | ------- |
+| @OnConfirmation | BEFORE | Sempre  |
+| @OnCritical     | BEFORE | Sempre  |
+| @OnInfo         | AFTER  | Sucesso |
+| @OnWarning      | AFTER  | Sucesso |
+| @OnSuccess      | AFTER  | Sucesso |
+| @OnError        | AFTER  | Erro    |
+| @OnException    | AFTER  | Erro    |
+| @NewScene       | AFTER  | Sucesso |
+| @SwapFxml       | AFTER  | Sucesso |
+| @SwapImage      | AFTER  | Sucesso |
 
-@OnConfirmation (se existir)
+---
 
-AFTER (Sucesso):
+# 🔄 Pipeline de Execução
 
-@OnInfo
+## BEFORE
 
-@OnWarning
+* `@OnCritical`
+* `@OnConfirmation`
 
-@OnSuccess
+## EXECUTION
 
-@SwapImage
+* Método original
 
-@SwapFxml
+## AFTER (Sucesso)
 
-@NewScene
+1. `@OnInfo`
+2. `@OnWarning`
+3. `@OnSuccess`
+4. `@SwapImage`
+5. `@SwapFxml`
+6. `@NewScene`
 
-AFTER (Erro):
+## AFTER (Erro)
 
-@OnError
+1. `@OnError`
+2. `@OnException`
 
-@OnException
+---
 
-💉 Injeção de Dependências
-@Inject para Serviços
-java
-@Controller(proxy = false)
-public class LoginController implements WinterFXController {
-    
-    @Inject private UsuarioService usuarioService;
-    @Inject private NotificationManager notificationManager;
-}
-@InjectView para Views
-java
-@Controller(proxy = false)
-public class MainController implements WinterFXController {
-    
-    @InjectView(value = "dashboard", title = "Dashboard")
-    private StackPane contentArea;
-}
-@InjectImage para Imagens
-java
-@Controller(proxy = false)
-public class MainController implements WinterFXController {
-    
-    @InjectImage(value = "logo")
-    private ImageView logoView;
-}
-Serviços com @Service
-java
+# 💉 Injeção de Dependências
+
+## Serviços
+
+```java
+@Inject
+private UsuarioService usuarioService;
+```
+
+## Views
+
+```java
+@InjectView(
+    value = "dashboard",
+    title = "Dashboard"
+)
+private StackPane contentArea;
+```
+
+## Imagens
+
+```java
+@InjectImage("logo")
+private ImageView logoView;
+```
+
+## Serviço
+
+```java
 @Service
 public class UsuarioService {
-    
-    @Inject private UsuarioRepository repository;
-    
-    @Transactional
-    public boolean autenticar(String usuario, String senha) {
-        return repository.findByUsuarioAndSenha(usuario, senha) != null;
-    }
+
+    @Inject
+    private UsuarioRepository repository;
 }
-Repositórios com @Repository
-java
+```
+
+## Repositório
+
+```java
 @Repository
 public class UsuarioRepository {
-    
-    @Inject private DatabaseConnection db;
-    
-    public Usuario findByUsuarioAndSenha(String usuario, String senha) {
-        // código
-    }
-}
-🧭 Navegação
-@NewScene - Troca de Tela Completa
-java
-@NewScene(view = "main", width = 1200, height = 800, title = "Dashboard", centered = true)
-public void handleLogin(ActionEvent event) {
-    // Código executa; se sucesso → navega
-}
-Parâmetros:
 
-Parâmetro	Padrão	Descrição
-view	Obrigatório	ID da view registrada
-width	Do descriptor	Largura da nova cena
-height	Do descriptor	Altura da nova cena
-title	Do descriptor	Título da janela
-centered	false	Centralizar na tela
-@SwapFxml - Troca de Conteúdo
-java
-@SwapFxml(container = "contentArea", viewId = "dashboard")
-public void btn_dashboard(ActionEvent event) {
-    LOGGER.info("Abrindo dashboard");
+    @Inject
+    private DatabaseConnection db;
 }
-Parâmetros:
+```
 
-Parâmetro	Padrão	Descrição
-container	Obrigatório	Nome do campo @FXML Pane
-viewId	Obrigatório	ID da view a carregar
-Registrando Views
-java
+---
+
+# 🧭 Navegação
+
+## Nova Cena
+
+```java
+@NewScene(
+    view = "main",
+    title = "Dashboard",
+    centered = true
+)
+```
+
+## Troca de Conteúdo
+
+```java
+@SwapFxml(
+    container = "contentArea",
+    viewId = "dashboard"
+)
+```
+
+## Registro de View
+
+```java
 @RegisterView(
     id = "dashboard",
-    fxml = "/com/ossobo/seuprojeto/fxmls/dashboard.fxml",
-    title = "Dashboard",
-    primaryCss = "/com/ossobo/seuprojeto/css/dashboard.css",
-    width = 1200,
-    height = 800
+    fxml = "/dashboard.fxml",
+    title = "Dashboard"
 )
-public class DashboardController implements WinterFXController {
-    // ...
-}
-🔔 Notificações
-Via Anotações
-java
-@OnInfo(titulo = "Informação", descricao = "Processo concluído")
-public void metodo() { ... }
+```
 
-@OnWarning(titulo = "Aviso", descricao = "Dados incompletos")
-public void metodo() { ... }
+---
 
-@OnSuccess(titulo = "Sucesso", descricao = "Operação concluída!")
-public void metodo() { ... }
+# 🔔 Notificações
 
-@OnError(titulo = "Erro", descricao = "Falha na operação")
-public void metodo() { ... }
-Com Detalhes
-java
-@OnError(titulo = "Erro de Validação", descricao = "Campos obrigatórios", detalhe = "Preencha usuário e senha")
-public void handleLogin(ActionEvent event) {
-    // Se erro → detalhe exibido
-}
-Temporizadores Automáticos
-Tipo	Temporizador
-@OnInfo	5 segundos
-@OnWarning	5 segundos
-@OnSuccess	3 segundos
-@OnError	Até fechar
-@OnCritical	Até fechar
-Uso Programático
-java
-@Inject private NotificationManager notif;
+## Via Anotações
 
-public void algumMetodo() {
-    notif.info("Carregando", "Dados sendo carregados...");
-    notif.success("Sucesso", "Dados carregados!");
-    notif.warn("Aviso", "Alguns dados não foram carregados");
-    notif.erro("Erro", "Falha ao carregar dados");
-    notif.critico("⚠️ CRÍTICO", "Sistema pode apresentar instabilidade");
-}
-🖼️ Imagens
-Registrando Imagens
-java
+```java
+@OnSuccess(
+    titulo = "Sucesso",
+    descricao = "Operação concluída!"
+)
+```
+
+```java
+@OnError(
+    titulo = "Erro",
+    descricao = "Falha na operação"
+)
+```
+
+## Uso Programático
+
+```java
+notif.info("Info", "Mensagem");
+notif.success("Sucesso", "Concluído");
+notif.warn("Aviso", "Atenção");
+notif.erro("Erro", "Falha");
+```
+
+## Temporizadores
+
+| Tipo     | Tempo      |
+| -------- | ---------- |
+| Info     | 5s         |
+| Warning  | 5s         |
+| Success  | 3s         |
+| Error    | Até fechar |
+| Critical | Até fechar |
+
+---
+
+# 🖼️ Imagens
+
+## Registro
+
+```java
+@Configuration
 @RegisterImage(
     id = "logo",
-    path = "/images/logo.png",
-    width = 100,
-    height = 100,
-    preserveRatio = true
+    path = "/images/logo.png"
 )
-public class ImageConstants {
-    // Classe apenas para registro
+public class ImagesConfig {
 }
-Injetando Imagens
-java
-@InjectImage(value = "logo")
+```
+
+## Injeção
+
+```java
+@InjectImage("logo")
 private ImageView logoView;
+```
 
-@InjectImage(value = "icon", width = 24, height = 24)
-private ImageView smallIcon;
-Trocando Imagens Dinamicamente
-java
-@SwapImage(imageView = "logoView", imageId = "logo_new", width = 100, height = 100)
-public void toggleLogo(ActionEvent event) {
-    // Troca a imagem automaticamente em sucesso
+## Troca Dinâmica
+
+```java
+@SwapImage(
+    imageView = "logoView",
+    imageId = "logo_new"
+)
+```
+
+---
+
+# 🪟 Janelas Flutuantes
+
+```java
+@FloatingWindow(
+    viewId = "detalhes",
+    title = "Detalhes",
+    width = 600,
+    height = 400
+)
+private Stage detalhesWindow;
+```
+
+## Abrir Janela
+
+```java
+detalhesWindow.show();
+```
+
+### Principais Parâmetros
+
+| Parâmetro         | Descrição            |
+| ----------------- | -------------------- |
+| viewId            | View registrada      |
+| title             | Título               |
+| width             | Largura              |
+| height            | Altura               |
+| resizable         | Redimensionável      |
+| alwaysOnTop       | Sempre no topo       |
+| multipleInstances | Múltiplas instâncias |
+
+---
+
+# 🎯 Combinações Avançadas
+
+## Notificação + Troca de Conteúdo
+
+```java
+@OnSuccess(
+    titulo = "Atualizado"
+)
+@SwapFxml(
+    container = "contentArea",
+    viewId = "dashboard"
+)
+public void btn_dashboard(ActionEvent event) {
 }
+```
 
-@SwapImage(imageView = "menuIcon", imageId = "menu_open")
-public void toggleMenu(ActionEvent event) {
-    // Troca ícone do menu
+## Confirmação + Navegação
+
+```java
+@OnConfirmation(...)
+@OnSuccess(...)
+@NewScene(view = "lista")
+public void excluir(ActionEvent event) {
 }
-📏 Convenções e Boas Práticas
-✅ DO
-Regra	Exemplo
-Controller implementa WinterFXController	implements WinterFXController
-@Controller(proxy = false)	@Controller(proxy = false)
-Método tem ActionEvent	public void metodo(ActionEvent event)
-fx:id = nome do método	<Button fx:id="handleLogin" />
-NUNCA usar onAction	<Button fx:id="handleLogin" />
-❌ DON'T
-Regra	Exemplo
-NUNCA usar onAction	onAction="#handleLogin" ❌
-NUNCA usar proxy para controllers	@Controller(proxy = true) ❌
-NUNCA esquecer ActionEvent	public void metodo() ❌
-NUNCA usar fx:id diferente	<Button fx:id="btnLogin" /> ❌
-Padrão de Nomenclatura
-java
-// ✅ Recomendado
-public void handleLogin(ActionEvent event)
-public void btn_dashboard(ActionEvent event)
-public void toggleMenu(ActionEvent event)
-public void onSave(ActionEvent event)
-public void doSomething(ActionEvent event)
+```
 
-// ✅ Aceito (qualquer nome)
-public void qualquerNome(ActionEvent event)
-Organização do Controller
-java
-@Controller(proxy = false)
-@RegisterView(...)
-public class MeuController implements WinterFXController {
-    
-    // 1. LOGGER
-    private static final Logger LOGGER = ...;
-    
-    // 2. @FXML Injections
-    @FXML private TextField campo;
-    
-    // 3. @Inject Services
-    @Inject private Servico servico;
-    
-    // 4. Estado
-    private boolean estado;
-    
-    // 5. Inicialização
-    public void initialize(URL url, ResourceBundle rb) { ... }
-    
-    // 6. Métodos privados auxiliares
-    private void metodoAuxiliar() { ... }
-    
-    // 7. Métodos de botão (públicos, com ActionEvent)
-    public void handleBotao(ActionEvent event) { ... }
-    
-    // 8. Getters/Setters
-    public String getAlgo() { ... }
-}
-❓ FAQ
-Botão não funciona
-Verificações:
+---
 
-fx:id = nome do método? ✅
+# 📏 Convenções e Boas Práticas
 
-Método tem ActionEvent? ✅
+## ✅ Faça
 
-Controller implementa WinterFXController? ✅
+* Implementar `WinterFXController`
+* Utilizar `ActionEvent`
+* Usar `@Controller(proxy = false)`
+* Manter `fx:id` igual ao método
 
-@Controller(proxy = false)? ✅
+## ❌ Evite
 
-NÃO tem onAction no FXML? ✅
+* `onAction`
+* Proxy em controllers
+* Métodos sem ActionEvent
+* `fx:id` divergente
+* `fx:controller` no FXML
 
-NÃO tem @FXML no método? ✅
+---
 
-@OnSuccess e @OnError executam juntos
-Solução: Use a versão mais recente com pipeline condicional.
+# 📁 Estrutura Recomendada
 
-FXML não encontra botões
-Causa: O FXML não tem o botão com esse fx:id
+```text
+src/main/java/
+├── controllers/
+├── services/
+├── repositories/
+└── config/
 
-Verificar:
+src/main/resources/
+├── fxmls/
+├── css/
+└── images/
+```
 
-bash
-grep -o 'fx:id="[^"]*"' src/main/resources/.../main.fxml
-View não registrada
-Solução:
+---
 
-java
-@RegisterView(id = "xxx", fxml = "/path/to/xxx.fxml")
-public class XxxController implements WinterFXController { ... }
-📦 Dependências
-Biblioteca	Versão
-JavaFX	25.0.3
-ByteBuddy	1.17.2
-ClassGraph	4.8.168
-SLF4J	2.0.16
-📄 Licença
-Este projeto está licenciado sob a licença MIT. Consulte o arquivo LICENSE para mais detalhes.
+# ❓ FAQ
 
-👨‍💻 Autor
-Rafael Tavares
+## Botão não funciona
+
+Verifique:
+
+* Controller implementa WinterFXController
+* Método recebe ActionEvent
+* `fx:id` = nome do método
+* Não existe `onAction`
+* Controller usa `proxy = false`
+
+## NullPointerException em @FXML
+
+Verifique:
+
+* O FXML foi carregado corretamente
+* O `fx:id` existe
+* O controller está registrado
+
+## View não encontrada
+
+```java
+@RegisterView(
+    id = "dashboard",
+    fxml = "/dashboard.fxml"
+)
+```
+
+---
+
+# 📦 Dependências
+
+| Biblioteca  | Versão  | Finalidade        |
+| ----------- | ------- | ----------------- |
+| JavaFX      | 25.0.3  | UI Framework      |
+| ByteBuddy   | 1.17.2  | Proxy             |
+| ClassGraph  | 4.8.168 | Discovery         |
+| SLF4J       | 2.0.16  | Logging           |
+| Reflections | 0.10.2  | Scan de anotações |
+
+---
+
+# 🗺️ Roadmap
+
+* [x] Dependency Injection
+* [x] View Registry
+* [x] Notifications
+* [x] Floating Windows
+* [x] Image Registry
+* [ ] Validation API
+* [ ] Event Bus
+* [ ] Data Binding Extensions
+* [ ] Native Packaging Helpers
+
+---
+
+# 📄 Licença
+
+Este projeto está licenciado sob a licença MIT.
+
+Consulte o arquivo `LICENSE` para mais detalhes.
+
+---
+
+# 👨‍💻 Autor
+
+**Rafael Tavares**
 
 GitHub: @rephaelTAS
 
 Projeto: WinterFX
 
-Email: rafaeltavares.dev@gmail.com
+Email: [rephaeltavares@gmail.com](mailto:rephaeltavares@gmail.com)
 
-🏔️ WinterFX
-JavaFX Framework for Modern Desktop Applications
+---
 
-Menos boilerplate. Mais produtividade. 🚀
+# ⭐ Apoie o Projeto
+
+ Se o WinterFX ajudou você:
+
+ ⭐ Dê uma estrela no GitHub
+ 
+    🐛 Reporte bugs
+    
+    💡 Sugira melhorias
+    
+    🤝 Envie Pull Requests
+
+---
+
+## 🏔️ WinterFX
+
+**JavaFX Framework for Modern Desktop Applications**
+
+**Menos boilerplate. Mais produtividade. 🚀**
