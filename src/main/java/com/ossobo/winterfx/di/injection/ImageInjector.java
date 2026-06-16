@@ -10,8 +10,6 @@ import javafx.scene.image.ImageView;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ImageInjector v1.1
@@ -21,8 +19,6 @@ import java.util.logging.Logger;
  * Caso contrário, cria um novo ImageView.
  */
 public class ImageInjector implements DependencyInjector {
-
-    private static final Logger LOGGER = Logger.getLogger(ImageInjector.class.getName());
 
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
@@ -49,7 +45,6 @@ public class ImageInjector implements DependencyInjector {
                 Image image = imageManager.loadImage(imageId);
 
                 if (image == null) {
-                    LOGGER.warning("⚠️ Imagem não encontrada: '" + imageId + "'");
                     if (annotation.required()) {
                         throw new IllegalArgumentException("Imagem não registrada: '" + imageId + "'");
                     }
@@ -68,20 +63,13 @@ public class ImageInjector implements DependencyInjector {
                     if (annotation.height() > 0) existingView.setFitHeight(annotation.height());
                     existingView.setPreserveRatio(annotation.preserveRatio());
                     existingView.setSmooth(annotation.smooth());
-
-                    LOGGER.log(Level.FINE, "✅ Imagem atualizada no ImageView existente: '{0}' → {1}.{2}",
-                            new Object[]{imageId, type.getSimpleName(), field.getName()});
                 } else {
                     // 🆕 Campo vazio → cria novo ImageView
                     ImageView imageView = createImageView(image, annotation);
                     reflectionProcessor.injectField(instance, field, imageView);
-
-                    LOGGER.log(Level.FINE, "✅ Imagem injetada: '{0}' → {1}.{2}",
-                            new Object[]{imageId, type.getSimpleName(), field.getName()});
                 }
 
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "❌ Erro @InjectImage '" + imageId + "': " + e.getMessage(), e);
                 if (annotation.required()) {
                     throw new RuntimeException("Falha ao injetar imagem: " + imageId, e);
                 }

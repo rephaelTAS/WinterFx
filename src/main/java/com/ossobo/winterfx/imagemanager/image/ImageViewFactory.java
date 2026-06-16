@@ -2,8 +2,6 @@ package com.ossobo.winterfx.imagemanager.image;
 
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
@@ -12,7 +10,6 @@ import java.util.Objects;
  */
 
 public class ImageViewFactory {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ImageViewFactory.class);
 
     /**
      * ✅ CRIA IMAGEVIEW COM DIMENSÕES
@@ -26,7 +23,6 @@ public class ImageViewFactory {
         imageView.setPreserveRatio(true);
         imageView.setSmooth(true);
 
-        LOGGER.debug("ImageView criado: {}x{}", width, height);
         return imageView;
     }
 
@@ -40,7 +36,6 @@ public class ImageViewFactory {
         imageView.setSmooth(true);
         imageView.setPreserveRatio(true);
 
-        LOGGER.debug("ImageView simples criado");
         return imageView;
     }
 
@@ -56,7 +51,6 @@ public class ImageViewFactory {
         imageView.setPreserveRatio(preserveRatio);
         imageView.setSmooth(smooth);
 
-        LOGGER.debug("ImageView avançado criado");
         return imageView;
     }
 }

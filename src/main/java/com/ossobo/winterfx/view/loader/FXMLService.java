@@ -50,8 +50,6 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Serviço de carregamento FXML com arquitetura híbrida.
@@ -81,8 +79,6 @@ import java.util.logging.Logger;
  * @version 5.3 - Interface WinterFXController com método execute(), busca recursiva em todo FXML
  */
 public final class FXMLService {
-
-    private static final Logger LOGGER = Logger.getLogger(FXMLService.class.getName());
 
     private final DiContainer diContainer;
     private final WinterFXProxyFactory serviceProxyFactory; // Para serviços apenas
@@ -148,15 +144,6 @@ public final class FXMLService {
 
                 // 6. 🔥 NÃO cria proxy JDK!
                 //    Usa diretamente o controller original com WinterFXController.execute()
-                if (originalController instanceof WinterFXController) {
-                    LOGGER.info(() -> "✅ Controller implements WinterFXController: " +
-                            originalController.getClass().getSimpleName() +
-                            " - usando execute() para interceptação");
-                } else {
-                    LOGGER.info(() -> "ℹ️ Controller sem WinterFXController: " +
-                            originalController.getClass().getSimpleName() +
-                            " - sem interceptação de anotações");
-                }
 
                 // 7. 🔥 Rebinde dos botões (BUSCA RECURSIVA em todo FXML)
                 rebindButtons(root, originalController);
@@ -167,7 +154,6 @@ public final class FXMLService {
             return new LoadedView<>(root, null, descriptor.getId(), false);
 
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao carregar FXML: " + descriptor.getId(), e);
             throw new ViewEngineException("Erro ao carregar FXML: " + descriptor.getId(), e);
         }
     }
@@ -196,8 +182,6 @@ public final class FXMLService {
         int count = 0;
         boolean isWinterController = controller instanceof WinterFXController;
 
-        LOGGER.info(() -> "🔍 Procurando botões para: " + controller.getClass().getSimpleName());
-
         for (Method method : controller.getClass().getMethods()) {
             String fxId = method.getName();
 
@@ -208,7 +192,6 @@ public final class FXMLService {
 
             // ✅ ÚNICA REGRA: método precisa ter ActionEvent
             if (!hasActionEventParam(method)) {
-                LOGGER.fine(() -> "ℹ️ Método " + fxId + " não tem ActionEvent - ignorado");
                 continue;
             }
 
@@ -216,8 +199,6 @@ public final class FXMLService {
             Node node = findButtonById(root, fxId);
 
             if (node instanceof ButtonBase button) {
-                LOGGER.info(() -> "✅ Botão configurado: " + fxId);
-
                 button.setOnAction(event -> {
                     try {
                         if (isWinterController) {
@@ -227,18 +208,11 @@ public final class FXMLService {
                             method.invoke(controller, event);
                         }
                     } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Erro ao invocar handler " + fxId, e);
                     }
                 });
                 count++;
-            } else {
-                LOGGER.warning(() -> "⚠️ Botão NÃO encontrado no FXML: " + fxId);
             }
         }
-
-        int finalCount = count;
-        LOGGER.info(() -> "✅ " + finalCount + " botões configurados (busca completa em todos níveis)" +
-                (isWinterController ? " com WinterFXController.execute()" : ""));
     }
 
     /**

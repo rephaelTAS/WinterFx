@@ -14,8 +14,6 @@ import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.view.floatingwindow.FloatingWindowManager;
 import com.ossobo.winterfx.view.loader.FXMLService;
 
-import java.util.logging.Logger;
-
 /**
  * InjectionManager v3.2
  *
@@ -36,8 +34,6 @@ import java.util.logging.Logger;
  */
 public final class InjectionManager {
 
-    private static final Logger LOGGER = Logger.getLogger(InjectionManager.class.getName());
-
     // ==================== DEPENDÊNCIAS ====================
 
     private ReflectionCache reflectionCache;
@@ -50,7 +46,7 @@ public final class InjectionManager {
     private FXMLService fxmlService;
     private StageManager stageManager;
     private FloatingWindowManager floatingWindowManager;
-    private WinterFXProxyFactory proxyFactory;  // 🔥 NOVO
+    private WinterFXProxyFactory proxyFactory;
 
     // ==================== INJECTORS ====================
 

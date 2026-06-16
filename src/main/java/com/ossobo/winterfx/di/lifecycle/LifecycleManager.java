@@ -12,8 +12,6 @@ import com.ossobo.winterfx.di.scopes.implementations.ThreadScope;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * LifecycleManager v2.0
@@ -31,8 +29,6 @@ import java.util.logging.Logger;
  * @since 2.0
  */
 public final class LifecycleManager {
-
-    private static final Logger LOGGER = Logger.getLogger(LifecycleManager.class.getName());
 
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
@@ -53,7 +49,6 @@ public final class LifecycleManager {
      * Inicializa o gerenciador. Chamado pelo DiContainer após a construção.
      */
     public void initialize() {
-        LOGGER.log(Level.INFO, "LifecycleManager inicializado.");
         eventPublisher.publishEvent(null, null,
                 DependencyLifecycleListener.LifecycleEventType.CONTAINER_INITIALIZED);
     }
@@ -76,9 +71,6 @@ public final class LifecycleManager {
                 throw new LifecycleException(
                         "@PostConstruct deve ser sem argumentos: " + type.getName());
             }
-
-            LOGGER.log(Level.FINE, "@PostConstruct: {0}.{1}()",
-                    new Object[]{type.getSimpleName(), method.getName()});
 
             try {
                 reflectionProcessor.invokeMethod(instance, method);
@@ -112,19 +104,12 @@ public final class LifecycleManager {
 
         for (Method method : methods) {
             if (method.getParameterCount() != 0) {
-                LOGGER.log(Level.WARNING,
-                        "@PreDestroy deve ser sem argumentos. Pulando: {0}", type.getName());
                 continue;
             }
-
-            LOGGER.log(Level.FINE, "@PreDestroy: {0}.{1}()",
-                    new Object[]{type.getSimpleName(), method.getName()});
 
             try {
                 reflectionProcessor.invokeMethod(instance, method);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Erro no @PreDestroy de {0}: {1}",
-                        new Object[]{type.getName(), e.getMessage()});
                 eventPublisher.publishEvent(type, null,
                         DependencyLifecycleListener.LifecycleEventType.LIFECYCLE_ERROR,
                         instance, e);
@@ -169,13 +154,10 @@ public final class LifecycleManager {
      * 3. Notifica shutdown
      */
     public void shutdown() {
-        LOGGER.log(Level.INFO, "Iniciando shutdown...");
-
         // 1. Destruir Singletons
         SingletonScope singletonScope = scopeManager.getSingletonScope();
         if (singletonScope != null) {
             Map<Class<?>, Object> singletons = singletonScope.getAllInstances();
-            LOGGER.log(Level.INFO, "Destruindo {0} singletons...", singletons.size());
             singletons.values().forEach(instance -> {
                 eventPublisher.publishEvent(instance.getClass(), null,
                         DependencyLifecycleListener.LifecycleEventType.BEFORE_DESTRUCTION,
@@ -201,8 +183,6 @@ public final class LifecycleManager {
         eventPublisher.publishEvent(null, null,
                 DependencyLifecycleListener.LifecycleEventType.CONTAINER_SHUTDOWN);
         eventPublisher.clearListeners();
-
-        LOGGER.log(Level.INFO, "Shutdown concluído.");
     }
 
     /**
@@ -215,7 +195,6 @@ public final class LifecycleManager {
 
         Map<Class<?>, Object> instances = threadScope.clearAndGetInstances();
         if (instances != null && !instances.isEmpty()) {
-            LOGGER.log(Level.FINE, "Destruindo {0} beans do ThreadScope.", instances.size());
             instances.values().forEach(this::invokePreDestroy);
         }
     }

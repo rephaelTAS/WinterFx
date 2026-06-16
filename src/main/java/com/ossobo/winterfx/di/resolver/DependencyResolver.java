@@ -20,8 +20,6 @@ import com.ossobo.winterfx.di.scopes.interfaces.ScopeInterface;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -30,8 +28,6 @@ import java.util.stream.Collectors;
  * Resolve e cria beans sob demanda, gerenciando o ciclo de vida completo.
  */
 public final class DependencyResolver {
-
-    private static final Logger LOGGER = Logger.getLogger(DependencyResolver.class.getName());
 
     private BeanRegistry beanRegistry;
     private ScopeManager scopeManager;

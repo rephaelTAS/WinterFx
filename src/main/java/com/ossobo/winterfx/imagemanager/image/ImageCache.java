@@ -1,8 +1,6 @@
 package com.ossobo.winterfx.imagemanager.image;
 
 import javafx.scene.image.Image;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.ref.SoftReference;
 import java.util.LinkedHashMap;
@@ -25,7 +23,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * Design Pattern: Cache com política de limpeza inteligente
  */
 public class ImageCache {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ImageCache.class);
 
     // 🔥 CONFIGURAÇÃO DO CACHE
     private static final int DEFAULT_MAX_SIZE = 500;
@@ -49,7 +46,6 @@ public class ImageCache {
     private volatile long lastCleanup = System.currentTimeMillis();
 
     public ImageCache() {
-        LOGGER.info("ImageCache inicializado. Tamanho máximo: {}", maxSize);
         schedulePeriodicCleanup();
     }
 
@@ -72,9 +68,6 @@ public class ImageCache {
             // 🔥 ADICIONA COM SOFTREFERENCE
             cache.put(key, new SoftReference<>(image));
             accessTimes.put(key, System.currentTimeMillis());
-
-            LOGGER.debug("Imagem cacheada: {} (tamanho cache: {})",
-                    key, cache.size());
 
         } finally {
             cleanupLock.unlock();
@@ -103,7 +96,6 @@ public class ImageCache {
                 cache.remove(key);
                 accessTimes.remove(key);
                 misses.incrementAndGet();
-                LOGGER.debug("SoftReference coletada para: {}", key);
                 return Optional.empty();
             }
 
@@ -126,7 +118,6 @@ public class ImageCache {
     private void performEviction() {
         cleanupLock.lock();
         try {
-            LOGGER.debug("Iniciando eviction LRU...");
             int removed = 0;
 
             // REMOVE MAIS ANTIGOS PRIMEIRO
@@ -136,10 +127,6 @@ public class ImageCache {
                 accessTimes.remove(oldestKey);
                 removed++;
                 evictions.incrementAndGet();
-            }
-
-            if (removed > 0) {
-                LOGGER.info("Eviction LRU: {} entradas removidas", removed);
             }
 
         } finally {
@@ -158,9 +145,6 @@ public class ImageCache {
                 return;
             }
 
-            int beforeSize = cache.size();
-            int collected = 0;
-
             // REMOVE ENTRIES COLETADAS PELO GC
             cache.entrySet().removeIf(entry -> {
                 if (entry.getValue().get() == null) {
@@ -170,12 +154,7 @@ public class ImageCache {
                 return false;
             });
 
-            collected = beforeSize - cache.size();
             lastCleanup = now;
-
-            if (collected > 0) {
-                LOGGER.debug("Cleanup: {} SoftReferences coletadas pelo GC", collected);
-            }
 
         } finally {
             cleanupLock.unlock();
@@ -193,7 +172,6 @@ public class ImageCache {
                     performCleanup();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    LOGGER.info("Cleanup thread interrompida");
                 }
             }
         });
@@ -201,7 +179,6 @@ public class ImageCache {
         cleanupThread.setDaemon(true);
         cleanupThread.setName("ImageCache-Cleanup");
         cleanupThread.start();
-        LOGGER.debug("Thread de cleanup automático iniciada");
     }
 
     // ===== MÉTODOS DE CONSULTA E CONTROLE =====
@@ -219,8 +196,6 @@ public class ImageCache {
             hits.set(0);
             misses.set(0);
             evictions.set(0);
-
-            LOGGER.info("Cache limpo - {} entradas removidas", size);
         } finally {
             cleanupLock.unlock();
         }
@@ -245,7 +220,6 @@ public class ImageCache {
             if (cache.size() > newSize) {
                 performEviction();
             }
-            LOGGER.info("Tamanho máximo do cache alterado para: {}", newSize);
         } finally {
             cleanupLock.unlock();
         }

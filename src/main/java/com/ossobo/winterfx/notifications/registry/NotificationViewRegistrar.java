@@ -10,8 +10,6 @@ import com.ossobo.winterfx.view.enums.ViewType;
 import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
 
 import java.net.URL;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * NotificationViewRegistrar v3.1
@@ -21,14 +19,12 @@ import java.util.logging.Logger;
  */
 public final class NotificationViewRegistrar {
 
-    private static final Logger LOGGER = Logger.getLogger(NotificationViewRegistrar.class.getName());
     private static final String FXML_BASE_PATH = "/META-INF/winterfx/notifications/";
 
     private NotificationViewRegistrar() {}
 
     public static void registerAll(ResourceRegistry registry) {
         if (registry == null) {
-            LOGGER.severe("❌ ResourceRegistry nulo!");
             return;
         }
 
@@ -37,8 +33,6 @@ public final class NotificationViewRegistrar {
         registerWarningView(registry);
         registerInfoView(registry);
         registerConfirmationView(registry);
-
-        LOGGER.info("📋 5 views de notificação registradas no ResourceRegistry");
     }
 
     private static void registerSuccessView(ResourceRegistry registry) {

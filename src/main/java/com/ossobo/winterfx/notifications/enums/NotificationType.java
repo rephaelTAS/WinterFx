@@ -8,6 +8,8 @@ public enum NotificationType {
     SUCCESS,
     WARNING,
     ERROR,
-    CONFIRMATION
+    CRITICAL,  // Adicionar esta linha
+    CONFIRMATION,
+    EXCEPTION
 }
 

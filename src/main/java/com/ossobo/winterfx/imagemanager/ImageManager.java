@@ -21,13 +21,10 @@ import javafx.scene.layout.BackgroundSize;
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Logger;
 
 @Component
 @Scope(ScopeType.SINGLETON)
 public class ImageManager {
-
-    private static final Logger LOGGER = Logger.getLogger(ImageManager.class.getName());
 
     private final ResourceRegistry registry;
     private final DiContainer diContainer;
@@ -41,7 +38,6 @@ public class ImageManager {
         this.imageCache = new ImageCache();
         this.imageLoader = new ImageLoader();
         this.viewFactory = new ImageViewFactory();
-        LOGGER.info("🖼️ ImageManager v3.1 inicializado");
     }
 
     // =============================================

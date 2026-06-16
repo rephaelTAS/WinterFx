@@ -6,8 +6,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * SingletonScope v2.0
@@ -27,8 +25,6 @@ import java.util.logging.Logger;
  * @since 2.0
  */
 public final class SingletonScope implements ScopeInterface {
-
-    private static final Logger LOGGER = Logger.getLogger(SingletonScope.class.getName());
 
     /** Instâncias completamente inicializadas */
     private final Map<Class<?>, Object> singletons = new ConcurrentHashMap<>();
@@ -66,14 +62,11 @@ public final class SingletonScope implements ScopeInterface {
         // 1. Já completamente inicializada?
         Object instance = singletons.get(type);
         if (instance != null) {
-            LOGGER.log(Level.FINE, "SingletonScope: Instância de {0} já existe.", type.getName());
             return (T) instance;
         }
 
         // 2. Dependência circular?
         if (inCreation.containsKey(type)) {
-            LOGGER.log(Level.SEVERE,
-                    "SingletonScope: Dependência circular detetada para {0}.", type.getName());
             throw new IllegalStateException(
                     "Dependência circular detetada para " + type.getName() +
                             ". Verifique as dependências do construtor.");
@@ -82,23 +75,19 @@ public final class SingletonScope implements ScopeInterface {
         // 3. Early reference disponível? (injeção por setter/field)
         Object early = earlyInstances.get(type);
         if (early != null) {
-            LOGGER.log(Level.FINE, "SingletonScope: Retornando early reference para {0}.", type.getName());
             return (T) early;
         }
 
         // 4. Criar nova instância
         inCreation.put(type, Boolean.TRUE);
-        LOGGER.log(Level.INFO, "SingletonScope: Criando instância para {0}.", type.getName());
 
         try {
             T newInstance = objectFactory.get();
             inCreation.remove(type);
             singletons.put(type, newInstance);
-            LOGGER.log(Level.INFO, "SingletonScope: Instância de {0} criada e registrada.", type.getName());
             return newInstance;
         } catch (Exception e) {
             inCreation.remove(type);
-            LOGGER.log(Level.SEVERE, "SingletonScope: Falha ao criar " + type.getName(), e);
             throw new RuntimeException("Falha ao criar instância de " + type.getName(), e);
         }
     }
@@ -113,7 +102,6 @@ public final class SingletonScope implements ScopeInterface {
     @Override
     public <T> void put(Class<T> type, T bean) {
         singletons.put(type, bean);
-        LOGGER.log(Level.FINE, "SingletonScope: Instância de {0} registada manualmente.", type.getName());
     }
 
     /**
@@ -127,7 +115,6 @@ public final class SingletonScope implements ScopeInterface {
         singletons.remove(type);
         earlyInstances.remove(type);
         inCreation.remove(type);
-        LOGGER.log(Level.FINE, "SingletonScope: Instância de {0} removida.", type.getName());
     }
 
     /**
@@ -140,7 +127,6 @@ public final class SingletonScope implements ScopeInterface {
         singletons.clear();
         earlyInstances.clear();
         inCreation.clear();
-        LOGGER.log(Level.INFO, "SingletonScope: Destruído. {0} instâncias libertadas.", count);
     }
 
     /**
@@ -151,7 +137,6 @@ public final class SingletonScope implements ScopeInterface {
     public void clear() {
         earlyInstances.clear();
         inCreation.clear();
-        LOGGER.log(Level.FINE, "SingletonScope: Estado temporário limpo.");
     }
 
     // ===== MÉTODOS DE ACESSO (para LifecycleManager) =====
@@ -176,6 +161,5 @@ public final class SingletonScope implements ScopeInterface {
      */
     public <T> void putEarly(Class<T> type, T instance) {
         earlyInstances.put(type, instance);
-        LOGGER.log(Level.FINE, "SingletonScope: Early reference registada para {0}.", type.getName());
     }
 }

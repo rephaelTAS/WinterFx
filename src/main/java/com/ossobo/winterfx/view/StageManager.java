@@ -32,8 +32,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 🎬 StageManager v5.3
@@ -42,8 +40,6 @@ import java.util.logging.Logger;
  * Suporte a alertas UNDECORATED com temporizador.
  */
 public class StageManager {
-
-    private static final Logger LOGGER = Logger.getLogger(StageManager.class.getName());
 
     // 🆕 Cache de controllers ativos (carregados pelo JavaFX com @FXML)
     private final Map<Class<?>, Object> activeControllers = new ConcurrentHashMap<>();
@@ -98,8 +94,6 @@ public class StageManager {
     private void registerActiveController(Object controller) {
         if (controller != null) {
             activeControllers.put(controller.getClass(), controller);
-            LOGGER.log(Level.FINE, "📝 Controller registrado: {0}",
-                    controller.getClass().getSimpleName());
         }
     }
 
@@ -130,8 +124,6 @@ public class StageManager {
         for (Method method : methods) {
             if (method.getDeclaringClass().equals(clazz)) {
                 FloatingWindow annotation = method.getAnnotation(FloatingWindow.class);
-                LOGGER.log(Level.FINE, "🔍 @FloatingWindow: {0}.{1}() → viewId={2}",
-                        new Object[]{clazz.getSimpleName(), method.getName(), annotation.viewId()});
             }
         }
     }
@@ -144,7 +136,6 @@ public class StageManager {
                 if (annotation.required()) {
                     throw new IllegalArgumentException("View não registrada: '" + viewId + "'");
                 }
-                LOGGER.warning("⚠️ View não encontrada: '" + viewId + "'");
                 return;
             }
 
@@ -155,7 +146,6 @@ public class StageManager {
                 Stage stage = openInNewStage(viewId, title, descriptor);
                 field.setAccessible(true);
                 field.set(bean, stage);
-                LOGGER.info("🪟 Nova janela: '" + viewId + "'");
                 return;
             }
 
@@ -169,7 +159,6 @@ public class StageManager {
             injectViewIntoField(bean, field, view, viewId, annotation.child());
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "❌ Erro @InjectView '" + viewId + "': " + e.getMessage(), e);
             if (annotation.required()) {
                 throw new RuntimeException("Falha ao injetar view: " + viewId, e);
             }
@@ -195,7 +184,6 @@ public class StageManager {
         } else if (Parent.class.isAssignableFrom(fieldType) || Node.class.isAssignableFrom(fieldType)) {
             field.set(bean, view);
         }
-        LOGGER.info("✅ View injetada: '" + viewId + "' → " + field.getName());
     }
 
     // =============================================
@@ -286,14 +274,12 @@ public class StageManager {
 
     private void loadViewAsync(String viewId, ViewDescriptor descriptor,
                                Object bean, Field field, InjectView annotation) {
-        LOGGER.info("⏳ Carregando view async: '" + viewId + "'");
         CompletableFuture.supplyAsync(() -> loadViewAsParent(viewId, descriptor))
                 .thenAccept(root -> {
                     Platform.runLater(() -> {
                         try {
                             injectViewIntoField(bean, field, root, viewId, annotation.child());
                         } catch (Exception e) {
-                            LOGGER.log(Level.SEVERE, "❌ Erro na injeção async: " + e.getMessage(), e);
                         }
                     });
                 });
@@ -389,16 +375,15 @@ public class StageManager {
         }
 
         Stage alertStage = new Stage();
-        alertStage.initStyle(StageStyle.UNDECORATED);  // 🆕 Sem bordas!
+        alertStage.initStyle(StageStyle.UNDECORATED);
         alertStage.setScene(new Scene(root));
         alertStage.centerOnScreen();
         alertStage.setAlwaysOnTop(true);
 
-        // 🆕 Temporizador — some automaticamente para tipos leves
         long duracao = switch (tipo) {
-            case SUCCESS -> 3000;   // 3 segundos
-            case INFO, WARNING -> 5000;  // 5 segundos
-            default -> 0;  // ERROR, CRITICAL, CONFIRMATION → não some
+            case SUCCESS -> 3000;
+            case INFO, WARNING -> 5000;
+            default -> 0;
         };
 
         if (duracao > 0) {
@@ -474,5 +459,55 @@ public class StageManager {
 
     public ViewDescriptor swapFxml(String viewId){
         return getDescriptor(viewId);
+    }
+
+    // =============================================
+    // PRIMARY STAGE E ALERTAS
+    // =============================================
+
+    private javafx.stage.Stage primaryStage;
+
+    /**
+     * Define o Stage principal da aplicação.
+     *
+     * @param primaryStage Stage principal
+     */
+    public void setPrimaryStage(javafx.stage.Stage primaryStage) {
+        this.primaryStage = primaryStage;
+    }
+
+    /**
+     * Retorna o Stage principal da aplicação.
+     *
+     * @return Stage principal
+     */
+    public javafx.stage.Stage getPrimaryStage() {
+        return primaryStage;
+    }
+
+    /**
+     * Abre um alerta UNDECORATED com ID para gerenciamento.
+     *
+     * @param viewId ID da view de alerta
+     * @param tipo Tipo do alerta
+     * @param id ID único do alerta
+     * @return Stage do alerta
+     */
+    public javafx.stage.Stage openAlertUndecoratedWithId(String viewId, AlertType tipo, String id) {
+        return openAlertUndecorated(viewId, tipo);
+    }
+
+    /**
+     * Abre um alerta UNDECORATED e aguarda resultado.
+     *
+     * @param viewId ID da view de alerta
+     * @param tipo Tipo do alerta
+     * @return true se confirmado, false se cancelado
+     */
+    public boolean openAlertUndecoratedWithResult(String viewId, AlertType tipo) {
+        javafx.stage.Stage stage = openAlertUndecorated(viewId, tipo);
+        stage.showAndWait();
+        // TODO: Implementar retorno baseado na resposta do usuário
+        return true;
     }
 }

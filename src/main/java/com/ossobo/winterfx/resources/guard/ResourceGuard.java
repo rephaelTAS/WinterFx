@@ -15,7 +15,6 @@ import com.ossobo.winterfx.resources.excecoes.ResourceValidationException;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 
 import java.util.Objects;
-import java.util.logging.Logger;
 
 /**
  * 🛡️ ResourceGuard v1.0
@@ -32,8 +31,6 @@ import java.util.logging.Logger;
  */
 public final class ResourceGuard {
 
-    private static final Logger LOGGER = Logger.getLogger(ResourceGuard.class.getName());
-
     private final ResourceRegistry registry;
 
     /**
@@ -41,7 +38,6 @@ public final class ResourceGuard {
      */
     public ResourceGuard(ResourceRegistry registry) {
         this.registry = registry;
-        LOGGER.info("🛡️ ResourceGuard v1.0 inicializado");
     }
 
     // ===== VALIDAÇÃO DE REGISTRO =====
@@ -60,8 +56,6 @@ public final class ResourceGuard {
         validateUrl(descriptor);
         validateUniqueness(descriptor);
         validateTypeConsistency(descriptor);
-
-        LOGGER.fine(() -> "✅ Descriptor validado: " + descriptor.getId());
     }
 
     /**
@@ -113,10 +107,6 @@ public final class ResourceGuard {
         ResourceType detectedType = detectTypeFromUrl(url);
 
         if (detectedType != ResourceType.UNKNOWN && detectedType != declaredType) {
-            LOGGER.warning(() -> String.format(
-                    "⚠️ Inconsistência de tipo para '%s': declarado=%s, detectado=%s (extensão)",
-                    descriptor.getId(), declaredType, detectedType
-            ));
         }
     }
 

@@ -11,22 +11,18 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class FieldInjector implements DependencyInjector {
-
-    private static final Logger LOGGER = Logger.getLogger(FieldInjector.class.getName());
 
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
     private final DependencyResolver dependencyResolver;
-    private final StageManager stageManager;  // 🆕
+    private final StageManager stageManager;
 
     public FieldInjector(ReflectionCache reflectionCache,
                          ReflectionProcessor reflectionProcessor,
                          DependencyResolver dependencyResolver,
-                         StageManager stageManager) {  // 🆕
+                         StageManager stageManager) {
         this.reflectionCache = reflectionCache;
         this.reflectionProcessor = reflectionProcessor;
         this.dependencyResolver = dependencyResolver;
@@ -42,10 +38,6 @@ public class FieldInjector implements DependencyInjector {
 
             Object dependency = resolveFieldDependency(field);
             reflectionProcessor.injectField(instance, field, dependency);
-
-            LOGGER.log(Level.FINE, "@Inject {0}.{1} ← {2}",
-                    new Object[]{type.getSimpleName(), field.getName(),
-                            dependency != null ? dependency.getClass().getSimpleName() : "null"});
         }
     }
 
@@ -58,12 +50,10 @@ public class FieldInjector implements DependencyInjector {
             return resolveCollection(genericType);
         }
 
-        // 🆕 Controller FXML? Busca do StageManager (já tem @FXML!)
+        // Controller FXML? Busca do StageManager (já tem @FXML!)
         if (stageManager != null) {
             Object activeController = stageManager.findActiveController(fieldType);
             if (activeController != null) {
-                LOGGER.log(Level.FINE, "🎯 Controller FXML do StageManager: {0}",
-                        fieldType.getSimpleName());
                 return activeController;
             }
         }

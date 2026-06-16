@@ -26,8 +26,6 @@ import com.ossobo.winterfx.di.scopes.implementations.SingletonScope;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Cria instâncias de beans gerenciados pelo container WinterFX.
@@ -44,8 +42,6 @@ import java.util.logging.Logger;
  * @version 2.2 - Suporte a @Controller(proxy=false), remoção de extractOriginal()
  */
 public final class InstanceCreator {
-
-    private static final Logger LOGGER = Logger.getLogger(InstanceCreator.class.getName());
 
     private InjectionManager injectionManager;
     private LifecycleManager lifecycleManager;
@@ -100,8 +96,6 @@ public final class InstanceCreator {
         eventPublisher.publishEvent(type, null,
                 DependencyLifecycleListener.LifecycleEventType.BEFORE_CREATION, type);
 
-        LOGGER.log(Level.FINE, "Criando instância: {0}", type.getName());
-
         try {
             BeanDefinition definition = beanRegistry.getDefinition(type);
 
@@ -131,10 +125,6 @@ public final class InstanceCreator {
 
             eventPublisher.publishEvent(type, null,
                     DependencyLifecycleListener.LifecycleEventType.AFTER_POST_CONSTRUCT, proxied);
-
-            if (proxied != instance) {
-                LOGGER.log(Level.FINE, "Proxy WinterFX aplicado: {0}", type.getName());
-            }
 
             return proxied;
 
@@ -186,7 +176,6 @@ public final class InstanceCreator {
         if (clazz.isAnnotationPresent(Controller.class)) {
             Controller ann = clazz.getAnnotation(Controller.class);
             if (!ann.proxy()) {
-                LOGGER.fine(() -> "Controller sem proxy: " + clazz.getSimpleName());
                 return instance;
             }
         }
@@ -195,7 +184,6 @@ public final class InstanceCreator {
         if (clazz.isAnnotationPresent(Service.class)) {
             Service ann = clazz.getAnnotation(Service.class);
             if (!ann.proxy()) {
-                LOGGER.fine(() -> "Service sem proxy: " + clazz.getSimpleName());
                 return instance;
             }
         }
@@ -204,7 +192,6 @@ public final class InstanceCreator {
         if (clazz.isAnnotationPresent(Repository.class)) {
             Repository ann = clazz.getAnnotation(Repository.class);
             if (!ann.proxy()) {
-                LOGGER.fine(() -> "Repository sem proxy: " + clazz.getSimpleName());
                 return instance;
             }
         }
@@ -213,7 +200,6 @@ public final class InstanceCreator {
         if (clazz.isAnnotationPresent(Component.class)) {
             Component ann = clazz.getAnnotation(Component.class);
             if (!ann.proxy()) {
-                LOGGER.fine(() -> "Component sem proxy: " + clazz.getSimpleName());
                 return instance;
             }
         }
@@ -221,7 +207,6 @@ public final class InstanceCreator {
         // Obtém proxyFactory do InjectionManager
         WinterFXProxyFactory pf = injectionManager != null ? injectionManager.getProxyFactory() : null;
         if (pf == null) {
-            LOGGER.warning("ProxyFactory não disponível — bean sem proxy: " + clazz.getName());
             return instance;
         }
 

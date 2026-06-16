@@ -14,12 +14,9 @@ import net.bytebuddy.matcher.ElementMatchers;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class WinterFXProxyFactory {
 
-    private static final Logger LOGGER = Logger.getLogger(WinterFXProxyFactory.class.getName());
     private final HandlerRegistry registry;
 
     public WinterFXProxyFactory(HandlerRegistry registry) {
@@ -87,7 +84,6 @@ public final class WinterFXProxyFactory {
                     .getDeclaredConstructor()
                     .newInstance();
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Falha ao criar proxy para " + targetClass.getName(), e);
             return original;
         }
     }

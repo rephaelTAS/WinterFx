@@ -9,7 +9,6 @@ import com.ossobo.winterfx.view.controller.WinterFXController;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.logging.Logger;
 
 /**
  * Fábrica de proxies para CONTROLLERS usando JDK Dynamic Proxy.
@@ -20,8 +19,6 @@ import java.util.logging.Logger;
  * @version 1.0
  */
 public class ControllerProxyFactory {
-
-    private static final Logger LOGGER = Logger.getLogger(ControllerProxyFactory.class.getName());
 
     /**
      * Cria proxy JDK para o controller.
@@ -37,13 +34,8 @@ public class ControllerProxyFactory {
 
         // Verifica se implementa WinterFXController
         if (!(original instanceof WinterFXController)) {
-            LOGGER.warning(() -> "Controller não implementa WinterFXController: " +
-                    original.getClass().getName() + " - proxy não criado");
             return original;
         }
-
-        LOGGER.info(() -> "✅ Criando proxy JDK para controller: " +
-                original.getClass().getSimpleName());
 
         return (T) Proxy.newProxyInstance(
                 original.getClass().getClassLoader(),
@@ -80,8 +72,6 @@ public class ControllerProxyFactory {
                 // Sem anotações, chama diretamente no original
                 return method.invoke(original, args);
             }
-
-            LOGGER.fine(() -> "🔍 Interceptando: " + methodName);
 
             // Processa anotações
             AnnotationContext ctx = new AnnotationContext(original, method, args);

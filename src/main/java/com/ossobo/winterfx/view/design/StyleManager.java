@@ -5,8 +5,6 @@ import javafx.scene.Parent;
 
 import java.net.URL;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 🎨 StyleManager v2.1
@@ -16,11 +14,9 @@ import java.util.logging.Logger;
  */
 public final class StyleManager {
 
-    private static final Logger LOGGER = Logger.getLogger(StyleManager.class.getName());
     private static final StyleManager INSTANCE = new StyleManager();
 
     private StyleManager() {
-        LOGGER.info("🎨 StyleManager v2.1 inicializado");
     }
 
     public static StyleManager getInstance() {
@@ -33,7 +29,6 @@ public final class StyleManager {
      */
     public void apply(Parent root, ViewDescriptor descriptor) {
         if (root == null || descriptor == null) {
-            LOGGER.warning("Root ou ViewDescriptor nulo — CSS não aplicado");
             return;
         }
 
@@ -56,9 +51,6 @@ public final class StyleManager {
                 }
             }
         }
-
-        LOGGER.log(Level.FINE, "CSS aplicado para ''{0}'': {1} arquivos",
-                new Object[]{descriptor.getId(), appliedCount});
     }
 
     /**
@@ -68,7 +60,6 @@ public final class StyleManager {
         if (root == null) return;
         int count = root.getStylesheets().size();
         root.getStylesheets().clear();
-        LOGGER.log(Level.FINE, "CSS removido: {0} arquivos", count);
     }
 
     private boolean containsStylesheet(Parent root, URL cssUrl) {

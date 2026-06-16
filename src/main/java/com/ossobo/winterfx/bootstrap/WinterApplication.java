@@ -25,8 +25,6 @@ import javafx.stage.Stage;
 
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Bootstrap principal do WinterFX.
@@ -46,7 +44,6 @@ import java.util.logging.Logger;
  */
 public final class WinterApplication {
 
-    private static final Logger LOGGER = Logger.getLogger(WinterApplication.class.getName());
     private static final String VERSION = "14.0";
 
     private static WinterApplication INSTANCE;
@@ -79,7 +76,6 @@ public final class WinterApplication {
 
     public static void run(Class<? extends Application> appClass) {
         String packageName = appClass.getPackageName();
-        LOGGER.info("🚀 WinterApplication.run() - package: " + packageName);
 
         WinterApplication instance = new WinterApplication()
                 .withScanPackages(packageName)
@@ -112,13 +108,9 @@ public final class WinterApplication {
 
     public void initializeWithProgress(Consumer<Double> progressCallback) {
         if (initialized) {
-            LOGGER.warning("⚠️ WinterFX já foi inicializado.");
             if (progressCallback != null) progressCallback.accept(1.0);
             return;
         }
-
-        LOGGER.info("🚀 INICIALIZANDO WINTERFX v" + VERSION);
-        LOGGER.info("   Pacotes: " + String.join(", ", scanPackages));
 
         try {
             if (progressCallback != null) progressCallback.accept(0.0);
@@ -147,10 +139,8 @@ public final class WinterApplication {
 
             if (progressCallback != null) progressCallback.accept(1.0);
             initialized = true;
-            logInitializationSuccess();
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "❌ FALHA NA INICIALIZAÇÃO", e);
             if (progressCallback != null) progressCallback.accept(-1.0);
             throw new RuntimeException("Falha ao inicializar WinterFX: " + e.getMessage(), e);
         }
@@ -167,23 +157,16 @@ public final class WinterApplication {
         this.beanRegistry = new BeanRegistry();
         this.resourceRegistry = new ResourceRegistry();
         this.handlerRegistry = new HandlerRegistry();
-        LOGGER.info("📦 [1/8] BeanRegistry + ResourceRegistry criados");
     }
 
     private void initializeScannerEngine() {
-        LOGGER.info("🔍 [2/8] ScannerEngine — escaneando classpath...");
         ScannerEngine engine = new ScannerEngine(scanPackages);
-        int total = engine.scanAndRegister(beanRegistry, resourceRegistry);
-        LOGGER.info("   ✅ Scan concluído — Total: " + total
-                + " (Beans: " + beanRegistry.getBeanNames().size()
-                + ", Recursos: " + resourceRegistry.count() + ")");
+        engine.scanAndRegister(beanRegistry, resourceRegistry);
     }
 
     private void initializeDiContainer() {
-        LOGGER.info("🏗️ [3/8] DiContainer...");
         DiContainer.initialize(beanRegistry);
         diContainer = DiContainer.getInstance();
-        LOGGER.info("   ✅ " + diContainer.getBeanCount() + " beans geridos");
     }
 
     private void initializeImageManager() {
@@ -193,7 +176,6 @@ public final class WinterApplication {
             diContainer.getInjectionManager().setImageManager(imageManager);
         }
         this.handlerRegistry.register(new SwapImageHandler(imageManager));
-        LOGGER.info("🖼️ [4/8] ImageManager ✅");
     }
 
     private void initializeNotificationManager() {
@@ -209,34 +191,22 @@ public final class WinterApplication {
         this.handlerRegistry.register(new OnCriticalHandler(notificationManager));
         this.handlerRegistry.register(new OnConfirmationHandler(notificationManager));
         this.handlerRegistry.register(new OnExceptionHandler(notificationManager));
-        LOGGER.info("   ✅ 7 handlers de notificação registrados");
-        LOGGER.info("🔔 [5/8] NotificationManager ✅");
     }
 
     private void initializeInterceptionSystem() {
-        LOGGER.info("🎯 [6/8] Sistema de Interceptação — configurando handlers...");
-
-
         this.proxyFactory = new WinterFXProxyFactory(handlerRegistry);
-        LOGGER.info("   ✅ WinterFXProxyFactory criado");
 
         if (diContainer != null) {
             diContainer.getInjectionManager().setProxyFactory(proxyFactory);
-            // OU acesse o InstanceCreator diretamente
         }
 
         this.annotationPostProcessor = new AnnotationBeanPostProcessor(proxyFactory);
         if (diContainer != null) {
             diContainer.registerBeanPostProcessor(annotationPostProcessor);
-            LOGGER.info("   ✅ AnnotationBeanPostProcessor registrado no DiContainer");
         }
-
-        LOGGER.info("   ✅ Sistema de interceptação pronto");
     }
 
     private void initializeStageManager() {
-        LOGGER.info("🪟 [7/8] StageManager...");
-
         FXMLService fxmlService = new FXMLService(diContainer, proxyFactory);
         StyleManager styleManager = StyleManager.getInstance();
 
@@ -244,10 +214,10 @@ public final class WinterApplication {
                 resourceRegistry, diContainer, styleManager,
                 proxyFactory, handlerRegistry
         );
+        stageManager.setPrimaryStage(primaryStage);
         stageManager.setFxmlService(fxmlService);
         handlerRegistry.register(new NewSceneHandler());
         handlerRegistry.register(new SwapFxmlHandler(stageManager));
-        LOGGER.info("   ✅ SwapImageHandler e SwapFxmlHandler registrados");
 
         if (diContainer != null) {
             diContainer.register(StageManager.class, stageManager);
@@ -256,8 +226,6 @@ public final class WinterApplication {
             diContainer.getInjectionManager().setRegistry(resourceRegistry);
             diContainer.getInjectionManager().setFxmlService(fxmlService);
         }
-
-        LOGGER.info("   ✅ StageManager inicializado");
     }
 
     private void initializeFloatingWindowManager() {
@@ -267,7 +235,6 @@ public final class WinterApplication {
             diContainer.getInjectionManager().setFloatingWindowManager(floatingWindowManager);
             diContainer.completeResourceInjectors();
         }
-        LOGGER.info("🪟 [8/8] FloatingWindowManager ✅");
     }
 
     // ==================== STAGE ====================
@@ -298,7 +265,6 @@ public final class WinterApplication {
         primaryStage.setTitle(descriptor.getTitle() != null ? descriptor.getTitle() : "WinterFX App");
         primaryStage.setScene(scene);
         primaryStage.show();
-        LOGGER.info("🚀 Aplicação iniciada: " + viewId);
     }
 
     // ==================== PROCESSAMENTO ====================
@@ -317,7 +283,6 @@ public final class WinterApplication {
 
     public void shutdown() {
         if (!initialized) return;
-        LOGGER.info("🛑 Encerrando WinterFX...");
         if (floatingWindowManager != null) floatingWindowManager.fecharTodas();
         if (stageManager != null) stageManager.closeAllStages();
         if (imageManager != null) imageManager.clearCache();
@@ -325,17 +290,6 @@ public final class WinterApplication {
         if (diContainer != null) diContainer.close();
         initialized = false;
         INSTANCE = null;
-        LOGGER.info("✅ WinterFX encerrado.");
-    }
-
-    // ==================== DIAGNÓSTICO ====================
-
-    private void logInitializationSuccess() {
-        LOGGER.info("✅ WINTERFX v" + VERSION + " iniciado:");
-        LOGGER.info("   📦 Beans: " + (diContainer != null ? diContainer.getBeanCount() : 0));
-        LOGGER.info("   🗂️ Recursos: " + (resourceRegistry != null ? resourceRegistry.count() : 0));
-        LOGGER.info("   🎯 Handlers: " + (handlerRegistry != null ? handlerRegistry.size() : 0));
-        LOGGER.info("   🔷 ProxyFactory: " + (proxyFactory != null ? "ativo" : "inativo"));
     }
 
     // ==================== GETTERS ====================

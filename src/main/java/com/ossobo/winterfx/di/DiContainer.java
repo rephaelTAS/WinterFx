@@ -27,15 +27,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * DiContainer v3.6 — Container de Injeção de Dependências.
  */
 public final class DiContainer {
 
-    private static final Logger LOGGER = Logger.getLogger(DiContainer.class.getName());
     private static volatile DiContainer INSTANCE;
 
     private final List<BeanPostProcessor> beanPostProcessors = new ArrayList<>();
@@ -58,8 +55,6 @@ public final class DiContainer {
 
     private DiContainer(BeanRegistry beanRegistry) {
         this.beanRegistry = beanRegistry;
-        LOGGER.log(Level.INFO, "🚀 DiContainer v3.6 — pronto para boot com {0} beans pré-registados.",
-                beanRegistry.getBeanNames().size());
     }
 
     public DiContainer() {}
@@ -208,7 +203,6 @@ public final class DiContainer {
         beanPostProcessors.add(processor);
     }
 
-    // Adicione este getter:
     public List<BeanPostProcessor> getBeanPostProcessors() {
         return Collections.unmodifiableList(beanPostProcessors);
     }

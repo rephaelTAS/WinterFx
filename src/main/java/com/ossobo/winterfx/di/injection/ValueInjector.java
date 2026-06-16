@@ -7,12 +7,9 @@ import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class ValueInjector implements DependencyInjector {
 
-    private static final Logger LOGGER = Logger.getLogger(FieldInjector.class.getName()); // 🆕
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
     private final ConfigurationManager configurationManager;
@@ -50,9 +47,6 @@ public class ValueInjector implements DependencyInjector {
                 String expression = valueAnnotation.value();
                 Object resolvedValue = resolveValue(expression, field.getType());
                 reflectionProcessor.injectField(instance, field, resolvedValue);
-
-                LOGGER.log(Level.FINE, "@Value {0}.{1} = {2}",
-                        new Object[]{type.getSimpleName(), field.getName(), expression});
             }
         }
     }

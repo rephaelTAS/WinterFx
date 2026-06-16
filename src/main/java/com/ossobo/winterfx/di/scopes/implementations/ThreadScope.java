@@ -5,8 +5,6 @@ import com.ossobo.winterfx.di.scopes.interfaces.ScopeInterface;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ThreadScope v2.0
@@ -27,8 +25,6 @@ import java.util.logging.Logger;
  * @since 2.0
  */
 public final class ThreadScope implements ScopeInterface {
-
-    private static final Logger LOGGER = Logger.getLogger(ThreadScope.class.getName());
 
     /**
      * ThreadLocal que armazena um mapa de instâncias para cada thread.
@@ -72,8 +68,6 @@ public final class ThreadScope implements ScopeInterface {
     @Override
     public <T> void put(Class<T> type, T bean) {
         threadInstances.get().put(type, bean);
-        LOGGER.log(Level.FINE, "ThreadScope: Bean {0} registado na thread {1}.",
-                new Object[]{type.getName(), Thread.currentThread().getName()});
     }
 
     /**
@@ -85,8 +79,6 @@ public final class ThreadScope implements ScopeInterface {
     @Override
     public <T> void remove(Class<T> type) {
         threadInstances.get().remove(type);
-        LOGGER.log(Level.FINE, "ThreadScope: Bean {0} removido da thread {1}.",
-                new Object[]{type.getName(), Thread.currentThread().getName()});
     }
 
     /**
@@ -99,8 +91,6 @@ public final class ThreadScope implements ScopeInterface {
     @Override
     public void clear() {
         threadInstances.remove();
-        LOGGER.log(Level.FINE, "ThreadScope: Cache limpo para thread {0}.",
-                Thread.currentThread().getName());
     }
 
     /**
@@ -112,8 +102,6 @@ public final class ThreadScope implements ScopeInterface {
     @Override
     public void destroy() {
         clear();
-        LOGGER.log(Level.FINE, "ThreadScope: Escopo destruído para thread {0}.",
-                Thread.currentThread().getName());
     }
 
     // ===== MÉTODOS DE UTILIDADE (para ScopeManager e LifecycleManager) =====
@@ -129,8 +117,6 @@ public final class ThreadScope implements ScopeInterface {
     public Map<Class<?>, Object> clearAndGetInstances() {
         Map<Class<?>, Object> instances = threadInstances.get();
         threadInstances.remove();
-        LOGGER.log(Level.FINE, "ThreadScope: {0} instâncias recolhidas para @PreDestroy na thread {1}.",
-                new Object[]{instances.size(), Thread.currentThread().getName()});
         return instances;
     }
 
@@ -143,10 +129,5 @@ public final class ThreadScope implements ScopeInterface {
      * de requisições limpar suas próprias ThreadLocals.
      */
     public void clearAllThreads() {
-        LOGGER.log(Level.WARNING,
-                "ThreadScope: clearAllThreads() chamado. " +
-                        "O DI Container está a desligar, mas apenas a thread atual pode ser limpa. " +
-                        "Certifique-se de que o pool de threads ou filtro de requisições " +
-                        "limpa os seus próprios ThreadLocals.");
     }
 }

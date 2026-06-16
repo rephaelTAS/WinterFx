@@ -85,4 +85,13 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.runtime;
     exports com.ossobo.winterfx.runtime.handler;
     exports com.ossobo.winterfx.intercept;
+
+
+    exports com.ossobo.winterfx.di.injection;
+    exports com.ossobo.winterfx.di.instantiation;
+    exports com.ossobo.winterfx.di.lifecycle.events;
+    exports com.ossobo.winterfx.di.lifecycle.interfaces;
+    exports com.ossobo.winterfx.di.resolver.methods;
+    exports com.ossobo.winterfx.di.scopes.interfaces;
+    exports com.ossobo.winterfx.di.configuration;
 }

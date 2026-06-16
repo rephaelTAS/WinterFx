@@ -144,14 +144,10 @@ public class WinterErrorHandler {
             try {
                 manager.erro("Erro no Sistema", "Ocorreu um erro crítico.");
             } catch (Exception e) {
-                System.err.println("❌ FALLBACK CRÍTICO: " + originalError.getMessage());
-                if (handlerError != null) System.err.println("   Handler error: " + handlerError.getMessage());
             }
         }
 
         private void fallbackWinterFx(UserFriendlyMessage message) {
-            System.err.println("⚠️ FALLBACK - Título: " + message.getTitle());
-            System.err.println("   Mensagem: " + message.getBody());
         }
     }
 }

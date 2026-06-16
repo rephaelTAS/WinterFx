@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 🔧 ResourceLoader v2.0
@@ -57,8 +55,6 @@ import java.util.logging.Logger;
  */
 public final class ResourceLoader {
 
-    private static final Logger LOGGER = Logger.getLogger(ResourceLoader.class.getName());
-
     private final ResourceResolver resolver;
     private final ResourceRegistry registry;
 
@@ -68,7 +64,6 @@ public final class ResourceLoader {
     public ResourceLoader(ResourceResolver resolver) {
         this.resolver = resolver;
         this.registry = null;
-        LOGGER.info("🔧 ResourceLoader v2.0 inicializado");
     }
 
     /**
@@ -77,7 +72,6 @@ public final class ResourceLoader {
     public ResourceLoader(ResourceResolver resolver, ResourceRegistry registry) {
         this.resolver = resolver;
         this.registry = registry;
-        LOGGER.info("🔧 ResourceLoader v2.0 inicializado (com registry)");
     }
 
     // =============================================
@@ -385,7 +379,6 @@ public final class ResourceLoader {
         void onLoaded(Image image);
 
         default void onError(ResourceLoadException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao carregar imagem", e);
         }
     }
 
@@ -492,7 +485,6 @@ public final class ResourceLoader {
      * Pré-carrega uma view (útil para eager loading).
      */
     public void preloadView(String viewId) {
-        LOGGER.info(() -> "⚡ Pré-carregando view: " + viewId);
         loadView(viewId);
     }
 
@@ -500,7 +492,6 @@ public final class ResourceLoader {
      * Pré-carrega uma imagem.
      */
     public void preloadImage(String imageId) {
-        LOGGER.info(() -> "⚡ Pré-carregando imagem: " + imageId);
         loadImage(imageId);
     }
 

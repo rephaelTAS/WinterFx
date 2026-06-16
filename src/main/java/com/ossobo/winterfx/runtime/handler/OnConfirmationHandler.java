@@ -1,8 +1,11 @@
-// OnConfirmationHandler.java
+// OnConfirmationHandler.java v2.3 - 2026-06-14
 package com.ossobo.winterfx.runtime.handler;
 
 import com.ossobo.winterfx.notifications.NotificationManager;
 import com.ossobo.winterfx.notifications.anotations.OnConfirmation;
+
+import java.lang.annotation.Annotation;
+import java.util.concurrent.CompletableFuture;
 
 public class OnConfirmationHandler extends BaseNotificationHandler<OnConfirmation> {
 
@@ -11,7 +14,7 @@ public class OnConfirmationHandler extends BaseNotificationHandler<OnConfirmatio
     }
 
     @Override
-    public boolean supports(java.lang.annotation.Annotation annotation) {
+    public boolean supports(Annotation annotation) {
         return annotation instanceof OnConfirmation;
     }
 
@@ -22,15 +25,37 @@ public class OnConfirmationHandler extends BaseNotificationHandler<OnConfirmatio
 
     @Override
     public void handle(AnnotationContext ctx, OnConfirmation ann) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
         runOnFx(() -> {
-            boolean confirmed = manager.confirm(ann.titulo(), ann.descricao());
-            if (confirmed) {
-                try {
-                    ctx.getMethod().invoke(ctx.getTarget(), ctx.getArgs());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            // ✅ CORRETO: confirmar é void com callback
+            manager.confirmar(ann.descricao(), ann.titulo(), confirmed -> {
+                future.complete(confirmed);
+            });
         });
+
+        if (!future.join()) {
+            throw new PipelineInterruptedException("Usuário cancelou a operação");
+        }
+    }
+
+    @Override
+    public boolean isBeforePhase() {
+        return true;
+    }
+
+    @Override
+    public boolean isAfterPhase() {
+        return false;
+    }
+
+    @Override
+    public boolean isSuccessOnly() {
+        return false;
+    }
+
+    @Override
+    public boolean isErrorOnly() {
+        return false;
     }
 }

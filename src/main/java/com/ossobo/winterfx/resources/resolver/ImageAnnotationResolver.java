@@ -7,8 +7,6 @@ import com.ossobo.winterfx.resources.descriptor.ImageDescriptor;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ImageAnnotationResolver v2.2
@@ -28,8 +26,6 @@ import java.util.logging.Logger;
  * </ul>
  */
 public final class ImageAnnotationResolver {
-
-    private static final Logger LOGGER = Logger.getLogger(ImageAnnotationResolver.class.getName());
 
     private ImageAnnotationResolver() {}
 
@@ -51,9 +47,6 @@ public final class ImageAnnotationResolver {
                 .description(annotation.description())
                 .tags(annotation.tags())
                 .build();
-
-        LOGGER.log(Level.FINE, "✅ ImageDescriptor criado: id={0}, src={1}",
-                new Object[]{annotation.id(), annotation.src()});
 
         return descriptor;
     }
@@ -77,9 +70,6 @@ public final class ImageAnnotationResolver {
         if (registerImage != null) {
             descriptors.add(resolve(registerImage));
         }
-
-        LOGGER.log(Level.FINE, "📦 {0} imagens resolvidas da classe {1}",
-                new Object[]{descriptors.size(), clazz.getSimpleName()});
 
         return descriptors;
     }
@@ -112,7 +102,6 @@ public final class ImageAnnotationResolver {
             String mensagem = String.format(
                     "Imagem não encontrada para '%s': %s", imageId, path
             );
-            LOGGER.severe("❌ " + mensagem);
             throw new IllegalArgumentException(mensagem);
         }
 

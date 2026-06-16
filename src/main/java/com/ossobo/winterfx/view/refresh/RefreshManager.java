@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * RefreshManager v3.1
@@ -17,8 +15,6 @@ import java.util.logging.Logger;
  */
 public final class RefreshManager {
 
-    private static final Logger LOGGER = Logger.getLogger(RefreshManager.class.getName());
-
     private final ScheduledExecutorService scheduler;
     private final Map<String, RefreshEntry> refreshableViews;
     private final Map<String, ScheduledFuture<?>> refreshTasks;
@@ -27,7 +23,6 @@ public final class RefreshManager {
         this.scheduler = Executors.newScheduledThreadPool(1);
         this.refreshableViews = new ConcurrentHashMap<>();
         this.refreshTasks = new ConcurrentHashMap<>();
-        LOGGER.info("🔄 RefreshManager v3.1 inicializado");
     }
 
     /**
@@ -35,7 +30,6 @@ public final class RefreshManager {
      */
     public void register(String viewId, Parent root, Object controller) {
         if (viewId == null || root == null) {
-            LOGGER.warning("⚠️ Registro com parâmetros nulos");
             return;
         }
 
@@ -52,10 +46,7 @@ public final class RefreshManager {
             try {
                 refreshable.onViewInitialized();
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, "onViewInitialized falhou: {0}", viewId);
             }
-
-            LOGGER.log(Level.FINE, "✅ View registrada para refresh: {0}", viewId);
         }
     }
 
@@ -92,7 +83,6 @@ public final class RefreshManager {
             try {
                 entry.controller.onViewHidden();
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, "onViewHidden falhou: {0}", viewId);
             }
         }
     }
@@ -106,7 +96,6 @@ public final class RefreshManager {
             try {
                 entry.controller.onViewShown();
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, "onViewShown falhou: {0}", viewId);
             }
         }
     }
@@ -129,8 +118,6 @@ public final class RefreshManager {
         try {
             controller.refreshData();
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "❌ Erro no refresh de {0}: {1}",
-                    new Object[]{viewId, e.getMessage()});
         }
     }
 
@@ -138,8 +125,6 @@ public final class RefreshManager {
      * Finaliza o RefreshManager.
      */
     public void shutdown() {
-        LOGGER.info("🛑 Encerrando RefreshManager...");
-
         refreshTasks.values().forEach(task -> task.cancel(false));
         refreshTasks.clear();
 
@@ -159,8 +144,6 @@ public final class RefreshManager {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
-
-        LOGGER.info("✅ RefreshManager encerrado.");
     }
 
     // ==================== CLASSE INTERNA ====================

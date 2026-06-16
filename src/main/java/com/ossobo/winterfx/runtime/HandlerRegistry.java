@@ -1,5 +1,20 @@
-// Classe HandlerRegistry v2.0 - 2026-06-12
+// HandlerRegistry.java v2.1 - 2026-06-14
 // Registro central de handlers com cache por Method. Lookup O(1).
+// Com pipeline condicional para execução exclusiva de erro/sucesso.
+//
+// PIPELINE CONDICIONAL v2.1:
+//   - executeByPhase(): executa handlers BEFORE/AFTER (tradicional)
+//   - executeSuccessPhase(): executa apenas handlers SUCCESS_ONLY (@OnSuccess, @NewScene, @SwapFxml)
+//   - executeErrorPhase(): executa apenas handlers ERROR_ONLY (@OnError, @OnException)
+//
+// Vantagens v2.1:
+//   - ✅ @OnError e @OnSuccess MUTUAMENTE EXCLUSIVOS
+//   - ✅ NUNCA ambos executam simultaneamente
+//   - ✅ @NewScene e @SwapFxml só executam se sucesso
+//   - ✅ @OnError só executa se erro
+//   - ✅ Cache O(1) mantido
+//
+// @version 2.1 - Pipeline condicional com execução exclusiva de erro/sucesso
 package com.ossobo.winterfx.runtime;
 
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
@@ -16,12 +31,23 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Registro de handlers de anotações com cache otimizado por {@link Method}.
  *
- * <p>O faseamento (before/after/error) é controlado pela {@link WinterFXProxyFactory},
- * não por esta classe. Aqui apenas registramos e buscamos handlers.</p>
+ * <p><b>Pipeline de Interceptação:</b></p>
+ * <ol>
+ *   <li><b>FASE BEFORE:</b> {@link #executeByPhase(Method, AnnotationContext, boolean)} - executa handlers BEFORE</li>
+ *   <li><b>EXECUÇÃO:</b> método executa e captura exceção (se houver)</li>
+ *   <li><b>FASE AFTER (CONDICIONAL):</b>
+ *     <ul>
+ *       <li>Se erro: {@link #executeErrorPhase(Method, AnnotationContext)} - executa apenas @OnError, @OnException</li>
+ *       <li>Se sucesso: {@link #executeSuccessPhase(Method, AnnotationContext)} - executa apenas @OnSuccess, @NewScene, @SwapFxml</li>
+ *     </ul>
+ *   </li>
+ * </ol>
  *
  * <p><b>Trade-off:</b> Cache em memória vs. re-scanear anotações.
  * Cache consome memória mas evita reflection repetida. Em aplicações JavaFX típicas,
  * o número de métodos anotados é pequeno, então o consumo é irrelevante.</p>
+ *
+ * @version 2.1 - Pipeline condicional com execução exclusiva de erro/sucesso
  */
 public final class HandlerRegistry {
 
@@ -90,9 +116,14 @@ public final class HandlerRegistry {
 
     /**
      * Executa handlers filtrados por fase (before/after).
-     * Anotações sem atributo "before" executam em AMBAS as fases.
-     * Anotações com before=true só executam quando isBefore=true.
-     * Anotações com before=false só executam quando isBefore=false.
+     *
+     * <p>Anotações sem atributo "before" executam em AMBAS as fases.</p>
+     * <p>Anotações com before=true só executam quando isBefore=true.</p>
+     * <p>Anotações com before=false só executam quando isBefore=false.</p>
+     *
+     * @param method Método a executar handlers
+     * @param ctx Contexto de anotação
+     * @param isBefore true para fase BEFORE, false para fase AFTER
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void executeByPhase(Method method, AnnotationContext ctx, boolean isBefore) {
@@ -101,6 +132,73 @@ public final class HandlerRegistry {
             if (annotation == null) continue;
             if (!matchesPhase(annotation, isBefore)) continue;
             ((AnnotationHandler) handler).handle(ctx, annotation);
+        }
+    }
+
+    // ========== NOVO: Pipeline Condicional ==========
+
+    /**
+     * 🔥 NOVO: Executa apenas handlers de SUCESSO.
+     *
+     * <p>Executa handlers que são:</p>
+     * <ul>
+     *   <li>FASE AFTER ({@link AnnotationHandler#isAfterPhase()})</li>
+     *   <li>SÓ SUCESSO ({@link AnnotationHandler#isSuccessOnly()})</li>
+     * </ul>
+     *
+     * <p><b>Handlers executados:</b></p>
+     * <ul>
+     *   <li>{@code @OnSuccess} - mostra notificação de sucesso</li>
+     *   <li>{@code @NewScene} - navega para nova view</li>
+     *   <li>{@code @SwapFxml} - troca FXML</li>
+     * </ul>
+     *
+     * @param method Método a executar handlers de sucesso
+     * @param ctx Contexto de anotação com resultado
+     */
+    public void executeSuccessPhase(Method method, AnnotationContext ctx) {
+        List<AnnotationHandler<?>> handlers = cache.get(method);
+        if (handlers == null) return;
+
+        for (AnnotationHandler<?> handler : handlers) {
+            if (handler.isAfterPhase() && handler.isSuccessOnly()) {
+                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
+                if (annotation != null) {
+                    ((AnnotationHandler) handler).handle(ctx, annotation);
+                }
+            }
+        }
+    }
+
+    /**
+     * 🔥 NOVO: Executa apenas handlers de ERRO.
+     *
+     * <p>Executa handlers que são:</p>
+     * <ul>
+     *   <li>FASE AFTER ({@link AnnotationHandler#isAfterPhase()})</li>
+     *   <li>SÓ ERRO ({@link AnnotationHandler#isErrorOnly()})</li>
+     * </ul>
+     *
+     * <p><b>Handlers executados:</b></p>
+     * <ul>
+     *   <li>{@code @OnError} - mostra notificação de erro</li>
+     *   <li>{@code @OnException} - processa exceção</li>
+     * </ul>
+     *
+     * @param method Método a executar handlers de erro
+     * @param ctx Contexto de anotação com exceção
+     */
+    public void executeErrorPhase(Method method, AnnotationContext ctx) {
+        List<AnnotationHandler<?>> handlers = cache.get(method);
+        if (handlers == null) return;
+
+        for (AnnotationHandler<?> handler : handlers) {
+            if (handler.isAfterPhase() && handler.isErrorOnly()) {
+                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
+                if (annotation != null) {
+                    ((AnnotationHandler) handler).handle(ctx, annotation);
+                }
+            }
         }
     }
 

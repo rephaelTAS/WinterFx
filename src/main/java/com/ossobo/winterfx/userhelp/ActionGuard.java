@@ -1,11 +1,11 @@
 /*
- * ActionGuard v2.1
+ * ActionGuard v2.2
  *
  * Proteção de ações críticas com confirmação explícita.
  * Mostra impacto da ação e exige digitação para confirmar.
  *
  * Módulo: WinterFX UserHelp
- * v2.1: Atualizado para WinterFX v11 - usa NotificationManager
+ * v2.2: Corrigido para usar callback assíncrono do NotificationManager
  */
 package com.ossobo.winterfx.userhelp;
 
@@ -21,11 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 🛡️ ActionGuard v2.1
+ * 🛡️ ActionGuard v2.2
  *
  * Proteção de ações críticas com confirmação explícita.
  *
- * <p><b>🔥 v2.1:</b> Substitui NotificationSender por NotificationManager.</p>
+ * <p><b>🔥 v2.2:</b> Corrigido para usar callback assíncrono do NotificationManager.</p>
  *
  * <p><b>Exemplo de uso:</b></p>
  * <pre>
@@ -50,7 +50,6 @@ public class ActionGuard {
     private Runnable onConfirm;
     private Window owner;
 
-    // 🔥 Injeta o NotificationManager (substitui NotificationSender)
     @Inject
     private NotificationManager notificationManager;
 
@@ -73,10 +72,6 @@ public class ActionGuard {
         return this;
     }
 
-    /**
-     * Exige que o usuário digite um texto específico para confirmar.
-     * @param target texto que deve ser digitado exatamente
-     */
     public ActionGuard requireConfirmation(String target) {
         this.confirmationTarget = target;
         this.confirmationPrompt = "Digite \"" + target + "\" para confirmar:";
@@ -97,49 +92,41 @@ public class ActionGuard {
     // EXIBIÇÃO
     // =========================================================================
 
-    /** Exibe o diálogo de confirmação */
     public void show() {
-        // Se tem confirmação por digitação, usa Alert customizado
         if (confirmationTarget != null) {
             showWithConfirmationField();
         } else {
-            // 🔥 Modo simples: usa NotificationManager para confirmar
+            // ✅ CORRETO: usa callback assíncrono
             if (notificationManager != null) {
                 String descricao = warning != null ? warning : "Confirmar ação?";
 
-                boolean confirmado = notificationManager.confirm(title, descricao);
-
-                if (confirmado && onConfirm != null) {
-                    onConfirm.run();
-                }
+                notificationManager.confirmar(descricao, title, confirmed -> {
+                    if (confirmed && onConfirm != null) {
+                        onConfirm.run();
+                    }
+                });
             } else {
-                // Fallback: diálogo padrão do JavaFX
                 showFallbackConfirmation();
             }
         }
     }
 
-    /** Diálogo com campo de confirmação por digitação */
     private void showWithConfirmationField() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
 
-        // Configura owner se disponível
         if (owner != null) {
             alert.initOwner(owner);
         }
 
-        // Conteúdo
         VBox content = new VBox(12);
         content.setPadding(new Insets(20));
 
-        // Ícone + warning
         Label warningLabel = new Label("⚠ " + (warning != null ? warning : "Esta ação é irreversível"));
         warningLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " + UserHelpStyle.WARNING_ORANGE + ";");
         content.getChildren().add(warningLabel);
 
-        // Impactos
         if (!impacts.isEmpty()) {
             Label impactTitle = new Label("Impactos desta ação:");
             impactTitle.setStyle("-fx-font-weight: bold; -fx-padding: 8 0 0 0;");
@@ -152,7 +139,6 @@ public class ActionGuard {
             }
         }
 
-        // Campo de digitação
         Label promptLabel = new Label(confirmationPrompt);
         promptLabel.setStyle("-fx-font-weight: bold; -fx-padding: 8 0 0 0;");
         content.getChildren().add(promptLabel);
@@ -169,7 +155,6 @@ public class ActionGuard {
         alert.getDialogPane().setContent(content);
         styleDialog(alert);
 
-        // Botões
         Button confirmButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
         confirmButton.setText("Confirmar");
         confirmButton.setDisable(true);
@@ -178,7 +163,6 @@ public class ActionGuard {
         Button cancelButton = (Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL);
         cancelButton.setText("Cancelar");
 
-        // Habilita botão só quando digitar corretamente
         confirmationField.textProperty().addListener((obs, old, val) -> {
             boolean match = confirmationTarget.equals(val);
             confirmButton.setDisable(!match);
@@ -188,7 +172,6 @@ public class ActionGuard {
             }
         });
 
-        // Foco automático no campo de confirmação
         confirmationField.requestFocus();
 
         alert.showAndWait().ifPresent(response -> {
@@ -198,18 +181,15 @@ public class ActionGuard {
         });
     }
 
-    /** Fallback quando NotificationManager não está disponível */
     private void showFallbackConfirmation() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(title);
         alert.setHeaderText(warning != null ? warning : "Confirmar ação?");
 
-        // Configura owner se disponível
         if (owner != null) {
             alert.initOwner(owner);
         }
 
-        // Conteúdo com impactos
         if (!impacts.isEmpty()) {
             String contentText = "Impactos:\n" + String.join("\n", impacts);
             alert.setContentText(contentText);
@@ -226,7 +206,6 @@ public class ActionGuard {
         });
     }
 
-    /** Aplica estilo ao diálogo */
     private void styleDialog(Alert alert) {
         DialogPane pane = alert.getDialogPane();
         pane.getStyleClass().add(UserHelpStyle.CSS_GUARD_DIALOG);

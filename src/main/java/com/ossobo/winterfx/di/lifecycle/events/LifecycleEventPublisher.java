@@ -256,8 +256,6 @@ public class LifecycleEventPublisher {
                     break;
             }
         } catch (Exception e) {
-            // Previne que exceções em listeners quebrem o container
-            System.err.println("Error notifying lifecycle listener: " + e.getMessage());
         }
     }
 

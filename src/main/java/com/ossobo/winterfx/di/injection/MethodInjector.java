@@ -10,12 +10,8 @@ import java.lang.reflect.Parameter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class MethodInjector implements DependencyInjector {
-
-    private static final Logger LOGGER = Logger.getLogger(MethodInjector.class.getName()); // 🆕
 
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
@@ -36,9 +32,6 @@ public class MethodInjector implements DependencyInjector {
         for (Method method : methods) {
             Object[] args = resolveMethodParameters(method);
             reflectionProcessor.invokeMethod(instance, method, args);
-
-            LOGGER.log(Level.FINE, "@Inject método {0}.{1}()",
-                    new Object[]{type.getSimpleName(), method.getName()});
         }
     }
 
@@ -71,7 +64,6 @@ public class MethodInjector implements DependencyInjector {
         return dependencyResolver.getBean(paramType);
     }
 
-    // 🆕 Método movido para cá
     @SuppressWarnings("unchecked")
     private Object resolveCollection(java.lang.reflect.Type collectionType) {
         if (!(collectionType instanceof java.lang.reflect.ParameterizedType pt)) {
@@ -92,7 +84,6 @@ public class MethodInjector implements DependencyInjector {
         throw new IllegalArgumentException("Tipo de coleção não suportado: " + rawType);
     }
 
-    // 🆕 Método movido para cá
     private String getQualifier(Parameter param) {
         if (param.isAnnotationPresent(Qualifier.class)) {
             String value = param.getAnnotation(Qualifier.class).value();

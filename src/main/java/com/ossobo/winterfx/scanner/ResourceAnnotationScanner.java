@@ -15,12 +15,8 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class ResourceAnnotationScanner {
-
-    private static final Logger LOGGER = Logger.getLogger(ResourceAnnotationScanner.class.getName());
 
     private final ScanResult scanResult;
     private final ClassLoader classLoader;
@@ -39,28 +35,19 @@ public final class ResourceAnnotationScanner {
         imagesFound = 0;
         notificationsFound = 0;
 
-        LOGGER.info("🔍 Iniciando scan de recursos...");
-
         scanViews(registry);
         scanImages(registry);
         scanNotifications(registry);
-
-        LOGGER.info("✅ Scan de recursos concluído: "
-                + viewsFound + " views, "
-                + imagesFound + " imagens, "
-                + notificationsFound + " notificações");
 
         return viewsFound + imagesFound + notificationsFound;
     }
 
     private void scanViews(ResourceRegistry registry) {
         var classesWithAnnotation = scanResult.getClassesWithAnnotation(RegisterView.class);
-        LOGGER.info("   📋 Classes com @RegisterView: " + classesWithAnnotation.getNames());
 
         for (String className : classesWithAnnotation.getNames()) {
             Class<?> clazz = loadClass(className);
             if (clazz == null) {
-                LOGGER.warning("   ⚠️ Não foi possível carregar classe: " + className);
                 continue;
             }
             registerView(clazz, registry);
@@ -72,12 +59,8 @@ public final class ResourceAnnotationScanner {
             RegisterView ann = clazz.getAnnotation(RegisterView.class);
             if (ann == null) return;
 
-            LOGGER.fine("   📝 Registrando view: " + ann.id() + " → " + ann.fxml());
-
             URL fxmlUrl = resolveResource(clazz, ann.fxml());
             if (fxmlUrl == null) {
-                LOGGER.warning("   ⚠️ FXML não encontrado para view '" + ann.id()
-                        + "': " + ann.fxml() + " (classe: " + clazz.getName() + ")");
                 return;
             }
 
@@ -108,11 +91,8 @@ public final class ResourceAnnotationScanner {
 
             registry.register(descriptor);
             viewsFound++;
-            LOGGER.fine("   ✅ View registrada: " + ann.id());
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE,
-                    "   ❌ Erro ao registrar view da classe " + clazz.getName() + ": " + e.getMessage(), e);
         }
     }
 
@@ -120,8 +100,6 @@ public final class ResourceAnnotationScanner {
         List<String> classNames = new ArrayList<>();
         classNames.addAll(scanResult.getClassesWithAnnotation(RegisterImages.class).getNames());
         classNames.addAll(scanResult.getClassesWithAnnotation(RegisterImage.class).getNames());
-
-        LOGGER.info("   🖼️ Classes com @RegisterImage(s): " + classNames.size());
 
         for (String className : classNames) {
             Class<?> clazz = loadClass(className);
@@ -137,7 +115,6 @@ public final class ResourceAnnotationScanner {
         try {
             URL imageUrl = resolveResource(sourceClass, ann.src());
             if (imageUrl == null) {
-                LOGGER.warning("   ⚠️ Imagem não encontrada: " + ann.src());
                 return;
             }
 
@@ -157,13 +134,11 @@ public final class ResourceAnnotationScanner {
             registry.register(descriptor);
             imagesFound++;
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "   ⚠️ Erro ao registrar imagem " + ann.id(), e);
         }
     }
 
     private void scanNotifications(ResourceRegistry registry) {
         var classesWithAnnotation = scanResult.getClassesWithAnnotation(RegisterNotification.class);
-        LOGGER.info("   🔔 Classes com @RegisterNotification: " + classesWithAnnotation.getNames());
 
         for (String className : classesWithAnnotation.getNames()) {
             Class<?> clazz = loadClass(className);
@@ -186,14 +161,12 @@ public final class ResourceAnnotationScanner {
                 registry.register(descriptor);
                 notificationsFound++;
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "   ⚠️ Erro ao registrar notificação " + ann.id(), e);
             }
         }
     }
 
     private URL resolveResource(Class<?> sourceClass, String path) {
         if (path == null || path.isBlank()) {
-            LOGGER.fine("   ⚠️ Caminho de recurso vazio ou nulo");
             return null;
         }
 
@@ -202,7 +175,6 @@ public final class ResourceAnnotationScanner {
             try {
                 return URI.create(path).toURL();
             } catch (Exception e) {
-                LOGGER.warning("   ⚠️ URL inválida: " + path);
                 return null;
             }
         }
@@ -214,7 +186,6 @@ public final class ResourceAnnotationScanner {
             if (sourceLoader != null) {
                 URL url = sourceLoader.getResource(clean);
                 if (url != null) {
-                    LOGGER.fine("   📁 Recurso encontrado via ClassLoader da classe fonte: " + clean);
                     return url;
                 }
             }
@@ -222,7 +193,6 @@ public final class ResourceAnnotationScanner {
 
         URL url = classLoader.getResource(clean);
         if (url != null) {
-            LOGGER.fine("   📁 Recurso encontrado via ClassLoader contexto: " + clean);
             return url;
         }
 
@@ -230,13 +200,10 @@ public final class ResourceAnnotationScanner {
         if (frameworkClassLoader != null && frameworkClassLoader != classLoader) {
             url = frameworkClassLoader.getResource(clean);
             if (url != null) {
-                LOGGER.fine("   📁 Recurso encontrado via ClassLoader do framework: " + clean);
                 return url;
             }
         }
 
-        LOGGER.warning("   ❌ Recurso não encontrado em nenhum ClassLoader: " + clean
-                + " (sourceClass: " + (sourceClass != null ? sourceClass.getName() : "null") + ")");
         return null;
     }
 
@@ -244,7 +211,6 @@ public final class ResourceAnnotationScanner {
         try {
             return Class.forName(className, false, classLoader);
         } catch (Throwable e) {
-            LOGGER.log(Level.WARNING, "   ⚠️ Erro ao carregar classe: " + className + " - " + e.getMessage());
             return null;
         }
     }

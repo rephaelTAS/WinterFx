@@ -5,8 +5,6 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,8 +22,6 @@ import java.util.regex.Pattern;
  * @since 2.0
  */
 public final class ConfigurationManager {
-
-    private static final Logger LOGGER = Logger.getLogger(ConfigurationManager.class.getName());
 
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{(.+?)\\}");
 
@@ -56,16 +52,11 @@ public final class ConfigurationManager {
     public void loadConfiguration() {
         // 1. Arquivo de propriedades
         if (configFile != null && !configFile.isBlank()) {
-            LOGGER.log(Level.INFO, "Carregando: {0}", configFile);
             try (InputStream input = getClass().getClassLoader().getResourceAsStream(configFile)) {
                 if (input != null) {
                     properties.load(input);
-                    LOGGER.log(Level.INFO, "{0} propriedades carregadas.", properties.size());
-                } else {
-                    LOGGER.log(Level.WARNING, "Arquivo não encontrado: {0}", configFile);
                 }
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Erro ao carregar " + configFile + ": " + e.getMessage());
             }
         }
 
@@ -135,11 +126,9 @@ public final class ConfigurationManager {
         }
 
         if (defaultValue != null) {
-            LOGGER.log(Level.FINE, "Usando default para '{0}': {1}", new Object[]{key, defaultValue});
             return defaultValue;
         }
 
-        LOGGER.log(Level.WARNING, "Chave não encontrada: {0}", key);
         return null;
     }
 

@@ -52,7 +52,9 @@ public final class NotificationViewResolver {
             case ERROR        -> AlertType.ERROR;
             case WARNING      -> AlertType.WARNING;
             case INFO         -> AlertType.INFO;
+            case CRITICAL -> AlertType.CRITICAL;
             case CONFIRMATION -> AlertType.CONFIRMATION;
+            case EXCEPTION -> AlertType.EXCEPTION;
         };
     }
 
@@ -126,7 +128,9 @@ public final class NotificationViewResolver {
             case INFO    -> 3000;
             case WARNING -> 4000;
             case ERROR   -> 0;
+            case CRITICAL -> 0;
             case CONFIRMATION -> 0;
+            case EXCEPTION -> 0;
         };
     }
 }

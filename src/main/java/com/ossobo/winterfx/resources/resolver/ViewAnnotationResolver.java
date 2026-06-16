@@ -8,8 +8,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ViewAnnotationResolver v2.1
@@ -24,8 +22,6 @@ import java.util.logging.Logger;
  * </ul>
  */
 public final class ViewAnnotationResolver {
-
-    private static final Logger LOGGER = Logger.getLogger(ViewAnnotationResolver.class.getName());
 
     private ViewAnnotationResolver() {}
 
@@ -145,9 +141,6 @@ public final class ViewAnnotationResolver {
             }
         }
 
-        LOGGER.log(Level.FINE, "✅ ViewDescriptor criado: id={0}, fxml={1}",
-                new Object[]{ann.id(), ann.fxml()});
-
         return builder.build();
     }
 
@@ -176,7 +169,6 @@ public final class ViewAnnotationResolver {
             if (required) {
                 throw new IllegalArgumentException(mensagem);
             } else {
-                LOGGER.warning("⚠️ " + mensagem);
                 return null;
             }
         }

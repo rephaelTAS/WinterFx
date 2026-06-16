@@ -12,8 +12,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 🔍 ResourceResolver v2.1
@@ -39,13 +37,10 @@ import java.util.logging.Logger;
  */
 public final class ResourceResolver {
 
-    private static final Logger LOGGER = Logger.getLogger(ResourceResolver.class.getName());
-
     private final ResourceRegistry registry;
 
     public ResourceResolver(ResourceRegistry registry) {
         this.registry = registry;
-        LOGGER.info("🔍 ResourceResolver v2.1 inicializado");
     }
 
     // ===== RESOLUÇÃO DE URL =====
@@ -65,7 +60,6 @@ public final class ResourceResolver {
     // ===== RESOLUÇÃO DE DESCRIPTOR =====
 
     public Optional<ResourceDescriptor> resolveDescriptor(String id) {
-        LOGGER.log(Level.FINE, () -> "Resolvendo recurso: " + id);
         return registry.findById(id);
     }
 

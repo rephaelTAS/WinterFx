@@ -11,8 +11,6 @@ import javafx.scene.Node;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,7 +18,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @Component
 @Scope(ScopeType.SINGLETON)
 public class OwnerWindowProvider {
-    private static final Logger logger = LoggerFactory.getLogger(OwnerWindowProvider.class);
 
     // Singleton para o Stage temporário (evita memory leak)
     private final AtomicReference<Stage> fallbackStage = new AtomicReference<>();
@@ -36,7 +33,6 @@ public class OwnerWindowProvider {
             int nodeHash = System.identityHashCode(node);
             Window cached = windowCache.get(nodeHash);
             if (isValidWindow(cached)) {
-                logger.debug("✅ Window do cache: {}", cached);
                 return cached;
             }
         }
@@ -45,7 +41,6 @@ public class OwnerWindowProvider {
         Window existingWindow = extractWindowFromNode(node);
         if (isValidWindow(existingWindow)) {
             cacheWindow(node, existingWindow);
-            logger.debug("✅ Window existente obtida: {}", existingWindow);
             return existingWindow;
         }
 
@@ -53,12 +48,10 @@ public class OwnerWindowProvider {
         Window focused = findFocusedWindow();
         if (isValidWindow(focused)) {
             cacheWindow(node, focused);
-            logger.debug("✅ Usando janela em foco");
             return focused;
         }
 
         // 4. Fallback: Stage temporário CORRETAMENTE inicializado
-        logger.warn("⚠️ Nenhuma janela válida encontrada. Usando fallback.");
         return getOrCreateFallbackStage();
     }
 
@@ -83,7 +76,6 @@ public class OwnerWindowProvider {
                 return current.getScene().getWindow();
             }
         } catch (Exception e) {
-            logger.debug("Erro ao extrair window do node", e);
         }
 
         return null;
@@ -133,10 +125,8 @@ public class OwnerWindowProvider {
 
             try {
                 Stage newStage = createProperFallbackStage();
-                logger.info("✅ Stage temporário criado corretamente");
                 return newStage;
             } catch (Exception e) {
-                logger.error("❌ Falha crítica ao criar stage temporário", e);
                 return null;
             }
         });
@@ -195,7 +185,6 @@ public class OwnerWindowProvider {
             fallbackStage.set(null);
         }
         windowCache.clear();
-        logger.info("🧹 OwnerWindowProvider limpo");
     }
 
     // Métodos estáticos para uso fácil
@@ -205,7 +194,6 @@ public class OwnerWindowProvider {
                     .getBean(OwnerWindowProvider.class);
             return provider.getOwnerWindow(node);
         } catch (Exception e) {
-            logger.error("Não foi possível obter OwnerWindowProvider", e);
             return null;
         }
     }

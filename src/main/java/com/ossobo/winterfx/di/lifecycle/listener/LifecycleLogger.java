@@ -11,30 +11,22 @@ public class LifecycleLogger implements DependencyLifecycleListener {
 
     @Override
     public void beforeBeanCreation(Class<?> beanClass) {
-        System.out.println("[LIFECYCLE] Creating bean: " + beanClass.getSimpleName());
     }
 
     @Override
     public void afterPostConstruct(Object beanInstance) {
-        System.out.println("[LIFECYCLE] Bean initialized: " +
-                beanInstance.getClass().getSimpleName());
     }
 
     @Override
     public void onLifecycleError(Object beanInstance, Throwable error) {
-        System.err.println("[LIFECYCLE] Error in bean: " +
-                (beanInstance != null ? beanInstance.getClass().getSimpleName() : "unknown") +
-                " - " + error.getMessage());
     }
 
     @Override
     public void onContainerInitialized() {
-        System.out.println("[LIFECYCLE] Container initialized");
     }
 
     @Override
     public void onContainerShutdown() {
-        System.out.println("[LIFECYCLE] Container shutdown");
     }
 
     @Override

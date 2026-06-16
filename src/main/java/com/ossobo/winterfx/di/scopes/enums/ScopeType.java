@@ -41,7 +41,6 @@ public enum ScopeType {
             case "prototype"                -> PROTOTYPE;
             case "thread", "request"        -> THREAD;
             default -> {
-                System.err.println("Escopo desconhecido: " + scope + ". Usando SINGLETON.");
                 yield SINGLETON;
             }
         };

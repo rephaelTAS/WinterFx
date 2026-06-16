@@ -1,8 +1,6 @@
 package com.ossobo.winterfx.imagemanager.image;
 
 import javafx.scene.image.Image;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.Objects;
@@ -12,7 +10,6 @@ import java.util.Optional;
  * 🎯 IMAGE LOADER - Com fallback programático robusto
  */
 public class ImageLoader {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ImageLoader.class);
 
     /**
      * ✅ CARREGA IMAGEM DE RECURSO
@@ -22,16 +19,13 @@ public class ImageLoader {
 
         try (InputStream stream = getClass().getResourceAsStream(resourcePath)) {
             if (stream == null) {
-                LOGGER.warn("Recurso não encontrado: {}", resourcePath);
                 return Optional.empty();
             }
 
             Image image = new Image(stream);
-            LOGGER.debug("Imagem carregada: {}", resourcePath);
             return Optional.of(image);
 
         } catch (Exception e) {
-            LOGGER.warn("Falha ao carregar recurso: {}", resourcePath, e);
             return Optional.empty();
         }
     }

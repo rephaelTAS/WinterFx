@@ -14,8 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 💾 ResourceCache v1.0 (OPCIONAL)
@@ -28,8 +26,6 @@ import java.util.logging.Logger;
  */
 public class ResourceCache<T> {
 
-    private static final Logger LOGGER = Logger.getLogger(ResourceCache.class.getName());
-
     private final Map<String, SoftReference<T>> cache = new ConcurrentHashMap<>();
     private final String cacheName;
 
@@ -38,7 +34,6 @@ public class ResourceCache<T> {
      */
     public ResourceCache(String cacheName) {
         this.cacheName = cacheName;
-        LOGGER.fine(() -> "💾 Cache inicializado: " + cacheName);
     }
 
     /**
@@ -53,16 +48,13 @@ public class ResourceCache<T> {
         T value = (ref != null) ? ref.get() : null;
 
         if (value != null) {
-            LOGGER.log(Level.FINEST, () -> "✅ Cache hit: " + cacheName + " -> " + key);
             return value;
         }
 
-        LOGGER.log(Level.FINE, () -> "❌ Cache miss: " + cacheName + " -> " + key);
         value = loader.apply(key);
 
         if (value != null) {
             cache.put(key, new SoftReference<>(value));
-            LOGGER.log(Level.FINE, () -> "📦 Armazenado: " + cacheName + " -> " + key);
         }
 
         return value;
@@ -74,7 +66,6 @@ public class ResourceCache<T> {
     public void put(String key, T value) {
         if (key != null && value != null) {
             cache.put(key, new SoftReference<>(value));
-            LOGGER.log(Level.FINEST, () -> "📦 Cache put: " + cacheName + " -> " + key);
         }
     }
 
@@ -92,7 +83,6 @@ public class ResourceCache<T> {
      */
     public void invalidate(String key) {
         cache.remove(key);
-        LOGGER.log(Level.FINE, () -> "🗑️ Invalidado: " + cacheName + " -> " + key);
     }
 
     /**
@@ -100,7 +90,6 @@ public class ResourceCache<T> {
      */
     public void clear() {
         cache.clear();
-        LOGGER.fine(() -> "🧹 Cache limpo: " + cacheName);
     }
 
     /**

@@ -17,15 +17,11 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 🪟 FloatingWindowManager v5.2 - Com loadFloatingView + fresh
  */
 public class FloatingWindowManager {
-
-    private static final Logger LOGGER = Logger.getLogger(FloatingWindowManager.class.getName());
 
     private final ResourceRegistry registry;
     private final StageManager stageManager;
@@ -39,7 +35,6 @@ public class FloatingWindowManager {
         this.registry = registry;
         this.stageManager = stageManager;
         this.diContainer = diContainer;
-        LOGGER.info("🪟 FloatingWindowManager v5.2 inicializado");
     }
 
     public void processAnnotations(Object bean) {
@@ -103,14 +98,9 @@ public class FloatingWindowManager {
             field.setAccessible(true);
             field.set(bean, stage);
 
-            LOGGER.log(Level.INFO, "🪟 @FloatingWindow: {0}.{1} → {2} [modality={3}, fresh={4}]",
-                    new Object[]{bean.getClass().getSimpleName(), field.getName(), viewId,
-                            modality, annotation.fresh()});
-
             if (annotation.autoOpen()) stage.show();
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "❌ Erro @FloatingWindow: " + e.getMessage(), e);
         }
     }
 

@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ScopeManager v2.0
@@ -28,8 +26,6 @@ import java.util.logging.Logger;
  */
 public final class ScopeManager {
 
-    private static final Logger LOGGER = Logger.getLogger(ScopeManager.class.getName());
-
     private final Map<String, ScopeInterface> scopes = new ConcurrentHashMap<>();
 
     public ScopeManager() {
@@ -40,7 +36,6 @@ public final class ScopeManager {
         registerScope(ScopeType.SINGLETON.getName(), new SingletonScope());
         registerScope(ScopeType.THREAD.getName(), new ThreadScope());
         registerScope(ScopeType.PROTOTYPE.getName(), new PrototypeScope());
-        LOGGER.log(Level.INFO, "Escopos registrados: singleton, thread, prototype");
     }
 
     // ===== REGISTRO =====
@@ -49,7 +44,6 @@ public final class ScopeManager {
         Objects.requireNonNull(name, "Nome do escopo não pode ser nulo.");
         Objects.requireNonNull(scope, "ScopeInterface não pode ser nulo.");
         scopes.put(name, scope);
-        LOGGER.log(Level.FINE, "Escopo ''{0}'' registrado.", name);
     }
 
     // ===== RESOLUÇÃO =====

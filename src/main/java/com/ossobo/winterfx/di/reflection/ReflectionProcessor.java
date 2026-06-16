@@ -3,8 +3,6 @@ package com.ossobo.winterfx.di.reflection;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.Map;
 import java.util.List;
 
@@ -26,8 +24,6 @@ import java.util.List;
  * @since 2.1
  */
 public final class ReflectionProcessor {
-
-    private static final Logger LOGGER = Logger.getLogger(ReflectionProcessor.class.getName());
 
     public ReflectionProcessor() {}
 
@@ -51,11 +47,6 @@ public final class ReflectionProcessor {
                 field.setAccessible(true);
             }
             field.set(instance, value);
-
-            LOGGER.log(Level.FINE, "✅ Campo injetado: {0}.{1} = {2}",
-                    new Object[]{instance.getClass().getSimpleName(),
-                            field.getName(),
-                            value != null ? value.getClass().getSimpleName() : "null"});
         } catch (IllegalAccessException e) {
             throw new RuntimeException(
                     "Erro ao injetar campo '" + field.getName() +
@@ -148,8 +139,6 @@ public final class ReflectionProcessor {
                 constructor.setAccessible(true);
             }
             T instance = (T) constructor.newInstance(args);
-            LOGGER.log(Level.FINE, "✅ Instância criada: {0}",
-                    instance.getClass().getSimpleName());
             return instance;
         } catch (Exception e) {
             throw new RuntimeException(
@@ -218,8 +207,6 @@ public final class ReflectionProcessor {
                         .getMethod("processAnnotations", Object.class);
                 processAnnotations.invoke(stageManager, instance);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Erro ao processar anotações de view: {0}",
-                        e.getMessage());
             }
         }
 
@@ -230,8 +217,6 @@ public final class ReflectionProcessor {
                         .getMethod("processAnnotations", Object.class);
                 processAnnotations.invoke(imageManager, instance);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Erro ao processar anotações de imagem: {0}",
-                        e.getMessage());
             }
         }
     }

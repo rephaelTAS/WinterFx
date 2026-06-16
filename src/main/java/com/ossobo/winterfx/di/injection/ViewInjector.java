@@ -18,8 +18,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * ViewInjector v1.3
@@ -29,8 +27,6 @@ import java.util.logging.Logger;
  * Suporta inicialização tardia e preenchimento automático do container.
  */
 public class ViewInjector implements DependencyInjector {
-
-    private static final Logger LOGGER = Logger.getLogger(ViewInjector.class.getName());
 
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
@@ -66,18 +62,17 @@ public class ViewInjector implements DependencyInjector {
                     if (annotation.required()) {
                         throw new IllegalArgumentException("View não registrada: '" + viewId + "'");
                     }
-                    LOGGER.warning("⚠️ View não encontrada: '" + viewId + "'");
                     continue;
                 }
 
                 ViewDescriptor descriptor = optDescriptor.get();
 
-                // 🆕 Carrega o FXML com controller totalmente funcional
+                // Carrega o FXML com controller totalmente funcional
                 LoadedView<?> loadedView = fxmlService.load(descriptor, Object.class);
                 Parent view = loadedView.getRoot();
                 Object viewController = loadedView.getController();
 
-                // 🆕 Força initialize() se existir (para @FXML como carregarDados)
+                // Força initialize() se existir (para @FXML como carregarDados)
                 if (viewController != null) {
                     try {
                         Method initMethod = viewController.getClass().getMethod("initialize");
@@ -91,11 +86,7 @@ public class ViewInjector implements DependencyInjector {
                 // Injeta no campo com preenchimento automático
                 injectIntoField(instance, field, view, annotation.child());
 
-                LOGGER.log(Level.FINE, "✅ View injetada: '{0}' → {1}.{2}",
-                        new Object[]{viewId, type.getSimpleName(), field.getName()});
-
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "❌ Erro @InjectView '" + viewId + "': " + e.getMessage(), e);
                 if (annotation.required()) {
                     throw new RuntimeException("Falha ao injetar view: " + viewId, e);
                 }
