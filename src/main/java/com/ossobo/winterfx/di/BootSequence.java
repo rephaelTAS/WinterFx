@@ -10,36 +10,30 @@ import com.ossobo.winterfx.di.reflection.ReflectionCache;
 import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 import com.ossobo.winterfx.di.resolver.DependencyResolver;
 import com.ossobo.winterfx.di.resolver.methods.CircularDependencyDetector;
-import com.ossobo.winterfx.scanner.BeanMetadataExtractor;
-import com.ossobo.winterfx.scanner.registry.BeanRegistry;
-import com.ossobo.winterfx.scanner.ReflectionScanner;
 import com.ossobo.winterfx.di.scopes.ScopeManager;
-import com.ossobo.winterfx.view.loader.FXMLService;
+import com.ossobo.winterfx.scanner.ReflectionScanner;
+import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 
 /**
- * BootSequence v3.0 — Orquestrador de inicialização segura do DiContainer.
+ * Orquestrador responsável pela inicialização segura e sequencial dos componentes do DI Container.
  *
- * <p><b>Mudanças v2.0 → v3.0:</b></p>
+ * <p>Para evitar falhas de resolução circular durante a construção do próprio contêiner,
+ * este classe divide a inicialização em duas fases estritas:</p>
  * <ul>
- *   <li>🗑️ ComponentScanner removido — scan é feito externamente pelo ScannerEngine</li>
- *   <li>🔄 BeanRegistry recebido no construtor (já populado)</li>
- *   <li>🗑️ packages removido — não é mais responsabilidade do BootSequence</li>
- *   <li>🔄 LifecycleManager simplificado — recebe BeanRegistry + ScopeManager</li>
- *   <li>🔄 scan() agora só inicializa LifecycleManager (sem ClassGraph)</li>
- *   <li>🗑️ componentScanner removido do BootResult</li>
+ *   <li><b>FASE 1 — Nascimento:</b> Instancia todas as classes de infraestrutura utilizando
+ *       exclusivamente construtores vazios.</li>
+ *   <li><b>FASE 2 — Injeção:</b> Conecta as dependências entre os componentes recém-criados
+ *       utilizando exclusivamente métodos setters.</li>
  * </ul>
  *
- * <p><b>Padrão de 2 fases (mantido):</b></p>
- * <ul>
- *   <li>FASE 1 — NASCIMENTO: Constrói todas as classes com construtor vazio</li>
- *   <li>FASE 2 — INJEÇÃO:   Conecta dependências exclusivamente via setters</li>
- * </ul>
+ * <p>Este design garante que não haja tentativa de resolver beans de negócio durante a
+ * montagem da estrutura interna do contêiner.</p>
  *
- * @version v3.0 (31/05/2026)
+ * @version 4.0
  */
 public final class BootSequence {
 
-    // ===== COMPONENTES NÍVEL 0 (sem dependências) =====
+    // ===== NÍVEL 0 =====
     private final ScopeManager scopeManager;
     private final ReflectionCache reflectionCache;
     private final ReflectionProcessor reflectionProcessor;
@@ -48,43 +42,35 @@ public final class BootSequence {
     private final ConfigurationManager configurationManager;
     private final BeanRegistry beanRegistry;
     private final LifecycleManager lifecycleManager;
-    private final BeanMetadataExtractor metadataExtractor;
-    private final ReflectionScanner reflectionScanner;
 
-    // ===== COMPONENTES NÍVEL 1 (recebem dependências via setters) =====
+    // ===== NÍVEL 1 =====
     private InjectionManager injectionManager;
     private InstanceCreator instanceCreator;
     private InstantiationStrategyManager strategyManager;
     private DependencyResolver dependencyResolver;
 
     /**
-     * 🔄 FASE 1 — NASCIMENTO: Constrói todas as classes.
+     * Constrói a sequência de inicialização fornecendo o registro de beans.
      *
-     * <p><b>BeanRegistry já vem populado do ScannerEngine.</b>
-     * BootSequence NÃO faz mais scan de classpath.</p>
+     * <p>Executa imediatamente a Fase 1 (Nascimento), criando todas as instâncias
+     * de infraestrutura necessárias para o funcionamento do DI.</p>
      *
-     * @param beanRegistry registry JÁ populado pelo ScannerEngine
+     * @param beanRegistry O registro de definições de beans escaneados pelo framework.
      */
     public BootSequence(BeanRegistry beanRegistry) {
         this.beanRegistry = beanRegistry;
 
-        // ============================================================
-        // NÍVEL 0: Infraestrutura — não dependem de ninguém
-        // ============================================================
         this.scopeManager = new ScopeManager();
-        this.reflectionCache = new ReflectionCache(new ReflectionScanner());
+        ReflectionScanner scanner = new ReflectionScanner();
+        this.reflectionCache = new ReflectionCache(scanner);
         this.reflectionProcessor = new ReflectionProcessor();
         this.eventPublisher = new LifecycleEventPublisher();
         this.circularDetector = new CircularDependencyDetector();
         this.configurationManager = new ConfigurationManager();
+        this.configurationManager.loadConfiguration();
         this.lifecycleManager = new LifecycleManager(
                 reflectionCache, reflectionProcessor, scopeManager, eventPublisher);
-        this.reflectionScanner = new ReflectionScanner();
-        this.metadataExtractor = new BeanMetadataExtractor(reflectionScanner);
 
-        // ============================================================
-        // NÍVEL 1: Managers — construtores vazios, 100% seguros
-        // ============================================================
         this.strategyManager = new InstantiationStrategyManager();
         this.injectionManager = new InjectionManager();
         this.instanceCreator = new InstanceCreator();
@@ -92,32 +78,22 @@ public final class BootSequence {
     }
 
     /**
-     * FASE 2 — INJEÇÃO: Conecta todas as dependências via setters.
+     * Executa a Fase 2 (Injeção), conectando todos os componentes através de seus setters.
      */
     private void inject() {
-        // ============================================================
-        // dependencyResolver
-        // ============================================================
         dependencyResolver.setComponentRegistry(beanRegistry);
         dependencyResolver.setScopeManager(scopeManager);
         dependencyResolver.setInstanceCreator(instanceCreator);
         dependencyResolver.setLifecycleManager(lifecycleManager);
         dependencyResolver.setEventPublisher(eventPublisher);
         dependencyResolver.setCircularDependencyDetector(circularDetector);
-        dependencyResolver.setMetadataExtractor(metadataExtractor);
 
-        // ============================================================
-        // injectionManager
-        // ============================================================
         injectionManager.setReflectionCache(reflectionCache);
         injectionManager.setReflectionProcessor(reflectionProcessor);
         injectionManager.setDependencyResolver(dependencyResolver);
         injectionManager.setConfigurationManager(configurationManager);
         injectionManager.setEventPublisher(eventPublisher);
 
-        // ============================================================
-        // instanceCreator
-        // ============================================================
         instanceCreator.setDependencyResolver(dependencyResolver);
         instanceCreator.setInjectionManager(injectionManager);
         instanceCreator.setLifecycleManager(lifecycleManager);
@@ -126,23 +102,18 @@ public final class BootSequence {
         instanceCreator.setEventPublisher(eventPublisher);
         instanceCreator.setStrategyManager(strategyManager);
 
-        // ============================================================
-        // strategyManager
-        // ============================================================
         strategyManager.setDependencyResolver(dependencyResolver);
 
-        // ============================================================
-        // 🆕 INICIALIZA INJECTORS (APÓS TODOS OS SETTERS!)
-        // ============================================================
         injectionManager.initCoreInjectors();
     }
 
     /**
-     * Valida que nenhum componente crítico ficou null.
+     * Valida se todos os componentes cruciais foram instanciados e injetados corretamente.
+     *
+     * @throws IllegalStateException Se um ou mais componentes obrigatórios estiverem nulos.
      */
     private void validate() {
         StringBuilder erros = new StringBuilder();
-
         checkNotNull(dependencyResolver, "dependencyResolver", erros);
         checkNotNull(injectionManager, "injectionManager", erros);
         checkNotNull(instanceCreator, "instanceCreator", erros);
@@ -157,46 +128,60 @@ public final class BootSequence {
 
         if (erros.length() > 0) {
             throw new IllegalStateException(
-                    "❌ BootSequence — Componentes não inicializados:\n" + erros);
+                    "BootSequence — Componentes não inicializados:\n" + erros);
         }
     }
 
+    /**
+     * Método auxiliar que verifica se um objeto é nulo e registra o erro em um buffer.
+     *
+     * @param obj   O objeto a ser verificado.
+     * @param nome  O nome lógico do objeto para fins de mensagem de erro.
+     * @param erros O buffer onde a mensagem de erro será acumulada, se aplicável.
+     */
     private void checkNotNull(Object obj, String nome, StringBuilder erros) {
         if (obj == null) {
-            erros.append("   ❌ ").append(nome).append(" está NULL\n");
+            erros.append("   ").append(nome).append(" está NULL\n");
         }
     }
 
     /**
-     * 🔄 Inicializa o LifecycleManager.
+     * Executa o processo completo de bootstrap do contêiner de DI.
      *
-     * <p>NÃO faz mais scan de classpath — os beans já estão no BeanRegistry.</p>
-     */
-    private void scan() {
-        lifecycleManager.initialize();
-    }
-
-    /**
-     * Executa a sequência completa: NASCIMENTO → INJEÇÃO → VALIDAÇÃO → CICLO DE VIDA.
+     * <p>Invoca a injeção de dependências entre os componentes internos, valida o estado
+     * resultante, dispara o evento de inicialização do ciclo de vida e retorna um objeto
+     * imutável contendo todas as referências necessárias para o {@link DiContainer}.</p>
+     *
+     * @return Um {@link BootResult} contendo todos os componentes inicializados e conectados.
+     * @throws IllegalStateException Se a validação dos componentes falhar.
      */
     public BootResult boot() {
         inject();
         validate();
-        scan();
+        lifecycleManager.initialize();
         return new BootResult(
-                dependencyResolver,
-                injectionManager,
-                instanceCreator,
-                strategyManager,
-                beanRegistry,
-                scopeManager,
-                lifecycleManager,
-                metadataExtractor
+                dependencyResolver, injectionManager, instanceCreator,
+                strategyManager, beanRegistry, scopeManager, lifecycleManager,
+                configurationManager, reflectionCache, reflectionProcessor,
+                eventPublisher, circularDetector
         );
     }
 
     /**
-     * 🔄 Resultado do boot — componentScanner removido.
+     * Record imutável que agrupa o resultado bem-sucedido do processo de bootstrap.
+     *
+     * @param dependencyResolver   Resolvedor de dependências configurado.
+     * @param injectionManager     Gerenciador de injeção configurado.
+     * @param instanceCreator      Criador de instâncias configurado.
+     * @param strategyManager      Gerenciador de estratégias de instanciação.
+     * @param beanRegistry         Registro de beans do framework.
+     * @param scopeManager         Gerenciador de escopos.
+     * @param lifecycleManager     Gerenciador de ciclo de vida.
+     * @param configurationManager Gerenciador de configurações.
+     * @param reflectionCache      Cache de reflexão.
+     * @param reflectionProcessor  Processador de reflexão.
+     * @param eventPublisher       Publicador de eventos de ciclo de vida.
+     * @param circularDetector     Detector de dependências circulares.
      */
     public record BootResult(
             DependencyResolver dependencyResolver,
@@ -206,10 +191,10 @@ public final class BootSequence {
             BeanRegistry beanRegistry,
             ScopeManager scopeManager,
             LifecycleManager lifecycleManager,
-            BeanMetadataExtractor metadataExtractor
-    ) {
-        public int getBeanCount() {
-            return beanRegistry.getBeanNames().size();
-        }
-    }
+            ConfigurationManager configurationManager,
+            ReflectionCache reflectionCache,
+            ReflectionProcessor reflectionProcessor,
+            LifecycleEventPublisher eventPublisher,
+            CircularDependencyDetector circularDetector
+    ) {}
 }

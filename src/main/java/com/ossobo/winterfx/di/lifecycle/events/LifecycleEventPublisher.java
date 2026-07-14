@@ -1,6 +1,5 @@
 package com.ossobo.winterfx.di.lifecycle.events;
 
-
 import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener;
 
 import java.util.*;
@@ -8,8 +7,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * Publicador de eventos do ciclo de vida de dependências.
- * Gerencia os listeners e distribui os eventos apropriadamente.
+ * Publicador central de eventos do ciclo de vida de beans do contêiner de injeção.
+ *
+ * <p>Esta classe gerencia os ouvintes ({@link DependencyLifecycleListener}) registrados
+ * e distribui os eventos de ciclo de vida de forma eficiente, suportando filtragem
+ * por tipo de bean, nome do bean e tipo de evento específico.</p>
+ *
+ * <p>A publicação de eventos pode ser desabilitada globalmente através do método
+ * {@link #setEnabled(boolean)}, útil para cenários onde a sobrecarga de notificação
+ * não é desejada.</p>
  */
 public class LifecycleEventPublisher {
     private final Set<DependencyLifecycleListener> globalListeners;
@@ -19,13 +25,16 @@ public class LifecycleEventPublisher {
 
     private boolean enabled = true;
 
+    /**
+     * Construtor que inicializa as estruturas de armazenamento dos ouvintes
+     * e pré-registra os conjuntos para todos os tipos de evento disponíveis.
+     */
     public LifecycleEventPublisher() {
         this.globalListeners = new CopyOnWriteArraySet<>();
         this.typeSpecificListeners = new ConcurrentHashMap<>();
         this.nameSpecificListeners = new ConcurrentHashMap<>();
         this.eventSpecificListeners = new ConcurrentHashMap<>();
 
-        // Inicializa os mapas para todos os tipos de evento
         for (DependencyLifecycleListener.LifecycleEventType eventType :
                 DependencyLifecycleListener.LifecycleEventType.values()) {
             eventSpecificListeners.put(eventType, new CopyOnWriteArraySet<>());
@@ -33,29 +42,31 @@ public class LifecycleEventPublisher {
     }
 
     /**
-     * Registra um listener para eventos do ciclo de vida
-     * @param listener O listener a ser registrado
+     * Registra um ouvinte para receber notificações de eventos do ciclo de vida.
+     *
+     * <p>O ouvinte é automaticamente indexado com base nos tipos de beans, nomes
+     * e tipos de eventos que declarar interesse.</p>
+     *
+     * @param listener O ouvinte a ser registrado.
+     * @throws NullPointerException se o ouvinte fornecido for nulo.
      */
     public void registerListener(DependencyLifecycleListener listener) {
         Objects.requireNonNull(listener, "Listener cannot be null");
 
         globalListeners.add(listener);
 
-        // Registra para tipos específicos
         for (Class<?> beanType : listener.getInterestedBeanTypes()) {
             typeSpecificListeners
                     .computeIfAbsent(beanType, k -> new CopyOnWriteArraySet<>())
                     .add(listener);
         }
 
-        // Registra para nomes específicos
         for (String beanName : listener.getInterestedBeanNames()) {
             nameSpecificListeners
                     .computeIfAbsent(beanName, k -> new CopyOnWriteArraySet<>())
                     .add(listener);
         }
 
-        // Registra para eventos específicos
         for (DependencyLifecycleListener.LifecycleEventType eventType : listener.getInterestedEvents()) {
             eventSpecificListeners
                     .computeIfAbsent(eventType, k -> new CopyOnWriteArraySet<>())
@@ -64,32 +75,31 @@ public class LifecycleEventPublisher {
     }
 
     /**
-     * Remove um listener registrado
-     * @param listener O listener a ser removido
+     * Remove um ouvinte previamente registrado de todas as listas de notificação.
+     *
+     * @param listener O ouvinte a ser removido.
+     * @throws NullPointerException se o ouvinte fornecido for nulo.
      */
     public void unregisterListener(DependencyLifecycleListener listener) {
         Objects.requireNonNull(listener, "Listener cannot be null");
 
         globalListeners.remove(listener);
 
-        // Remove de tipos específicos
         for (Set<DependencyLifecycleListener> listeners : typeSpecificListeners.values()) {
             listeners.remove(listener);
         }
 
-        // Remove de nomes específicos
         for (Set<DependencyLifecycleListener> listeners : nameSpecificListeners.values()) {
             listeners.remove(listener);
         }
 
-        // Remove de eventos específicos
         for (Set<DependencyLifecycleListener> listeners : eventSpecificListeners.values()) {
             listeners.remove(listener);
         }
     }
 
     /**
-     * Remove todos os listeners
+     * Remove todos os ouvintes registrados, independentemente de seu tipo de filtro.
      */
     public void clearListeners() {
         globalListeners.clear();
@@ -101,11 +111,22 @@ public class LifecycleEventPublisher {
     }
 
     /**
-     * Publica um evento para todos os listeners interessados
-     * @param beanClass A classe do bean relacionado ao evento (pode ser null para eventos de container)
-     * @param beanName O nome do bean relacionado ao evento (pode ser null)
-     * @param eventType O tipo de evento
-     * @param eventData Dados adicionais do evento
+     * Publica um evento para todos os ouvintes registrados que demonstrarem interesse.
+     *
+     * <p>A notificação ocorre respeitando a seguinte prioridade de verificação:</p>
+     * <ol>
+     *     <li>Ouvintes globais</li>
+     *     <li>Ouvintes específicos por tipo de bean</li>
+     *     <li>Ouvintes específicos por nome de bean</li>
+     *     <li>Ouvintes específicos por tipo de evento</li>
+     * </ol>
+     * <p>Um mesmo ouvinte não será notificado mais de uma vez para o mesmo evento,
+     * mesmo que se encaixe em múltiplas categorias.</p>
+     *
+     * @param beanClass A classe do bean relacionado ao evento (pode ser nulo).
+     * @param beanName  O nome do bean relacionado ao evento (pode ser nulo).
+     * @param eventType O tipo específico do evento do ciclo de vida.
+     * @param eventData  Dados adicionais variáveis relevantes para o evento.
      */
     public void publishEvent(Class<?> beanClass, String beanName,
                              DependencyLifecycleListener.LifecycleEventType eventType,
@@ -116,7 +137,6 @@ public class LifecycleEventPublisher {
 
         Set<DependencyLifecycleListener> notifiedListeners = new HashSet<>();
 
-        // Notifica listeners globais
         for (DependencyLifecycleListener listener : globalListeners) {
             if (listener.isInterestedInEvent(beanClass, beanName, eventType)) {
                 notifyListener(listener, eventType, eventData);
@@ -124,7 +144,6 @@ public class LifecycleEventPublisher {
             }
         }
 
-        // Notifica listeners específicos por tipo
         if (beanClass != null) {
             Set<DependencyLifecycleListener> typeListeners = typeSpecificListeners.get(beanClass);
             if (typeListeners != null) {
@@ -138,7 +157,6 @@ public class LifecycleEventPublisher {
             }
         }
 
-        // Notifica listeners específicos por nome
         if (beanName != null) {
             Set<DependencyLifecycleListener> nameListeners = nameSpecificListeners.get(beanName);
             if (nameListeners != null) {
@@ -152,7 +170,6 @@ public class LifecycleEventPublisher {
             }
         }
 
-        // Notifica listeners específicos por evento
         Set<DependencyLifecycleListener> eventListeners = eventSpecificListeners.get(eventType);
         if (eventListeners != null) {
             for (DependencyLifecycleListener listener : eventListeners) {
@@ -166,7 +183,14 @@ public class LifecycleEventPublisher {
     }
 
     /**
-     * Notifica um listener específico sobre um evento
+     * Invoca o método de callback apropriado no ouvinte com base no tipo de evento.
+     *
+     * <p>Exceções lançadas durante a notificação de um ouvinte são absorvidas silenciosamente
+     * para evitar que um único ouvinte com erro interrompa a notificação dos demais.</p>
+     *
+     * @param listener   O ouvinte a ser notificado.
+     * @param eventType  O tipo do evento.
+     * @param eventData  Os dados do evento.
      */
     private void notifyListener(DependencyLifecycleListener listener,
                                 DependencyLifecycleListener.LifecycleEventType eventType,
@@ -260,32 +284,37 @@ public class LifecycleEventPublisher {
     }
 
     /**
-     * Habilita ou desabilita a publicação de eventos
-     * @param enabled true para habilitar, false para desabilitar
+     * Habilita ou desabilita a publicação de eventos globalmente.
+     *
+     * @param enabled {@code true} para habilitar, {@code false} para desabilitar.
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * Verifica se a publicação de eventos está habilitada
-     * @return true se a publicação de eventos está habilitada
+     * Verifica se a publicação de eventos está atualmente habilitada.
+     *
+     * @return {@code true} se habilitada, {@code false} caso contrário.
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Obtém o número de listeners registrados
-     * @return O número total de listeners
+     * Retorna o número total de ouvintes globais registrados.
+     *
+     * @return A quantidade de ouvintes globais.
      */
     public int getListenerCount() {
         return globalListeners.size();
     }
 
     /**
-     * Obtém estatísticas de listeners
-     * @return Mapa com estatísticas de listeners
+     * Retorna um mapa contendo estatísticas sobre a quantidade de ouvintes
+     * registrados em cada categoria de filtro.
+     *
+     * @return Um mapa imutável com as chaves representando as categorias e os valores as quantidades.
      */
     public Map<String, Integer> getStatistics() {
         Map<String, Integer> stats = new HashMap<>();

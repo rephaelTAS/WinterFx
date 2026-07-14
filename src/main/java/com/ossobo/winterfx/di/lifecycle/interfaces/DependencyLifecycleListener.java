@@ -4,147 +4,178 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * Interface para listeners de eventos do ciclo de vida de dependências.
- * Permite que componentes externos recebam notificações sobre eventos
- * do ciclo de vida dos beans gerenciados pelo container.
+ * Contrato para ouvintes de eventos do ciclo de vida de beans gerenciados pelo contêiner.
+ *
+ * <p>Permite que componentes externos observem e reajam a diversas fases do ciclo de vida,
+ * como criação, injeção de dependências, destruição e erros.</p>
+ *
+ * <p>Os métodos desta interface possuem implementações padrão vazias, permitindo que as
+ * classes de implementação substituam apenas os eventos de seu interesse.</p>
  */
 public interface DependencyLifecycleListener {
 
     /**
-     * Chamado quando um bean está prestes a ser criado
-     * @param beanClass A classe do bean que será criado
+     * Chamado imediatamente antes da criação de uma nova instância de bean.
+     *
+     * @param beanClass A classe do bean que será criada.
      */
     default void beforeBeanCreation(Class<?> beanClass) {}
 
     /**
-     * Chamado quando um bean foi criado mas antes da injeção de dependências
-     * @param beanInstance A instância do bean recém-criada
+     * Chamado imediatamente após a instância bruta do bean ser criada,
+     * mas antes da injeção de suas dependências.
+     *
+     * @param beanInstance A instância recém-criada do bean.
      */
     default void afterBeanCreation(Object beanInstance) {}
 
     /**
-     * Chamado após a injeção de dependências mas antes dos callbacks @PostConstruct
-     * @param beanInstance A instância do bean com dependências injetadas
+     * Chamado após a conclusão da injeção de dependências no bean,
+     * mas antes da execução dos métodos {@code @PostConstruct}.
+     *
+     * @param beanInstance A instância do bean com suas dependências já injetadas.
      */
     default void afterDependencyInjection(Object beanInstance) {}
 
     /**
-     * Chamado após a execução dos métodos @PostConstruct
-     * @param beanInstance A instância do bean totalmente inicializada
+     * Chamado após a execução bem-sucedida de todos os métodos {@code @PostConstruct}
+     * do bean, indicando que a inicialização foi concluída.
+     *
+     * @param beanInstance A instância do bean totalmente inicializada.
      */
     default void afterPostConstruct(Object beanInstance) {}
 
     /**
-     * Chamado quando um bean está prestes a ser destruído
-     * @param beanInstance A instância do bean que será destruída
+     * Chamado imediatamente antes do contêiner iniciar o processo de destruição do bean.
+     *
+     * @param beanInstance A instância do bean que será destruída.
      */
     default void beforeBeanDestruction(Object beanInstance) {}
 
     /**
-     * Chamado após a execução dos métodos @PreDestroy
-     * @param beanInstance A instância do bean após destruição
+     * Chamado após a execução dos métodos {@code @PreDestroy} do bean.
+     *
+     * @param beanInstance A instância do bean após a finalização de sua destruição.
      */
     default void afterPreDestroy(Object beanInstance) {}
 
     /**
-     * Chamado quando ocorre um erro durante o ciclo de vida de um bean
-     * @param beanInstance A instância do bean onde ocorreu o erro (pode ser null)
-     * @param error O erro que ocorreu
+     * Chamado quando ocorre um erro genérico durante o processamento do ciclo de vida de um bean.
+     *
+     * @param beanInstance A instância do bean onde o erro ocorreu (pode ser nulo se o erro
+     *                     aconteceu antes da instanciação).
+     * @param error         A exceção que provocou o erro.
      */
     default void onLifecycleError(Object beanInstance, Throwable error) {}
 
     /**
-     * Chamado quando uma dependência não pode ser resolvida
-     * @param beanClass A classe do bean que precisa da dependência
-     * @param dependencyName O nome da dependência que não pôde ser resolvida
-     * @param error O erro que ocorreu durante a resolução
+     * Chamado quando o contêiner falha ao resolver uma dependência requerida por um bean.
+     *
+     * @param beanClass       A classe do bean que necessitava da dependência.
+     * @param dependencyName  O nome ou identificador da dependência que não pôde ser resolvida.
+     * @param error           A exceção detalhando a causa da falha na resolução.
      */
     default void onDependencyResolutionError(Class<?> beanClass, String dependencyName, Throwable error) {}
 
     /**
-     * Chamado quando um bean é registrado no container
-     * @param beanClass A classe do bean registrado
-     * @param beanName O nome do bean registrado
+     * Chamado quando uma nova definição de bean é registrada no contêiner.
+     *
+     * @param beanClass A classe do bean registrado.
+     * @param beanName  O nome lógico atribuído ao bean.
      */
     default void onBeanRegistered(Class<?> beanClass, String beanName) {}
 
     /**
-     * Chamado quando um bean é removido do container
-     * @param beanClass A classe do bean removido
-     * @param beanName O nome do bean removido
+     * Chamado quando uma definição de bean é removida do contêiner.
+     *
+     * @param beanClass A classe do bean removido.
+     * @param beanName  O nome lógico do bean que foi removido.
      */
     default void onBeanUnregistered(Class<?> beanClass, String beanName) {}
 
     /**
-     * Chamado quando o container é inicializado
+     * Chamado quando o contêiner de injeção finaliza seu processo de inicialização completo.
      */
     default void onContainerInitialized() {}
 
     /**
-     * Chamado quando o container é desligado
+     * Chamado quando o contêiner de injeção é desligado ou encerrado.
      */
     default void onContainerShutdown() {}
 
     /**
-     * Chamado quando um scope é criado
-     * @param scopeName O nome do scope criado
+     * Chamado quando um novo escopo de beans é criado e ativado no contêiner.
+     *
+     * @param scopeName O identificador do escopo criado.
      */
     default void onScopeCreated(String scopeName) {}
 
     /**
-     * Chamado quando um scope é destruído
-     * @param scopeName O nome do scope destruído
+     * Chamado quando um escopo de beans é destruído e encerrado.
+     *
+     * @param scopeName O identificador do escopo destruído.
      */
     default void onScopeDestroyed(String scopeName) {}
 
     /**
-     * Retorna os tipos de beans que este listener está interessado
-     * Retorna empty set para receber eventos de todos os tipos
-     * @return Conjunto de classes de interesse
+     * Retorna os tipos específicos de beans dos quais este ouvinte deseja receber eventos.
+     *
+     * <p>Retornar um conjunto vazio indica que o ouvinte tem interesse em eventos de
+     * todos os tipos de beans.</p>
+     *
+     * @return Um conjunto imutável contendo as classes de interesse.
      */
     default Set<Class<?>> getInterestedBeanTypes() {
         return Collections.emptySet();
     }
 
     /**
-     * Retorna os nomes de beans específicos que este listener está interessado
-     * Retorna empty set para receber eventos de todos os beans
-     * @return Conjunto de nomes de beans de interesse
+     * Retorna os nomes lógicos específicos de beans dos quais este ouvinte deseja receber eventos.
+     *
+     * <p>Retornar um conjunto vazio indica que o ouvinte tem interesse em eventos de
+     * todos os beans, independentemente do nome.</p>
+     *
+     * @return Um conjunto imutável contendo os nomes de beans de interesse.
      */
     default Set<String> getInterestedBeanNames() {
         return Collections.emptySet();
     }
 
     /**
-     * Retorna os eventos que este listener deseja receber
-     * Retorna empty set para receber todos os eventos
-     * @return Conjunto de tipos de evento de interesse
+     * Retorna os tipos específicos de eventos que este ouvinte deseja processar.
+     *
+     * <p>Retornar um conjunto vazio indica que o ouvinte deseja receber notificações
+     * de todos os tipos de eventos disponíveis.</p>
+     *
+     * @return Um conjunto imutável contendo os tipos de eventos de interesse.
      */
     default Set<LifecycleEventType> getInterestedEvents() {
         return Collections.emptySet();
     }
 
     /**
-     * Verifica se este listener está interessado em um evento específico
-     * @param beanClass A classe do bean relacionado ao evento
-     * @param beanName O nome do bean relacionado ao evento
-     * @param eventType O tipo de evento
-     * @return true se o listener está interessado no evento
+     * Método de filtragem central para determinar se este ouvinte deve ser notificado
+     * com base no contexto do evento.
+     *
+     * <p>Retorna {@code true} se o ouvinte não declarou filtros restritivos para a classe,
+     * nome ou tipo de evento fornecidos, ou se o evento corresponde aos filtros declarados.</p>
+     *
+     * @param beanClass A classe do bean relacionado ao evento.
+     * @param beanName  O nome do bean relacionado ao evento.
+     * @param eventType O tipo do evento disparado.
+     * @return {@code true} se o ouvinte está interessado e deve ser notificado, {@code false} caso contrário.
      */
     default boolean isInterestedInEvent(Class<?> beanClass, String beanName, LifecycleEventType eventType) {
-        // Verifica se está interessado no tipo de bean
         Set<Class<?>> interestedTypes = getInterestedBeanTypes();
         if (!interestedTypes.isEmpty() && !interestedTypes.contains(beanClass)) {
             return false;
         }
 
-        // Verifica se está interessado no nome do bean
         Set<String> interestedNames = getInterestedBeanNames();
         if (!interestedNames.isEmpty() && !interestedNames.contains(beanName)) {
             return false;
         }
 
-        // Verifica se está interessado no tipo de evento
         Set<LifecycleEventType> interestedEvents = getInterestedEvents();
         if (!interestedEvents.isEmpty() && !interestedEvents.contains(eventType)) {
             return false;
@@ -154,36 +185,37 @@ public interface DependencyLifecycleListener {
     }
 
     /**
-     * Tipos de eventos do ciclo de vida
+     * Enumeração de todos os tipos de eventos disparados durante o ciclo de vida
+     * do contêiner e de seus beans gerenciados.
      */
     enum LifecycleEventType {
-        /** Antes da criação de um bean */
+        /** Disparado antes da instanciação do bean. */
         BEFORE_CREATION,
-        /** Após a criação de um bean */
+        /** Disparado após a instanciação bruta do bean. */
         AFTER_CREATION,
-        /** Após a injeção de dependências */
+        /** Disparado após a conclusão da injeção de dependências. */
         AFTER_INJECTION,
-        /** Após a execução de @PostConstruct */
+        /** Disparado após a execução dos métodos de pós-construção. */
         AFTER_POST_CONSTRUCT,
-        /** Antes da destruição de um bean */
+        /** Disparado antes do início da destruição do bean. */
         BEFORE_DESTRUCTION,
-        /** Após a execução de @PreDestroy */
+        /** Disparado após a execução dos métodos de pré-destruição. */
         AFTER_PRE_DESTROY,
-        /** Erro no ciclo de vida */
+        /** Disparado quando uma exceção ocorre durante o ciclo de vida do bean. */
         LIFECYCLE_ERROR,
-        /** Erro na resolução de dependência */
+        /** Disparado quando falha a resolução de uma dependência do bean. */
         DEPENDENCY_ERROR,
-        /** Bean registrado no container */
+        /** Disparado quando um bean é registrado nos metadados do contêiner. */
         BEAN_REGISTERED,
-        /** Bean removido do container */
+        /** Disparado quando um bean é removido dos metadados do contêiner. */
         BEAN_UNREGISTERED,
-        /** Container inicializado */
+        /** Disparado quando o contêiner termina sua fase de bootstrap. */
         CONTAINER_INITIALIZED,
-        /** Container desligado */
+        /** Disparado quando o contêiner é encerrado. */
         CONTAINER_SHUTDOWN,
-        /** Scope criado */
+        /** Disparado na ativação de um novo escopo de beans. */
         SCOPE_CREATED,
-        /** Scope destruído */
+        /** Disparado na desativação e limpeza de um escopo de beans. */
         SCOPE_DESTROYED
     }
 }

@@ -1,52 +1,57 @@
 # 🏔️ WinterFX
 
-> **Modern JavaFX Framework**
-> Desenvolva aplicações JavaFX com menos boilerplate utilizando injeção de dependências, gerenciamento automático de views, imagens e componentes através de anotações.
+## O JavaFX Framework para Aplicações Desktop Modernas
 
-![Java](https://img.shields.io/badge/Java-25-orange)
-![JavaFX](https://img.shields.io/badge/JavaFX-25.0.3-blue)
-![Version](https://img.shields.io/badge/Version-10.0.5-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+Desenvolva com menos boilerplate utilizando **Injeção de Dependências**, gerenciamento automático de **Views** e um sistema de **Roteamento Interno** inédito, tudo através de anotações semânticas.
 
----
+Inspirado na simplicidade do ecossistema Spring, adaptado para a memória da Desktop.
 
-## 📖 Visão Geral
-
-WinterFX é um framework para JavaFX inspirado na simplicidade e produtividade do ecossistema Spring.
-
-O objetivo é eliminar tarefas repetitivas relacionadas a:
-
-* Carregamento de FXML
-* Gerenciamento de Controllers
-* Injeção de Dependências
-* Registro de Imagens
-* Controle de Janelas
-* Notificações
-* Navegação entre Views
-
-Tudo isso utilizando uma abordagem baseada em anotações e convenções.
+> Java • JavaFX • Version • License
 
 ---
 
-## ✨ Principais Recursos
+## 📑 Índice
 
-| Recurso                 | Descrição                              |
-| ----------------------- | -------------------------------------- |
-| 🎯 Dependency Injection | Container DI integrado                 |
-| 📋 View Registry        | Registro centralizado de Views         |
-| 🖼️ Image Manager       | Registro e cache automático de imagens |
-| 🔄 Dynamic View Swap    | Troca dinâmica de FXML                 |
-| 🪟 Floating Windows     | Gerenciamento de janelas desacopladas  |
-| 🔔 Notifications        | Sistema de notificações integrado      |
-| 🎨 CSS Integration      | Aplicação automática de estilos        |
-| ⚡ Auto Discovery        | Descoberta automática de componentes   |
-| 🧵 Thread Safe          | Estruturas concorrentes seguras        |
+- 📦 Instalação
+- 🚀 Quick Start
+- 🔌 Internal Routing
+- 📚 Documentação
 
 ---
 
-# 🚀 Instalação
+# 💡 Por que o WinterFX?
 
-## Maven
+O ciclo de vida de aplicações JavaFX tradicionais é cheio de tarefas repetitivas e acoplamento rígido.
+
+O WinterFX elimina a necessidade de escrever código manual para:
+
+- ❌ Carregamento manual de FXMLs (`FXMLLoader`)
+- ❌ Instanciação manual de Controllers e dependências (`new MeuService()`)
+- ❌ Passar dados entre telas criando `Stages` e `Scenes` no Controller
+- ❌ Registro cansativo de imagens e ícones
+- ❌ Criação de diálogos e notificações do zero
+
+---
+
+# ✨ Principais Recursos
+
+| Recurso | Descrição |
+|---------|-----------|
+| 🔌 Internal Routing | Roteamento de memória estilo API REST (`@GetMapping`, `@PostMapping`, `@Payload`). |
+| 🎯 Dependency Injection | Container DI completo e integrado (`@Inject`). |
+| 📋 View Registry | Registro centralizado de telas via anotações. |
+| 🖼️ Image Manager | Registro, cache automático (`SoftReference`) e injeção de imagens. |
+| 🔄 Dynamic UI | Troca dinâmica de FXMLs e imagens em tempo de execução. |
+| 🪟 Floating Windows | Criação de janelas desacopladas e modais na hora. |
+| 🔔 Notifications | Sistema de notificações programático e declarativo. |
+| ⚡ Auto Discovery | Escaneamento automático de classpath (`ClassGraph`). |
+| 🧵 Thread Safe | Estruturas concorrentes seguras para injeção e cache. |
+
+---
+
+# 📦 Instalação
+
+Adicione a dependência no seu `pom.xml`:
 
 ```xml
 <dependency>
@@ -58,18 +63,16 @@ Tudo isso utilizando uma abordagem baseada em anotações e convenções.
 
 ---
 
-# ⚡ Quick Start
+# 🚀 Quick Start
 
-## Aplicação Principal
+## 1. Inicialização da Aplicação
 
 ```java
 public class MinhaAplicacao extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        WinterApplication
-                .getInstance()
-                .autoStart(primaryStage);
+        WinterApplication.getInstance().autoStart(primaryStage);
     }
 
     public static void main(String[] args) {
@@ -78,54 +81,16 @@ public class MinhaAplicacao extends Application {
 }
 ```
 
-#✅ Sem Splash (padrão):
-```java
-public class Main extends Application {
-    @Override
-    public void start(Stage primaryStage) {
-        WinterApplication.getInstance().autoStart(primaryStage);
-    }
-
-    public static void main(String[] args) {
-        WinterApplication.run(Main.class);  // ← UMA LINHA!
-    }
-}
-```
-# Com Splash (opcional):
-```java
-public class Main extends Application {
-    @Override
-    public void start(Stage primaryStage) {
-        SplashScreenLoader.showSplashScreen(primaryStage, () -> {
-            mostrarLogin(primaryStage);
-        });
-
-        WinterApplication.getInstance().initializeWithProgress(progress -> {
-            Platform.runLater(() -> {
-                SplashScreenLoader.updateProgress(progress, "Carregando...");
-                if (progress >= 1.0) SplashScreenLoader.completeLoading();
-            });
-        });
-    }
-
-    public static void main(String[] args) {
-        // NÃO chama WinterApplication.run() — inicialização manual
-        Application.launch(Main.class);
-    }
-}
-```
 ---
 
-## Criando uma View
+## 2. Criando um Controller
 
 ```java
 @Controller
 @RegisterView(
-        id = "principal",
-        fxml = "/fxml/principal.fxml",
-        title = "Dashboard",
-        width = 1200,
-        height = 700
+    id = "principal",
+    fxml = "/fxml/principal.fxml",
+    title = "Dashboard"
 )
 public class PrincipalController {
 
@@ -135,73 +100,258 @@ public class PrincipalController {
     @InjectImage("logo")
     private ImageView logo;
 
-    @InjectView("conteudo")
-    private StackPane conteudo;
-
     @FXML
     public void initialize() {
-        System.out.println("WinterFX iniciado");
+        System.out.println("WinterFX iniciado!");
+    }
+}
+```
+
+> ⚠️ **Importante**
+>
+> Nunca utilize `fx:controller` nos seus arquivos FXML.
+>
+> O WinterFX gerencia os Controllers automaticamente.
+
+---
+
+# 🔌 Internal Routing API
+
+Esta é a funcionalidade mais poderosa do WinterFX.
+
+Inspirado no Spring MVC, nós trouxemos o padrão de Rotas para o Desktop, mas com uma diferença fundamental:
+
+> Não lidamos com texto (HTTP). Lidamos com objetos reais na memória RAM.
+
+---
+
+## O Problema Clássico
+
+No JavaFX tradicional:
+
+```java
+// ❌ JEITO ANTIGO (Acoplamento Forte)
+
+FormController form = new FormController();
+form.setDados(itemSelecionado);
+
+Stage stage = new Stage(
+    new Scene(FXMLLoader.load(...))
+);
+```
+
+---
+
+## A Solução WinterFX
+
+Você mapeia seus Controllers como rotas e deixa o framework agir como uma "Caixa Postal" interna.
+
+A ordem dos parâmetros não importa.
+
+---
+
+## Mapeando a Rota (Controller)
+
+```java
+@Controller
+@RequestMapping("usuarios")
+public class UsuarioController {
+
+    @PostMapping("atualizar")
+    public void atualizar(
+
+        @Payload("usuario") Usuario usuario,
+        @RouteVar("id") Long id,
+        @UI("painelForm") Pane painel,
+        @UI("labelStatus") Label status
+
+    ) {
+
+        usuarioService.atualizar(id, usuario);
+
+        painel.setStyle("-fx-background-color: green;");
+        status.setText("Atualizado!");
     }
 }
 ```
 
 ---
 
-## FXML
-
-```xml
-<BorderPane
-        xmlns="http://javafx.com/javafx"
-        xmlns:fx="http://javafx.com/fxml">
-
-    <center>
-        <StackPane fx:id="conteudo"/>
-    </center>
-
-</BorderPane>
-```
-
-> ⚠️ **Importante:** Não utilize `fx:controller`. O WinterFX gerencia automaticamente os controllers registrados.
-
----
-
-# 📚 Documentação
-
-## Componentes Gerenciados
-
-| Anotação         | Descrição              |
-| ---------------- | ---------------------- |
-| `@Controller`    | Controller JavaFX      |
-| `@Service`       | Serviço                |
-| `@Repository`    | Repositório            |
-| `@Configuration` | Classe de configuração |
-
----
-
-## Registro de Views
+## Executando a Rota
 
 ```java
-@RegisterView(
-    id = "dashboard",
-    fxml = "/views/dashboard.fxml",
-    title = "Dashboard",
-    width = 1200,
-    height = 700
-)
+Rotas.executar(
+
+    "usuarios/atualizar",
+
+    Params.with("id", 10L)
+          .and("labelStatus", meuLabel)
+          .and("painelForm", meuPainel)
+          .and("usuario", usuarioObjeto)
+          .build()
+
+);
+```
+
+> ✅ A ordem enviada NÃO precisa ser a mesma declarada no Controller.
+
+---
+
+## Anotações de Parâmetros
+
+| Anotação | Uso Ideal | Equivalente Web |
+|----------|-----------|----------------|
+| `@Payload("key")` | Entidades, DTOs e listas | `@RequestBody` |
+| `@UI("key")` | Componentes JavaFX | Exclusivo Desktop |
+| `@RouteVar("key")` | Variáveis simples | `@PathVariable` / `@RequestParam` |
+
+---
+
+# 🛒 Exemplo Prático
+
+## Cenário de Inventário Fragmentado
+
+Imagine um sistema composto por:
+
+- InventarioList
+- InventarioTable
+- InventarioFilter
+- InventarioForm
+- InventarioDetalhe
+
+Todos precisam conversar sem conhecer diretamente uns aos outros.
+
+---
+
+## 1. A Lista envia a tabela
+
+```java
+@Controller
+@RequestMapping("inventario")
+public class InventarioListController {
+
+    @FXML
+    private TableView<Inventario> tabela;
+
+    @Inject
+    private InventarioService service;
+
+    @GetMapping("carregar")
+    public void carregarDados() {
+        tabela.getItems().setAll(service.buscarTodos());
+    }
+
+    public void enviarTabelaParaContainer() {
+
+        Rotas.executar(
+            "inventario/tabela",
+            Params.with("tabelaPrincipal", tabela).build()
+        );
+
+    }
+}
 ```
 
 ---
 
-## Injeção de Dependências
+## 2. O Formulário recebe apenas o objeto
 
-### Bean
+```java
+@Controller
+@RequestMapping("inventario")
+public class InventarioFormController {
+
+    @FXML
+    private TextField campoNome;
+
+    @PostMapping("form/editar")
+    public void editar(@Payload("item") Inventario item) {
+        campoNome.setText(item.getNome());
+    }
+}
+```
+
+---
+
+## 3. A Lista chama o formulário
+
+```java
+@FXML
+public void onBotaoEditarClicado() {
+
+    Inventario selecionado =
+        tabela.getSelectionModel().getSelectedItem();
+
+    if (selecionado != null) {
+
+        Rotas.executar(
+            "inventario/form/editar",
+            Params.with("item", selecionado).build()
+        );
+
+    }
+}
+```
+
+---
+
+# 📦 O Envelope de Retorno (ResponseData)
+
+Para rotas que precisam retornar várias informações ao mesmo tempo, utilize `ResponseData`.
+
+É o equivalente ao `ResponseEntity` do Spring.
+
+```java
+@Controller
+@RequestMapping("inventario")
+public class InventarioDashboardController {
+
+    @GetMapping("dashboard/dados")
+    public ResponseData carregarEstatisticas() {
+
+        List<Inventario> todos = service.buscarTodos();
+        long total = todos.size();
+
+        return ResponseData.success()
+                .withData("lista", todos)
+                .withData("totalItens", total)
+                .withData("ultimoAcesso", "Hoje");
+    }
+}
+```
+
+Também é possível utilizar:
+
+```java
+ResponseData.error("Mensagem")
+    .withError("campo", "erro");
+```
+
+---
+
+# 📚 Documentação (Core Features)
+
+## Estereótipos
+
+| Anotação | Uso |
+|----------|-----|
+| `@Controller` | Gerenciador de tela JavaFX |
+| `@Service` | Regra de negócio |
+| `@Repository` | Acesso a dados |
+| `@Configuration` | Configuração do framework |
+
+---
+
+# 🎯 Injeção de Dependências
+
+### Serviços
 
 ```java
 @Inject
 private UsuarioService usuarioService;
 ```
 
-### View
+### Nó do FXML
 
 ```java
 @InjectView("conteudo")
@@ -219,8 +369,8 @@ private ImageView logo;
 
 ```java
 @FloatingWindow(
-        viewId = "detalhes",
-        modality = Modality.WINDOW_MODAL
+    viewId = "detalhes",
+    modality = Modality.WINDOW_MODAL
 )
 private Stage detalhesWindow;
 ```
@@ -229,64 +379,46 @@ private Stage detalhesWindow;
 
 # 🖼️ Gerenciamento de Imagens
 
-## Registro
-
 ```java
 @Configuration
-@RegisterImage(
-        id = "logo",
-        src = "/images/logo.png"
-)
-public class ImagesConfig {
-}
+@RegisterImage(id = "logo", src = "/images/logo.png")
+@RegisterImage(id = "icon-add", src = "/icons/add.png")
+public class ImagesConfig {}
 ```
 
-## Recursos
-
-* Cache automático
-* SoftReference
-* Fallback automático
-* Thread-safe
-* Carregamento otimizado
+O framework realiza cache automático utilizando `SoftReference`.
 
 ---
 
-# 🔄 Navegação Dinâmica
+# 🔄 UI Dinâmica
 
-## Troca de Imagem
-
-```java
-@SwapImage(
-        imageView = "iconView",
-        imageId = "icon-add"
-)
-```
-
-## Troca de View
+## Trocar uma View
 
 ```java
 @SwapFxml(
-        container = "contentArea",
-        viewId = "usuarios"
+    container = "contentArea",
+    viewId = "tela-usuarios"
 )
+@FXML
+private void abrirTelaUsuarios() {}
+```
+
+---
+
+## Trocar uma Imagem
+
+```java
+@SwapImage(
+    imageView = "iconView",
+    imageId = "icon-success"
+)
+@FXML
+private void atualizarIcone() {}
 ```
 
 ---
 
 # 🔔 Sistema de Notificações
-
-## Anotações
-
-| Anotação          | Evento                 |
-| ----------------- | ---------------------- |
-| `@OnSuccess`      | Operação concluída     |
-| `@OnInfo`         | Informação             |
-| `@OnError`        | Erro                   |
-| `@OnCritical`     | Erro crítico           |
-| `@OnException`    | Tratamento específico  |
-| `@OnConfirmation` | Confirmação do usuário |
-
----
 
 ## Uso Programático
 
@@ -294,61 +426,85 @@ public class ImagesConfig {
 @Inject
 private NotificationManager notification;
 
-notification.success(
-        "Sucesso",
-        "Registro salvo com sucesso."
-);
-
-notification.info(
-        "Informação",
-        "Processamento concluído."
-);
-
-notification.error(
-        "Erro",
-        "Falha ao processar solicitação."
-);
+notification.success("Sucesso", "Registro salvo.");
+notification.error("Erro", "Falha ao salvar.");
 ```
 
 ---
 
-# 🎯 Combinações Avançadas
+## Uso Declarativo
 
-## Swap + Notificação
+| Anotação | Comportamento |
+|----------|---------------|
+| `@OnSuccess` | Dispara ao finalizar o método |
+| `@OnInfo` | Informação |
+| `@OnError` | Erro |
+| `@OnException` | Exception específica |
+| `@OnConfirmation` | Solicita confirmação antes da execução |
+
+---
+
+## Combinação Avançada
 
 ```java
+@OnConfirmation(
+    titulo = "Excluir",
+    descricao = "Deseja excluir?"
+)
 @SwapImage(
-        imageView = "imageView",
-        imageId = "icon-success"
+    imageView = "statusIcon",
+    imageId = "icon-trash"
 )
 @OnSuccess(
-        titulo = "Atualizado",
-        descricao = "Imagem alterada."
+    titulo = "Concluído",
+    descricao = "Registro removido."
 )
 @FXML
-private void onAtualizar() {
+private void onExcluir() {
+
+    repository.delete(id);
+
 }
 ```
 
 ---
 
-## Confirmação + Sucesso + Erro
+# 🎬 Tela de Splash (Opcional)
 
 ```java
-@OnConfirmation(
-        titulo = "Excluir",
-        descricao = "Deseja realmente excluir?"
-)
-@OnSuccess(
-        titulo = "Concluído",
-        descricao = "Registro removido."
-)
-@OnError(
-        titulo = "Falha",
-        descricao = "Não foi possível remover."
-)
-@FXML
-private void onExcluir() {
+public class MainComSplash extends Application {
+
+    @Override
+    public void start(Stage primaryStage) {
+
+        SplashScreenLoader.showSplashScreen(
+            primaryStage,
+            () -> mostrarLogin(primaryStage)
+        );
+
+        WinterApplication.getInstance()
+                .initializeWithProgress(progress -> {
+
+            Platform.runLater(() -> {
+
+                SplashScreenLoader.updateProgress(
+                    progress,
+                    "Carregando módulos..."
+                );
+
+                if (progress >= 1.0) {
+                    SplashScreenLoader.completeLoading();
+                }
+
+            });
+
+        });
+
+    }
+
+    public static void main(String[] args) {
+        Application.launch(MainComSplash.class);
+    }
 }
 ```
 
@@ -356,45 +512,20 @@ private void onExcluir() {
 
 # 📏 Convenções
 
-## Controllers
+- Nunca use `fx:controller` no FXML.
+- Toda View deve possuir um `@RegisterView`.
+- O `id` da View deve ser único.
+- Caminhos de imagens devem ser absolutos do classpath.
+- O `fx:id` de um botão deve corresponder ao nome do método do Controller.
 
-✅ Não utilizar `fx:controller`
-
----
-
-## Views
-
-✅ Toda View deve possuir `@RegisterView`
-
----
-
-## Imagens
-
-✅ Sempre utilizar caminhos absolutos do classpath
+Exemplo:
 
 ```text
-/images/logo.png
-/icons/add.png
-```
+fx:id="onSalvar"
 
----
+↓
 
-## Eventos
-
-O nome do método deve corresponder ao `fx:id`.
-
-### Controller
-
-```java
-@FXML
-private void onSalvar() {
-}
-```
-
-### FXML
-
-```xml
-<Button fx:id="onSalvar"/>
+public void onSalvar()
 ```
 
 ---
@@ -403,64 +534,51 @@ private void onSalvar() {
 
 ```text
 Application
-     │
-     ▼
-WinterApplication
-     │
-     ▼
-DI Container
-     │
- ┌───┴─────────┐
- ▼             ▼
-
-Services    Controllers
-                 │
-                 ▼
-             Views (FXML)
-                 │
-                 ▼
-            Components
+│
+▼
+WinterApplication (Bootstrap & Auto-Discovery)
+│
+▼
+DI Container & ApiDispatcher
+(ClassGraph + Reflections)
+│
+├── Services / Repositories
+│
+└── Controllers
+    ├── Views (FXML & Swap Dinâmico)
+    ├── Rotas (@Payload, @UI, Params)
+    ├── Images (Cache + SoftReference)
+    └── Notifications
 ```
 
 ---
 
-# 📦 Dependências
+# 🛠️ Tecnologias e Dependências
 
-| Biblioteca  | Versão  |
-| ----------- | ------- |
-| JavaFX      | 25.0.3  |
-| ClassGraph  | 4.8.168 |
-| Reflections | 0.10.2  |
-| SLF4J       | 2.0.16  |
+| Biblioteca | Versão | Propósito |
+|------------|---------|-----------|
+| JavaFX | 25.0.3 | Toolkit UI |
+| ClassGraph | 4.8.168 | Escaneamento de Classpath |
+| Reflections | 0.10.2 | Reflexão |
 
 ---
 
 # 📄 Licença
 
-Este projeto está licenciado sob a licença MIT.
+Este projeto está licenciado sob a licença **MIT**.
 
-Consulte o arquivo `LICENSE` para mais detalhes.
-
----
-
-# 👨‍💻 Autor
-
-**Rafael Tavares**
-
-GitHub: https://github.com/rephaelTAS
-
-Projeto: https://github.com/rephaelTAS/WinterFx
-
-Email: [rafaeltavares.dev@gmail.com](mailto:rafaeltavares.dev@gmail.com)
+Consulte o arquivo **LICENSE** para mais detalhes.
 
 ---
 
 <div align="center">
 
-### 🏔️ WinterFX
+## ❄️ Feito com Java por Rafael Tavares
 
-JavaFX Framework for Modern Desktop Applications
+GitHub • WinterFX Project • Email
 
 **Menos boilerplate. Mais produtividade.**
+
+**Roteamento Desktop como nunca visto.**
 
 </div>

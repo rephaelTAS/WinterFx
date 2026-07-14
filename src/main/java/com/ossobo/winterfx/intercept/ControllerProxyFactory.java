@@ -1,121 +1,129 @@
-// ControllerProxyFactory.java
 package com.ossobo.winterfx.intercept;
 
-import com.ossobo.winterfx.bootstrap.WinterApplication;
 import com.ossobo.winterfx.runtime.HandlerRegistry;
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
-import com.ossobo.winterfx.view.controller.WinterFXController;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * Fábrica de proxies para CONTROLLERS usando JDK Dynamic Proxy.
+ * ControllerProxyFactory v2.0 — DESACOPLADO
  *
- * <p><b>Requisito:</b> Controller deve implementar WinterFXController</p>
- * <p><b>Vantagem:</b> @FXML funciona, sem ByteBuddy, stack trace limpo</p>
+ * <p>Fábrica de proxies JDK para controllers.</p>
  *
- * @version 1.0
+ * <p>NÃO conhece anotações específicas nem módulos externos.
+ * Delega toda a lógica de interceptação ao {@link HandlerRegistry}.</p>
+ *
+ * <p><b>Requisito:</b> Controller deve implementar uma interface
+ * fornecida no parâmetro {@code controllerInterface}.</p>
+ *
+ * @version 2.0 (01/07/2026)
  */
-public class ControllerProxyFactory {
+public final class ControllerProxyFactory {
+
+    private final HandlerRegistry handlerRegistry;
+
+    public ControllerProxyFactory(HandlerRegistry handlerRegistry) {
+        this.handlerRegistry = handlerRegistry;
+    }
 
     /**
-     * Cria proxy JDK para o controller.
+     * Cria um proxy JDK para o controller.
      *
-     * @param original Controller original (com @FXML)
-     * @return Proxy que implementa WinterFXController
+     * @param original            Controller original
+     * @param controllerInterface Interface que o controller implementa
+     * @param <T>                 Tipo do controller
+     * @return Proxy ou o próprio original se não houver handlers
      */
     @SuppressWarnings("unchecked")
-    public static <T> T createProxy(T original) {
+    public <T> T createProxy(T original, Class<?>... controllerInterface) {
         if (original == null) {
             return null;
         }
 
-        // Verifica se implementa WinterFXController
-        if (!(original instanceof WinterFXController)) {
+        // Se não há handlers registrados para esta classe, não precisa de proxy
+        if (!handlerRegistry.hasHandlers(original.getClass())) {
             return original;
         }
 
         return (T) Proxy.newProxyInstance(
                 original.getClass().getClassLoader(),
-                new Class<?>[]{WinterFXController.class},
-                new ControllerInvocationHandler(original)
+                controllerInterface,
+                new ControllerInvocationHandler(original, handlerRegistry)
         );
     }
 
-    /**
-     * Handler de interceptação para controllers.
-     */
+    // ============================================================
+    // INVOCATION HANDLER
+    // ============================================================
+
     private static class ControllerInvocationHandler implements InvocationHandler {
+
         private final Object original;
         private final HandlerRegistry registry;
 
-        public ControllerInvocationHandler(Object original) {
+        ControllerInvocationHandler(Object original, HandlerRegistry registry) {
             this.original = original;
-            this.registry = WinterApplication.getInstance().getHandlerRegistry();
+            this.registry = registry;
         }
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             String methodName = method.getName();
 
-            // Pula métodos do Object
-            if (methodName.equals("toString") || methodName.equals("hashCode") || methodName.equals("equals")) {
+            // Métodos do Object passam direto
+            if ("toString".equals(methodName)
+                    || "hashCode".equals(methodName)
+                    || "equals".equals(methodName)) {
                 return method.invoke(original, args);
             }
 
-            // Verifica se o método tem anotações de interceptação
-            boolean hasInterception = hasInterceptionAnnotation(method);
+            // Encontra o método real na classe original
+            Method targetMethod = findTargetMethod(method);
 
-            if (!hasInterception) {
-                // Sem anotações, chama diretamente no original
+            // Se não há handlers para este método, executa direto
+            if (!registry.hasHandlers(targetMethod)) {
                 return method.invoke(original, args);
             }
 
-            // Processa anotações
-            AnnotationContext ctx = new AnnotationContext(original, method, args);
+            // Pipeline de interceptação
+            AnnotationContext ctx = new AnnotationContext(original, targetMethod, args);
 
-            // Fase BEFORE
-            registry.executeByPhase(method, ctx, true);
+            // FASE BEFORE
+            registry.executeBeforePhase(targetMethod, ctx);
 
-            // Executa método original
-            Object result = method.invoke(original, args);
+            // EXECUÇÃO
+            Object result;
+            try {
+                result = method.invoke(original, args);
+            } catch (Exception e) {
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
 
-            // Fase AFTER
-            ctx = ctx.withResult(result);
-            registry.executeByPhase(method, ctx, false);
+                // FASE AFTER — ERRO
+                registry.executeErrorPhase(targetMethod, ctx.withError(cause));
+
+                if (registry.hasErrorHandlers(targetMethod)) {
+                    return null; // Erro tratado
+                }
+                throw cause;
+            }
+
+            // FASE AFTER — SUCESSO
+            registry.executeSuccessPhase(targetMethod, ctx.withResult(result));
 
             return result;
         }
 
-        private boolean hasInterceptionAnnotation(Method method) {
-            // Anotações de UI
-            if (method.isAnnotationPresent(com.ossobo.winterfx.view.anotations.SwapFxml.class)) {
-                return true;
+        private Method findTargetMethod(Method proxyMethod) {
+            try {
+                return original.getClass().getMethod(
+                        proxyMethod.getName(),
+                        proxyMethod.getParameterTypes()
+                );
+            } catch (NoSuchMethodException e) {
+                return proxyMethod;
             }
-            if (method.isAnnotationPresent(com.ossobo.winterfx.imagemanager.anotations.SwapImage.class)) {
-                return true;
-            }
-            if (method.isAnnotationPresent(com.ossobo.winterfx.view.anotations.NewScene.class)) {
-                return true;
-            }
-
-            // Anotações de notificação
-            if (method.isAnnotationPresent(com.ossobo.winterfx.notifications.anotations.OnSuccess.class)) {
-                return true;
-            }
-            if (method.isAnnotationPresent(com.ossobo.winterfx.notifications.anotations.OnError.class)) {
-                return true;
-            }
-            if (method.isAnnotationPresent(com.ossobo.winterfx.notifications.anotations.OnConfirmation.class)) {
-                return true;
-            }
-            if (method.isAnnotationPresent(com.ossobo.winterfx.notifications.anotations.OnException.class)) {
-                return true;
-            }
-
-            return false;
         }
     }
 }

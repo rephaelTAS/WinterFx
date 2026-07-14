@@ -1,9 +1,5 @@
 package com.ossobo.winterfx.imagemanager;
 
-import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.anotations.Component;
-import com.ossobo.winterfx.anotations.Scope;
-import com.ossobo.winterfx.di.scopes.enums.ScopeType;
 import com.ossobo.winterfx.imagemanager.image.ImageCache;
 import com.ossobo.winterfx.imagemanager.image.ImageLoader;
 import com.ossobo.winterfx.imagemanager.image.ImageViewFactory;
@@ -19,22 +15,30 @@ import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
 
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@Component
-@Scope(ScopeType.SINGLETON)
+/**
+ * ImageManager v2.0 — Fachada do módulo imagemanager.
+ *
+ * <p>Responsável por carregar, cachear e fornecer imagens.
+ * Usa {@link ResourceRegistry} para localizar descritores de imagem.</p>
+ *
+ * <p>NÃO depende de {@code DiContainer} — apenas do módulo base {@code resources}
+ * e do módulo base {@code scanner}.</p>
+ *
+ * @version 2.0 (01/07/2026)
+ */
 public class ImageManager {
 
     private final ResourceRegistry registry;
-    private final DiContainer diContainer;
     private final ImageCache imageCache;
     private final ImageLoader imageLoader;
     private final ImageViewFactory viewFactory;
 
-    public ImageManager(ResourceRegistry registry, DiContainer diContainer) {
+    public ImageManager(ResourceRegistry registry) {
         this.registry = registry;
-        this.diContainer = diContainer;
         this.imageCache = new ImageCache();
         this.imageLoader = new ImageLoader();
         this.viewFactory = new ImageViewFactory();
@@ -47,7 +51,10 @@ public class ImageManager {
     public Image loadImage(String imageId, ImageDescriptor descriptor, double w, double h,
                            boolean preserveRatio, boolean smooth, boolean useCache) {
         String key = imageId + "_" + (int) w + "x" + (int) h;
-        if (useCache) { Optional<Image> c = imageCache.get(key); if (c.isPresent()) return c.get(); }
+        if (useCache) {
+            Optional<Image> c = imageCache.get(key);
+            if (c.isPresent()) return c.get();
+        }
         URL url = descriptor.getImageUrl();
         try {
             Image img = w > 0 && h > 0 ? new Image(url.toExternalForm(), w, h, preserveRatio, smooth)
@@ -56,14 +63,17 @@ public class ImageManager {
                         : new Image(url.toExternalForm());
             if (useCache && img != null && !img.isError()) imageCache.put(key, img);
             return img;
-        } catch (Exception e) { return imageLoader.loadPlaceholder().orElse(null); }
+        } catch (Exception e) {
+            return imageLoader.loadPlaceholder().orElse(null);
+        }
     }
 
     public Image loadImage(String imageId) {
         Optional<ImageDescriptor> opt = registry.findImageById(imageId);
         if (opt.isPresent()) {
             ImageDescriptor d = opt.get();
-            return loadImage(imageId, d, d.getPreferredWidth(), d.getPreferredHeight(), d.isPreserveRatio(), d.isSmooth(), true);
+            return loadImage(imageId, d, d.getPreferredWidth(), d.getPreferredHeight(),
+                    d.isPreserveRatio(), d.isSmooth(), true);
         }
         return imageLoader.loadPlaceholder().orElse(null);
     }
@@ -75,17 +85,52 @@ public class ImageManager {
 
     public void load(ImageView target, String imageId, double w, double h) {
         Image img = loadImage(imageId);
-        if (img != null && target != null) { target.setImage(img); target.setFitWidth(w); target.setFitHeight(h); }
+        if (img != null && target != null) {
+            target.setImage(img);
+            target.setFitWidth(w);
+            target.setFitHeight(h);
+        }
     }
 
-    public java.util.List<ImageDescriptor> listAllImages() { return registry.findAllImages(); }
-    public boolean isRegistered(String id) { return registry.findImageById(id).isPresent(); }
+    // =============================================
+    // CONSULTA
+    // =============================================
+
+    public List<ImageDescriptor> listAllImages() {
+        return registry.findAllImages();
+    }
+
+    public boolean isRegistered(String id) {
+        return registry.findImageById(id).isPresent();
+    }
+
+    // =============================================
+    // BACKGROUND
+    // =============================================
 
     public Background createBackground(Image image) {
-        return new Background(new BackgroundImage(image, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT));
+        return new Background(new BackgroundImage(
+                image,
+                BackgroundRepeat.NO_REPEAT,
+                BackgroundRepeat.NO_REPEAT,
+                BackgroundPosition.CENTER,
+                BackgroundSize.DEFAULT
+        ));
     }
 
-    public void clearCache() { imageCache.clear(); }
-    public int getCacheSize() { return imageCache.size(); }
-    public Map<String, Object> getStats() { return imageCache.getStats(); }
+    // =============================================
+    // CACHE
+    // =============================================
+
+    public void clearCache() {
+        imageCache.clear();
+    }
+
+    public int getCacheSize() {
+        return imageCache.size();
+    }
+
+    public Map<String, Object> getStats() {
+        return imageCache.getStats();
+    }
 }

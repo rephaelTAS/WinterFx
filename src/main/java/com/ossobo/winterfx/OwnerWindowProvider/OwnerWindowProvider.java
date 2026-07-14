@@ -5,7 +5,7 @@ import com.ossobo.winterfx.di.DiContainer;
 import com.ossobo.winterfx.anotations.Component;
 import com.ossobo.winterfx.anotations.Scope;
 
-import com.ossobo.winterfx.di.scopes.enums.ScopeType;
+import com.ossobo.winterfx.scanner.enums.ScopeType;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.stage.Stage;

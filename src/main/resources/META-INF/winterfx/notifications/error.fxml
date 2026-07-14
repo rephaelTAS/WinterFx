@@ -4,7 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.image.ImageView?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
@@ -12,13 +12,20 @@
       style="-fx-background-color: #e74c3c; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 5);"
       maxWidth="450" minWidth="350">
 
-    <!-- Cabeçalho -->
+    <!-- Cabeçalho: Ícone + Título -->
     <HBox spacing="12" alignment="CENTER_LEFT">
-        <Circle radius="18" fill="white" opacity="0.9"/>
+        <!-- ✅ Ícone injetado via @InjectImage -->
+        <ImageView fx:id="iconImage" fitHeight="32" fitWidth="32" />
+
         <Label fx:id="tituloLabel"
                style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;"
                text="Erro"
                wrapText="true"/>
+
+        <!-- ✅ Botão de fechar SEM onAction -->
+        <Button fx:id="btnFechar"
+                style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-cursor: hand;"
+                text="✕" />
     </HBox>
 
     <!-- Descrição -->
@@ -44,9 +51,10 @@
            visible="false"
            managed="false"/>
 
-    <!-- Botão de fechar (para erros modais) -->
+    <!-- Botão de fechar (fallback se não usar o do header) -->
+    <!-- ✅ SEM onAction -->
     <HBox alignment="CENTER_RIGHT">
-        <Button fx:id="btnFechar"
+        <Button fx:id="btnFecharFooter"
                 text="Fechar"
                 style="-fx-background-color: white; -fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 8 20; -fx-cursor: hand;"/>
     </HBox>

@@ -1,21 +1,27 @@
 package com.ossobo.winterfx.di.injection;
 
 /**
- * Contrato para injetores de dependência.
+ * Contrato base para injetores de dependência especializados do framework.
  *
- * Cada implementação é responsável por um tipo específico
- * de injeção: @Value, @Inject, @InjectView, @InjectImage, etc.
+ * <p>Cada implementação desta interface é responsável por interpretar e processar
+ * um tipo específico de anotação de injeção (por exemplo, anotações de valor,
+ * injeção de views, injeção de imagens, entre outras).</p>
  *
- * O InjectionManager orquestra a execução de todos os injectors
- * registrados, na ordem em que foram adicionados.
+ * <p>O {@link InjectionManager} atua como o orquestrador central, iterando e
+ * executando todos os injetores registrados na ordem em que foram adicionados
+ * durante o processo de pós-criação dos beans.</p>
+ *
+ * @see InjectionManager
  */
 public interface DependencyInjector {
 
     /**
-     * Injeta dependências em uma instância.
+     * Analisa a instância fornecida e realiza a injeção de dependências
+     * conforme a lógica específica da implementação.
      *
-     * @param instance instância do bean a ser processada
-     * @param type     classe do bean
+     * @param instance A instância do bean que terá suas dependências injetadas.
+     * @param type     O tipo (Classe) do bean sendo processado, útil para reflexão
+     *                 cacheada ou validações de hierarquia.
      */
     void inject(Object instance, Class<?> type);
 }

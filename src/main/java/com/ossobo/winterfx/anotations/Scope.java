@@ -4,7 +4,7 @@ package com.ossobo.winterfx.anotations;
 
 
 
-import com.ossobo.winterfx.di.scopes.enums.ScopeType;
+import com.ossobo.winterfx.scanner.enums.ScopeType;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

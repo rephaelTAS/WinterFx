@@ -2,7 +2,7 @@ package com.ossobo.winterfx.view.anotations;
 
 
 
-import com.ossobo.winterfx.view.enums.ViewAnimation;
+import com.ossobo.winterfx.resources.enums.ViewAnimation;
 
 import java.lang.annotation.*;
 

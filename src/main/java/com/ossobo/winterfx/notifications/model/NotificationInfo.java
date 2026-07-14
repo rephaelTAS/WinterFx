@@ -2,7 +2,8 @@ package com.ossobo.winterfx.notifications.model;
 
 
 import com.ossobo.winterfx.notifications.enums.NotificationType;
-import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
+import com.ossobo.winterfx.resources.enums.CssMode;
+import com.ossobo.winterfx.resources.enums.Modality;
 
 /**
  * 📋 NotificationInfo v1.0

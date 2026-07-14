@@ -1,9 +1,6 @@
 package com.ossobo.winterfx.view.anotations;
 
-import com.ossobo.winterfx.notifications.enums.AlertType;
-import com.ossobo.winterfx.view.enums.*;
-import com.ossobo.winterfx.resources.enums.ResourceOrigin;
-import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
+import com.ossobo.winterfx.resources.enums.*;
 
 import java.lang.annotation.*;
 

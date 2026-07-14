@@ -1,6 +1,7 @@
 package com.ossobo.winterfx.view.floatingwindow.anotations;
 
-import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
+import com.ossobo.winterfx.resources.enums.CssMode;
+import com.ossobo.winterfx.resources.enums.Modality;
 
 import java.lang.annotation.*;
 
@@ -41,9 +42,6 @@ public @interface FloatingWindow {
     /** Se true, apenas uma instância por vez (traz para frente se já aberta) */
     boolean singleton() default true;
 
-    /** Se true, permite múltiplas instâncias simultâneas */
-    boolean multipleInstances() default false;
-
     /** Se true, fecha automaticamente ao perder foco */
     boolean autoClose() default false;
 
@@ -63,9 +61,6 @@ public @interface FloatingWindow {
 
     /** Se true, a janela fica sempre no topo */
     boolean alwaysOnTop() default false;
-    // Em FloatingWindow.java:
-    /** Se true, sempre carrega uma nova instância (dados frescos) */
-    boolean fresh() default true;
 
     /** ID da janela owner (vazio = usa a janela ativa como owner) */
     String owner() default "";

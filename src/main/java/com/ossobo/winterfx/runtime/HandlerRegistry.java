@@ -1,20 +1,10 @@
-// HandlerRegistry.java v2.1 - 2026-06-14
+// HandlerRegistry.java v3.0 - 2026-07-01
 // Registro central de handlers com cache por Method. Lookup O(1).
-// Com pipeline condicional para execução exclusiva de erro/sucesso.
+// Pipeline condicional: BEFORE, AFTER_SUCCESS, AFTER_ERROR.
 //
-// PIPELINE CONDICIONAL v2.1:
-//   - executeByPhase(): executa handlers BEFORE/AFTER (tradicional)
-//   - executeSuccessPhase(): executa apenas handlers SUCCESS_ONLY (@OnSuccess, @NewScene, @SwapFxml)
-//   - executeErrorPhase(): executa apenas handlers ERROR_ONLY (@OnError, @OnException)
+// DESACOPLADO: não conhece anotações específicas, apenas AnnotationHandler<T>.
 //
-// Vantagens v2.1:
-//   - ✅ @OnError e @OnSuccess MUTUAMENTE EXCLUSIVOS
-//   - ✅ NUNCA ambos executam simultaneamente
-//   - ✅ @NewScene e @SwapFxml só executam se sucesso
-//   - ✅ @OnError só executa se erro
-//   - ✅ Cache O(1) mantido
-//
-// @version 2.1 - Pipeline condicional com execução exclusiva de erro/sucesso
+// @version 3.0 - executeBeforePhase + hasErrorHandlers + matchesPhase removido
 package com.ossobo.winterfx.runtime;
 
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
@@ -33,59 +23,54 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p><b>Pipeline de Interceptação:</b></p>
  * <ol>
- *   <li><b>FASE BEFORE:</b> {@link #executeByPhase(Method, AnnotationContext, boolean)} - executa handlers BEFORE</li>
+ *   <li><b>FASE BEFORE:</b> {@link #executeBeforePhase(Method, AnnotationContext)}</li>
  *   <li><b>EXECUÇÃO:</b> método executa e captura exceção (se houver)</li>
  *   <li><b>FASE AFTER (CONDICIONAL):</b>
  *     <ul>
- *       <li>Se erro: {@link #executeErrorPhase(Method, AnnotationContext)} - executa apenas @OnError, @OnException</li>
- *       <li>Se sucesso: {@link #executeSuccessPhase(Method, AnnotationContext)} - executa apenas @OnSuccess, @NewScene, @SwapFxml</li>
+ *       <li>Se erro: {@link #executeErrorPhase(Method, AnnotationContext)}</li>
+ *       <li>Se sucesso: {@link #executeSuccessPhase(Method, AnnotationContext)}</li>
  *     </ul>
  *   </li>
  * </ol>
  *
- * <p><b>Trade-off:</b> Cache em memória vs. re-scanear anotações.
- * Cache consome memória mas evita reflection repetida. Em aplicações JavaFX típicas,
- * o número de métodos anotados é pequeno, então o consumo é irrelevante.</p>
+ * <p>NÃO conhece anotações concretas. Opera apenas com {@link AnnotationHandler}
+ * e seu contrato de fases ({@code isBeforePhase}, {@code isSuccessOnly}, {@code isErrorOnly}).</p>
  *
- * @version 2.1 - Pipeline condicional com execução exclusiva de erro/sucesso
+ * @version 3.0 (01/07/2026)
  */
 public final class HandlerRegistry {
 
-    /** Handlers indexados por tipo de anotação */
     private final Map<Class<? extends Annotation>, AnnotationHandler<?>> handlers =
             new ConcurrentHashMap<>();
 
-    /** Cache: Method -> lista de handlers aplicáveis */
     private final Map<Method, List<AnnotationHandler<?>>> cache =
             new ConcurrentHashMap<>();
 
-    // ==================== Registro ====================
+    // ==================== REGISTRO ====================
 
     /**
      * Registra um handler para um tipo de anotação.
-     * Substitui handler existente para o mesmo tipo.
-     * Limpa cache para garantir consistência.
      */
     public <A extends Annotation> void register(AnnotationHandler<A> handler) {
         handlers.put(handler.getAnnotationType(), handler);
         cache.clear();
     }
 
-    /** Remove handler pelo tipo de anotação */
+    /**
+     * Remove handler pelo tipo de anotação.
+     */
     public void unregister(Class<? extends Annotation> annotationType) {
         handlers.remove(annotationType);
         cache.clear();
     }
 
-    // ==================== Consulta ====================
+    // ==================== CONSULTA ====================
 
-    /** Acesso direto a um handler pelo tipo de anotação */
     @SuppressWarnings("unchecked")
     public <A extends Annotation> AnnotationHandler<A> getHandler(Class<A> annotationType) {
         return (AnnotationHandler<A>) handlers.get(annotationType);
     }
 
-    /** Verifica se algum método da classe tem anotações com handlers registrados */
     public boolean hasHandlers(Class<?> clazz) {
         for (Method method : clazz.getMethods()) {
             if (hasHandlers(method)) return true;
@@ -93,16 +78,75 @@ public final class HandlerRegistry {
         return false;
     }
 
-    /** Verifica se o método tem anotações com handlers registrados */
     public boolean hasHandlers(Method method) {
         return !getHandlers(method).isEmpty();
     }
 
-    // ==================== Execução ====================
+    /**
+     * Verifica se o método tem handlers de erro registrados.
+     */
+    public boolean hasErrorHandlers(Method method) {
+        return getHandlers(method).stream()
+                .anyMatch(h -> h.isAfterPhase() && h.isErrorOnly());
+    }
+
+    public int size() {
+        return handlers.size();
+    }
+
+    public void clearCache() {
+        cache.clear();
+    }
+
+    // ==================== EXECUÇÃO POR FASE ====================
 
     /**
-     * Executa todos os handlers aplicáveis ao método.
-     * A ordem segue a declaração das anotações no método.
+     * Executa handlers da fase BEFORE.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void executeBeforePhase(Method method, AnnotationContext ctx) {
+        for (AnnotationHandler<?> handler : getHandlers(method)) {
+            if (handler.isBeforePhase()) {
+                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
+                if (annotation != null) {
+                    ((AnnotationHandler) handler).handle(ctx, annotation);
+                }
+            }
+        }
+    }
+
+    /**
+     * Executa handlers da fase AFTER — SUCESSO.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void executeSuccessPhase(Method method, AnnotationContext ctx) {
+        for (AnnotationHandler<?> handler : getHandlers(method)) {
+            if (handler.isAfterPhase() && handler.isSuccessOnly()) {
+                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
+                if (annotation != null) {
+                    ((AnnotationHandler) handler).handle(ctx, annotation);
+                }
+            }
+        }
+    }
+
+    /**
+     * Executa handlers da fase AFTER — ERRO.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void executeErrorPhase(Method method, AnnotationContext ctx) {
+        for (AnnotationHandler<?> handler : getHandlers(method)) {
+            if (handler.isAfterPhase() && handler.isErrorOnly()) {
+                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
+                if (annotation != null) {
+                    ((AnnotationHandler) handler).handle(ctx, annotation);
+                }
+            }
+        }
+    }
+
+    /**
+     * Executa todos os handlers (independente de fase).
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void execute(Method method, AnnotationContext ctx) {
@@ -114,97 +158,8 @@ public final class HandlerRegistry {
         }
     }
 
-    /**
-     * Executa handlers filtrados por fase (before/after).
-     *
-     * <p>Anotações sem atributo "before" executam em AMBAS as fases.</p>
-     * <p>Anotações com before=true só executam quando isBefore=true.</p>
-     * <p>Anotações com before=false só executam quando isBefore=false.</p>
-     *
-     * @param method Método a executar handlers
-     * @param ctx Contexto de anotação
-     * @param isBefore true para fase BEFORE, false para fase AFTER
-     */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    public void executeByPhase(Method method, AnnotationContext ctx, boolean isBefore) {
-        for (AnnotationHandler<?> handler : getHandlers(method)) {
-            Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-            if (annotation == null) continue;
-            if (!matchesPhase(annotation, isBefore)) continue;
-            ((AnnotationHandler) handler).handle(ctx, annotation);
-        }
-    }
+    // ==================== CACHE ====================
 
-    // ========== NOVO: Pipeline Condicional ==========
-
-    /**
-     * 🔥 NOVO: Executa apenas handlers de SUCESSO.
-     *
-     * <p>Executa handlers que são:</p>
-     * <ul>
-     *   <li>FASE AFTER ({@link AnnotationHandler#isAfterPhase()})</li>
-     *   <li>SÓ SUCESSO ({@link AnnotationHandler#isSuccessOnly()})</li>
-     * </ul>
-     *
-     * <p><b>Handlers executados:</b></p>
-     * <ul>
-     *   <li>{@code @OnSuccess} - mostra notificação de sucesso</li>
-     *   <li>{@code @NewScene} - navega para nova view</li>
-     *   <li>{@code @SwapFxml} - troca FXML</li>
-     * </ul>
-     *
-     * @param method Método a executar handlers de sucesso
-     * @param ctx Contexto de anotação com resultado
-     */
-    public void executeSuccessPhase(Method method, AnnotationContext ctx) {
-        List<AnnotationHandler<?>> handlers = cache.get(method);
-        if (handlers == null) return;
-
-        for (AnnotationHandler<?> handler : handlers) {
-            if (handler.isAfterPhase() && handler.isSuccessOnly()) {
-                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-                if (annotation != null) {
-                    ((AnnotationHandler) handler).handle(ctx, annotation);
-                }
-            }
-        }
-    }
-
-    /**
-     * 🔥 NOVO: Executa apenas handlers de ERRO.
-     *
-     * <p>Executa handlers que são:</p>
-     * <ul>
-     *   <li>FASE AFTER ({@link AnnotationHandler#isAfterPhase()})</li>
-     *   <li>SÓ ERRO ({@link AnnotationHandler#isErrorOnly()})</li>
-     * </ul>
-     *
-     * <p><b>Handlers executados:</b></p>
-     * <ul>
-     *   <li>{@code @OnError} - mostra notificação de erro</li>
-     *   <li>{@code @OnException} - processa exceção</li>
-     * </ul>
-     *
-     * @param method Método a executar handlers de erro
-     * @param ctx Contexto de anotação com exceção
-     */
-    public void executeErrorPhase(Method method, AnnotationContext ctx) {
-        List<AnnotationHandler<?>> handlers = cache.get(method);
-        if (handlers == null) return;
-
-        for (AnnotationHandler<?> handler : handlers) {
-            if (handler.isAfterPhase() && handler.isErrorOnly()) {
-                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-                if (annotation != null) {
-                    ((AnnotationHandler) handler).handle(ctx, annotation);
-                }
-            }
-        }
-    }
-
-    // ==================== Cache ====================
-
-    /** Retorna handlers aplicáveis ao método, com cache */
     private List<AnnotationHandler<?>> getHandlers(Method method) {
         return cache.computeIfAbsent(method, m -> {
             List<AnnotationHandler<?>> result = new ArrayList<>();
@@ -217,29 +172,4 @@ public final class HandlerRegistry {
             return Collections.unmodifiableList(result);
         });
     }
-
-    // ==================== Faseamento ====================
-
-    /**
-     * Verifica se a anotação corresponde à fase atual.
-     * Lê atributo "before" via reflection (cache implícito pelo cache de handlers).
-     */
-    private boolean matchesPhase(Annotation annotation, boolean isBefore) {
-        try {
-            Method beforeMethod = annotation.annotationType().getMethod("before");
-            boolean annotationBefore = (boolean) beforeMethod.invoke(annotation);
-            return annotationBefore == isBefore;
-        } catch (NoSuchMethodException e) {
-            return true; // Sem atributo "before" = executa em qualquer fase
-        } catch (Exception e) {
-            return true; // Fallback seguro
-        }
-    }
-
-    // ==================== Utilidades ====================
-
-    public int size() { return handlers.size(); }
-
-    /** Limpa cache manualmente (testes) */
-    public void clearCache() { cache.clear(); }
 }

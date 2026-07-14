@@ -1,11 +1,17 @@
 package com.ossobo.winterfx.di.lifecycle.listener;
 
 import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener;
+import com.ossobo.winterfx.di.lifecycle.interfaces.DependencyLifecycleListener.LifecycleEventType;
 
 import java.util.Set;
 
 /**
- * Exemplo de listener para logging do ciclo de vida
+ * Implementação base (silenciosa) de um ouvinte de ciclo de vida.
+ *
+ * <p>Esta classe funciona como um ponto de partida ou como um observador que consome
+ * eventos sem executar nenhuma lógica. Pode ser estendida para implementar
+ * comportamentos específicos apenas para os eventos de interesse, aproveitando
+ * os métodos padrão vazios da interface.</p>
  */
 public class LifecycleLogger implements DependencyLifecycleListener {
 

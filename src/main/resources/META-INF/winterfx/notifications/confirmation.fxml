@@ -4,7 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.image.ImageView?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
@@ -14,11 +14,18 @@
 
     <!-- Cabeçalho: Ícone + Título -->
     <HBox spacing="12" alignment="CENTER_LEFT">
-        <Circle radius="20" fill="#f39c12" opacity="0.9"/>
+        <!-- ✅ Ícone injetado via @InjectImage (substitui Circle) -->
+        <ImageView fx:id="iconImage" fitHeight="32" fitWidth="32" />
+
         <Label fx:id="tituloLabel"
                style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"
                text="Confirmação"
                wrapText="true"/>
+
+        <!-- ✅ Botão de fechar SEM onAction -->
+        <Button fx:id="btnFechar"
+                style="-fx-background-color: transparent; -fx-text-fill: #999; -fx-font-size: 18px; -fx-cursor: hand;"
+                text="✕" />
     </HBox>
 
     <!-- Descrição -->
@@ -46,9 +53,11 @@
 
     <!-- Botões de ação -->
     <HBox spacing="12" alignment="CENTER_RIGHT">
+        <!-- ✅ SEM onAction -->
         <Button fx:id="btnCancelar"
                 text="Cancelar"
                 style="-fx-background-color: #ecf0f1; -fx-text-fill: #555; -fx-font-size: 14px; -fx-font-weight: bold; -fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;"/>
+
         <Button fx:id="btnConfirmar"
                 text="Confirmar"
                 style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;"/>

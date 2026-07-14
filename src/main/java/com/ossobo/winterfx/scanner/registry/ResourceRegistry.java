@@ -40,10 +40,15 @@ public final class ResourceRegistry {
     private final AtomicLong unregistrationCount = new AtomicLong(0);
     private final AtomicLong overwriteCount = new AtomicLong(0);
 
+    // ============================================================
+    // REGISTRO
+    // ============================================================
+
     /**
      * Registra um descritor no catálogo.
      *
-     * <p><b>Comportamento:</b> Se já existir recurso com mesmo ID, sobrescreve automaticamente (último ganha).</p>
+     * <p><b>Comportamento:</b> Se já existir recurso com mesmo ID,
+     * sobrescreve automaticamente (último ganha).</p>
      *
      * @param descriptor descritor do recurso (não pode ser nulo)
      * @throws NullPointerException se descriptor for nulo
@@ -59,7 +64,6 @@ public final class ResourceRegistry {
             throw new IllegalArgumentException("ID do descriptor não pode ser nulo ou vazio");
         }
 
-        // ⭐ Se já existe, sobrescreve (comportamento de "último ganha")
         boolean wasOverwritten = descriptors.put(id, descriptor) != null;
         registrationCount.incrementAndGet();
 
@@ -89,6 +93,10 @@ public final class ResourceRegistry {
             register(descriptor);
         }
     }
+
+    // ============================================================
+    // BUSCA POR ID
+    // ============================================================
 
     /**
      * Busca descritor pelo ID.
@@ -123,26 +131,9 @@ public final class ResourceRegistry {
         return findByIdAndType(id, type).filter(d -> d.getOrigin() == origin);
     }
 
-    /**
-     * Verifica se um recurso com o ID existe.
-     *
-     * @param id ID do recurso
-     * @return true se existe
-     */
-    public boolean contains(String id) {
-        return descriptors.containsKey(id);
-    }
-
-    /**
-     * Verifica se um recurso com o ID e tipo existe.
-     *
-     * @param id ID do recurso
-     * @param type tipo do recurso
-     * @return true se existe com o tipo especificado
-     */
-    public boolean contains(String id, ResourceType type) {
-        return findByIdAndType(id, type).isPresent();
-    }
+    // ============================================================
+    // BUSCA DE VIEWS
+    // ============================================================
 
     /**
      * Busca ViewDescriptor pelo ID.
@@ -180,6 +171,10 @@ public final class ResourceRegistry {
                 .filter(d -> d.getResourceType() == ResourceType.ALERT);
     }
 
+    // ============================================================
+    // BUSCA DE IMAGENS
+    // ============================================================
+
     /**
      * Busca ImageDescriptor pelo ID.
      *
@@ -191,6 +186,35 @@ public final class ResourceRegistry {
                 .filter(d -> d instanceof ImageDescriptor)
                 .map(d -> (ImageDescriptor) d);
     }
+
+    // ============================================================
+    // VERIFICAÇÃO
+    // ============================================================
+
+    /**
+     * Verifica se um recurso com o ID existe.
+     *
+     * @param id ID do recurso
+     * @return true se existe
+     */
+    public boolean contains(String id) {
+        return descriptors.containsKey(id);
+    }
+
+    /**
+     * Verifica se um recurso com o ID e tipo existe.
+     *
+     * @param id ID do recurso
+     * @param type tipo do recurso
+     * @return true se existe com o tipo especificado
+     */
+    public boolean contains(String id, ResourceType type) {
+        return findByIdAndType(id, type).isPresent();
+    }
+
+    // ============================================================
+    // LISTAGEM
+    // ============================================================
 
     /**
      * Retorna todos os recursos registrados.
@@ -250,6 +274,19 @@ public final class ResourceRegistry {
     }
 
     /**
+     * Retorna todos os IDs de recursos registrados.
+     *
+     * @return conjunto imutável de IDs
+     */
+    public Set<String> getAllIds() {
+        return Collections.unmodifiableSet(descriptors.keySet());
+    }
+
+    // ============================================================
+    // REMOÇÃO
+    // ============================================================
+
+    /**
      * Desregistra um recurso pelo ID.
      *
      * @param id ID do recurso
@@ -263,6 +300,17 @@ public final class ResourceRegistry {
         }
         return false;
     }
+
+    /**
+     * Limpa todos os recursos do registry.
+     */
+    public void clear() {
+        descriptors.clear();
+    }
+
+    // ============================================================
+    // ESTATÍSTICAS
+    // ============================================================
 
     /**
      * Retorna o número total de recursos registrados.
@@ -280,13 +328,6 @@ public final class ResourceRegistry {
      */
     public boolean isEmpty() {
         return descriptors.isEmpty();
-    }
-
-    /**
-     * Limpa todos os recursos do registry.
-     */
-    public void clear() {
-        descriptors.clear();
     }
 
     /**
@@ -327,14 +368,5 @@ public final class ResourceRegistry {
      */
     public long getOverwriteCount() {
         return overwriteCount.get();
-    }
-
-    /**
-     * Retorna todos os IDs de recursos registrados.
-     *
-     * @return conjunto imutável de IDs
-     */
-    public Set<String> getAllIds() {
-        return Collections.unmodifiableSet(descriptors.keySet());
     }
 }

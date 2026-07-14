@@ -1,8 +1,8 @@
 package com.ossobo.winterfx.imagemanager.anotations;
 
 
-import com.ossobo.winterfx.imagemanager.enums.ImageType;
 import com.ossobo.winterfx.resources.enums.ResourceOrigin;
+import com.ossobo.winterfx.resources.enums.ViewAnimation;
 
 import java.lang.annotation.*;
 
@@ -95,13 +95,13 @@ public @interface RegisterImage {
      * Tipo da imagem.
      *
      * <ul>
-     *   <li>{@link ImageType#IMAGE IMAGE}: Imagem normal</li>
-     *   <li>{@link ImageType#ICON ICON}: Ícone</li>
-     *   <li>{@link ImageType#BACKGROUND BACKGROUND}: Fundo</li>
-     *   <li>{@link ImageType#SPRITE SPRITE}: Sprite sheet</li>
+     *   <li>{@link ViewAnimation.ImageType#IMAGE IMAGE}: Imagem normal</li>
+     *   <li>{@link ViewAnimation.ImageType#ICON ICON}: Ícone</li>
+     *   <li>{@link ViewAnimation.ImageType#BACKGROUND BACKGROUND}: Fundo</li>
+     *   <li>{@link ViewAnimation.ImageType#SPRITE SPRITE}: Sprite sheet</li>
      * </ul>
      */
-    ImageType imageType() default ImageType.IMAGE;
+    ViewAnimation.ImageType imageType() default ViewAnimation.ImageType.IMAGE;
 
     // =============================================
     // DIMENSÕES

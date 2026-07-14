@@ -32,7 +32,7 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.di.enums;
     exports com.ossobo.winterfx.di.exceptions;
     exports com.ossobo.winterfx.di.scopes;
-    exports com.ossobo.winterfx.di.scopes.enums;
+    exports com.ossobo.winterfx.scanner.enums;
     exports com.ossobo.winterfx.scanner.models;
     exports com.ossobo.winterfx.di.reflection;
     exports com.ossobo.winterfx.di.resolver;
@@ -43,13 +43,11 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.scanner.registry;
     exports com.ossobo.winterfx.resources.resolver;
     exports com.ossobo.winterfx.resources.guard;
-    exports com.ossobo.winterfx.resources.loader;
     exports com.ossobo.winterfx.resources.cache;
     exports com.ossobo.winterfx.view;
     exports com.ossobo.winterfx.view.design;
     exports com.ossobo.winterfx.view.exceptios;
     exports com.ossobo.winterfx.view.loader;
-    exports com.ossobo.winterfx.view.refresh;
     exports com.ossobo.winterfx.imagemanager;
     exports com.ossobo.winterfx.imagemanager.image;
     exports com.ossobo.winterfx.notifications;
@@ -57,9 +55,8 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.notifications.controller;
     exports com.ossobo.winterfx.notifications.resolver;
     exports com.ossobo.winterfx.notifications.exceptions;
-    exports com.ossobo.winterfx.notifications.registry;
     exports com.ossobo.winterfx.notifications.core;
-
+    exports com.ossobo.winterfx.runtime.pipeline;
     exports com.ossobo.winterfx.imagemanager.anotations;
     exports com.ossobo.winterfx.view.floatingwindow.anotations;
     exports com.ossobo.winterfx.notifications.anotations;
@@ -73,10 +70,7 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.anotations;
     exports com.ossobo.winterfx.view.anotations;
     exports com.ossobo.winterfx.view.design.anotations;
-    exports com.ossobo.winterfx.view.floatingwindow.enums;
     exports com.ossobo.winterfx.notifications.enums;
-    exports com.ossobo.winterfx.view.enums;
-    exports com.ossobo.winterfx.imagemanager.enums;
     exports com.ossobo.winterfx.scanner;
 
 
@@ -94,4 +88,12 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.di.resolver.methods;
     exports com.ossobo.winterfx.di.scopes.interfaces;
     exports com.ossobo.winterfx.di.configuration;
+    exports com.ossobo.winterfx.uiRefresh.model;
+    exports com.ossobo.winterfx.uiRefresh.processor;
+    exports com.ossobo.winterfx.imagemanager.handler;
+    exports com.ossobo.winterfx.view.handler;
+    exports com.ossobo.winterfx.view.resolver;
+    exports com.ossobo.winterfx.imagemanager.resolver;
+    opens com.ossobo.winterfx.view.controller to javafx.fxml;
+    exports com.ossobo.winterfx.uiRefresh;
 }

@@ -1,8 +1,6 @@
 package com.ossobo.winterfx.scanner.registry;
 
 import com.ossobo.winterfx.di.aot.InstanceFactory;
-import com.ossobo.winterfx.di.resolver.DependencyResolver;
-import com.ossobo.winterfx.di.scopes.ScopeManager;
 import com.ossobo.winterfx.scanner.models.BeanDefinition;
 
 import java.util.*;
@@ -14,6 +12,10 @@ import java.util.stream.Collectors;
  *
  * <p>Armazena todas as {@link BeanDefinition} descobertas pelo scanner.
  * Thread-safe: usa {@link ConcurrentHashMap} para operações concorrentes.</p>
+ *
+ * <p><b>CATÁLOGO PASSIVO:</b> Apenas armazena e consulta definições.
+ * Não conhece o DI Container, ScopeManager ou DependencyResolver.
+ * O ciclo de vida e resolução de dependências são responsabilidade do módulo {@code di}.</p>
  *
  * <p>Suporta:</p>
  * <ul>
@@ -32,29 +34,17 @@ import java.util.stream.Collectors;
  * </ul>
  *
  * @see BeanDefinition
- * @see DependencyResolver
  */
 public class BeanRegistry {
 
     private final Map<String, BeanDefinition> definitionsByName = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<String>> beanNamesByType = new ConcurrentHashMap<>();
-    private final Set<String> primaryBeanNames = new HashSet<>();
+    private final Set<String> primaryBeanNames = ConcurrentHashMap.newKeySet();
     private final Map<Class<?>, InstanceFactory<?>> aotFactoriesByType = new ConcurrentHashMap<>();
 
-    private DependencyResolver dependencyResolver;
-
-    /**
-     * Define o resolver de dependências para uso posterior.
-     *
-     * @param resolver resolver de dependências
-     */
-    public void setDependencyResolver(DependencyResolver resolver) {
-        this.dependencyResolver = resolver;
-    }
-
-    public DependencyResolver getDependencyResolver() {
-        return dependencyResolver;
-    }
+    // ============================================================
+    // REGISTRO
+    // ============================================================
 
     /**
      * Registra uma definição de bean no catálogo.
@@ -85,19 +75,9 @@ public class BeanRegistry {
         }
     }
 
-    /**
-     * Registra uma instância já criada (bootstrap, serviços externos).
-     *
-     * @param type tipo do bean
-     * @param instance instância do bean
-     * @param definition definição do bean
-     * @param scopeManager gerenciador de escopos
-     * @param <T> tipo do bean
-     */
-    public <T> void registerInstance(Class<T> type, T instance, BeanDefinition definition, ScopeManager scopeManager) {
-        registerDefinition(definition);
-        scopeManager.getSingletonScope().put(type, instance);
-    }
+    // ============================================================
+    // CONSULTA POR NOME
+    // ============================================================
 
     /**
      * Busca definição pelo nome do bean.
@@ -108,6 +88,28 @@ public class BeanRegistry {
     public BeanDefinition getDefinition(String name) {
         return definitionsByName.get(name);
     }
+
+    /**
+     * Busca definição pelo nome e tipo.
+     *
+     * @param name nome do bean
+     * @param type tipo esperado
+     * @return definição do bean, ou null se não encontrado ou tipo incompatível
+     */
+    public BeanDefinition getDefinition(String name, Class<?> type) {
+        BeanDefinition def = definitionsByName.get(name);
+        if (def == null) {
+            return null;
+        }
+        if (!type.isAssignableFrom(def.getType())) {
+            return null;
+        }
+        return def;
+    }
+
+    // ============================================================
+    // CONSULTA POR TIPO
+    // ============================================================
 
     /**
      * Busca definição pelo tipo do bean.
@@ -157,24 +159,6 @@ public class BeanRegistry {
     }
 
     /**
-     * Busca definição pelo nome e tipo.
-     *
-     * @param name nome do bean
-     * @param type tipo esperado
-     * @return definição do bean, ou null se não encontrado ou tipo incompatível
-     */
-    public BeanDefinition getDefinition(String name, Class<?> type) {
-        BeanDefinition def = definitionsByName.get(name);
-        if (def == null) {
-            return null;
-        }
-        if (!type.isAssignableFrom(def.getType())) {
-            return null;
-        }
-        return def;
-    }
-
-    /**
      * Retorna todas as definições de um tipo específico.
      *
      * @param type tipo do bean
@@ -189,15 +173,6 @@ public class BeanRegistry {
     }
 
     /**
-     * Retorna todas as definições registradas.
-     *
-     * @return coleção imutável de definições
-     */
-    public Collection<BeanDefinition> getAllDefinitions() {
-        return Collections.unmodifiableCollection(definitionsByName.values());
-    }
-
-    /**
      * Retorna todos os nomes de beans do tipo especificado.
      *
      * @param type tipo do bean
@@ -208,26 +183,17 @@ public class BeanRegistry {
         return names != null ? Collections.unmodifiableList(new ArrayList<>(names)) : Collections.emptyList();
     }
 
-    /**
-     * Registra uma factory AOT para um tipo de bean.
-     *
-     * @param beanType tipo do bean
-     * @param factory factory AOT
-     */
-    public void registerAotFactory(Class<?> beanType, InstanceFactory<?> factory) {
-        aotFactoriesByType.put(beanType, Objects.requireNonNull(factory, "factory não pode ser nulo"));
-    }
+    // ============================================================
+    // CONSULTA GERAL
+    // ============================================================
 
     /**
-     * Obtém a factory AOT para um tipo de bean.
+     * Retorna todas as definições registradas.
      *
-     * @param beanType tipo do bean
-     * @param <T> tipo do bean
-     * @return factory AOT, ou null se não existir
+     * @return coleção imutável de definições
      */
-    @SuppressWarnings("unchecked")
-    public <T> InstanceFactory<T> getAotFactory(Class<T> beanType) {
-        return (InstanceFactory<T>) aotFactoriesByType.get(beanType);
+    public Collection<BeanDefinition> getAllDefinitions() {
+        return Collections.unmodifiableCollection(definitionsByName.values());
     }
 
     /**
@@ -238,6 +204,10 @@ public class BeanRegistry {
     public Set<String> getBeanNames() {
         return Collections.unmodifiableSet(definitionsByName.keySet());
     }
+
+    // ============================================================
+    // VERIFICAÇÃO
+    // ============================================================
 
     /**
      * Verifica se um tipo está registrado.
@@ -264,6 +234,36 @@ public class BeanRegistry {
         return definitionsByName.containsKey(name);
     }
 
+    // ============================================================
+    // AOT FACTORIES
+    // ============================================================
+
+    /**
+     * Registra uma factory AOT para um tipo de bean.
+     *
+     * @param beanType tipo do bean
+     * @param factory factory AOT
+     */
+    public void registerAotFactory(Class<?> beanType, InstanceFactory<?> factory) {
+        aotFactoriesByType.put(beanType, Objects.requireNonNull(factory, "factory não pode ser nulo"));
+    }
+
+    /**
+     * Obtém a factory AOT para um tipo de bean.
+     *
+     * @param beanType tipo do bean
+     * @param <T> tipo do bean
+     * @return factory AOT, ou null se não existir
+     */
+    @SuppressWarnings("unchecked")
+    public <T> InstanceFactory<T> getAotFactory(Class<T> beanType) {
+        return (InstanceFactory<T>) aotFactoriesByType.get(beanType);
+    }
+
+    // ============================================================
+    // ESTATÍSTICAS
+    // ============================================================
+
     /**
      * Retorna o número total de beans registrados.
      *
@@ -273,15 +273,9 @@ public class BeanRegistry {
         return definitionsByName.size();
     }
 
-    /**
-     * Remove todas as definições.
-     */
-    public void clear() {
-        definitionsByName.clear();
-        beanNamesByType.clear();
-        primaryBeanNames.clear();
-        aotFactoriesByType.clear();
-    }
+    // ============================================================
+    // LIMPEZA
+    // ============================================================
 
     /**
      * Remove uma definição pelo nome.
@@ -300,5 +294,15 @@ public class BeanRegistry {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Remove todas as definições.
+     */
+    public void clear() {
+        definitionsByName.clear();
+        beanNamesByType.clear();
+        primaryBeanNames.clear();
+        aotFactoriesByType.clear();
     }
 }

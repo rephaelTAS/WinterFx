@@ -7,21 +7,24 @@ import java.util.Map;
 import java.util.List;
 
 /**
- * ReflectionProcessor v2.1
+ * Utilitário de baixo nível para execução segura de operações de reflexão.
  *
- * Utilitário de baixo nível para manipulação segura de reflection.
+ * <p>Esta classe encapsula as chamadas à API de reflexão do Java, garantindo que
+ * membros privados possam ser acessados e restaurando corretamente o estado original
+ * de acessibilidade ({@code accessible}) após a execução das operações, prevenindo
+ * vazamentos de segurança em ambientes com gerenciadores de segurança ativados.</p>
  *
- * Responsabilidades:
- * - Injetar valores em campos (privados ou não)
- * - Invocar métodos (privados ou não)
- * - Instanciar classes via construtor (privado ou não)
- * - Garantir restauração do estado de acessibilidade
- * - Suporte a processamento em lote de anotações ← NOVO!
+ * <p>Principais operações suportadas:</p>
+ * <ul>
+ *   <li>Injeção de valores em campos.</li>
+ *   <li>Leitura de valores de campos.</li>
+ *   <li>Invocação de métodos.</li>
+ *   <li>Instanciação via construtores.</li>
+ * </ul>
  *
- * Usado por InjectionManager, InstanceCreator, StageManager e ImageManager.
- * Sem estado interno — thread-safe.
+ * <p>Por não manter estado interno, esta classe é inerentemente thread-safe.</p>
  *
- * @since 2.1
+ * @since 3.0
  */
 public final class ReflectionProcessor {
 
@@ -32,12 +35,13 @@ public final class ReflectionProcessor {
     // =============================================
 
     /**
-     * Injeta um valor num campo específico de uma instância.
-     * Trata campos privados e restaura o estado de acessibilidade.
+     * Injeta um valor em um campo específico de uma instância, contornando
+     * o modificador de acesso ({@code private}, {@code protected}), se necessário.
      *
-     * @param instance instância alvo
-     * @param field    campo a injetar
-     * @param value    valor a atribuir
+     * @param instance A instância alvo da injeção.
+     * @param field    O campo a ser modificado.
+     * @param value    O valor a ser atribuído ao campo.
+     * @throws RuntimeException Se a injeção falhar devido a restrições de segurança do Java.
      */
     public void injectField(Object instance, Field field, Object value) {
         boolean wasAccessible = field.canAccess(instance);
@@ -59,10 +63,10 @@ public final class ReflectionProcessor {
     }
 
     /**
-     * Injeta múltiplos campos de uma vez (processamento em lote).
+     * Injeta múltiplos valores em seus respectivos campos de uma única instância.
      *
-     * @param instance   instância alvo
-     * @param fieldValues mapa de campo → valor
+     * @param instance     A instância alvo.
+     * @param fieldValues Um mapa associando os campos aos seus novos valores.
      */
     public void injectFields(Object instance, Map<Field, Object> fieldValues) {
         for (Map.Entry<Field, Object> entry : fieldValues.entrySet()) {
@@ -75,13 +79,16 @@ public final class ReflectionProcessor {
     // =============================================
 
     /**
-     * Invoca um método numa instância com os argumentos fornecidos.
-     * Trata métodos privados e restaura o estado de acessibilidade.
+     * Invoca um método em uma instância fornecida, passando os argumentos especificados.
      *
-     * @param instance instância alvo
-     * @param method   método a invocar
-     * @param args     argumentos do método
-     * @return valor de retorno do método, ou null se void
+     * <p>Contorna o modificador de acesso do método se necessário, garantindo a restauração
+     * do estado original ao final da execução.</p>
+     *
+     * @param instance A instância na qual o método será invocado.
+     * @param method   O método a ser executado.
+     * @param args     Os argumentos a serem passados para o método.
+     * @return O objeto retornado pela invocação do método, ou {@code null} para métodos void.
+     * @throws RuntimeException Se a invocação falhar por qualquer motivo (segurança, argumentos inválidos, etc.).
      */
     public Object invokeMethod(Object instance, Method method, Object... args) {
         boolean wasAccessible = method.canAccess(instance);
@@ -103,11 +110,14 @@ public final class ReflectionProcessor {
     }
 
     /**
-     * Invoca múltiplos métodos em sequência.
+     * Invoca uma lista de métodos em sequência na mesma instância.
      *
-     * @param instance     instância alvo
-     * @param methods      lista de métodos a invocar
-     * @param argsProvider fornecedor de argumentos por método
+     * <p>Os argumentos para cada método são resolvidos dinamicamente através da função
+     * fornecida no parâmetro {@code argsProvider}.</p>
+     *
+     * @param instance     A instância alvo.
+     * @param methods      A lista de métodos a serem invocados.
+     * @param argsProvider Função que recebe um método e retorna o array de argumentos adequado para ele.
      */
     public void invokeMethods(Object instance, List<Method> methods,
                               java.util.function.Function<Method, Object[]> argsProvider) {
@@ -122,13 +132,17 @@ public final class ReflectionProcessor {
     // =============================================
 
     /**
-     * Cria uma nova instância via construtor.
-     * Trata construtores privados e restaura o estado de acessibilidade.
+     * Cria uma nova instância de uma classe invocando o construtor fornecido
+     * com os argumentos especificados.
      *
-     * @param constructor construtor a usar
-     * @param args        argumentos do construtor
-     * @param <T>         tipo da instância
-     * @return nova instância
+     * <p>Contorna o modificador de acesso do construtor, permitindo a instanciação
+     * de classes com construtores privados (padrão Singleton, por exemplo).</p>
+     *
+     * @param <T>         O tipo da instância a ser criada.
+     * @param constructor O construtor a ser invocado.
+     * @param args        Os argumentos necessários para a invocação do construtor.
+     * @return A nova instância criada.
+     * @throws RuntimeException Se a instanciação falhar.
      */
     @SuppressWarnings("unchecked")
     public <T> T instantiate(Constructor<?> constructor, Object... args) {
@@ -138,8 +152,7 @@ public final class ReflectionProcessor {
             if (!wasAccessible) {
                 constructor.setAccessible(true);
             }
-            T instance = (T) constructor.newInstance(args);
-            return instance;
+            return (T) constructor.newInstance(args);
         } catch (Exception e) {
             throw new RuntimeException(
                     "Erro ao instanciar '" + constructor.getDeclaringClass().getName() +
@@ -156,11 +169,14 @@ public final class ReflectionProcessor {
     // =============================================
 
     /**
-     * Lê o valor de um campo de uma instância.
+     * Lê o valor atual de um campo de uma instância específica.
      *
-     * @param instance instância alvo
-     * @param field    campo a ler
-     * @return valor do campo
+     * <p>Contorna o modificador de acesso do campo caso não seja acessível publicamente.</p>
+     *
+     * @param instance A instância alvo.
+     * @param field    O campo a ser lido.
+     * @return O valor atual armazenado no campo.
+     * @throws RuntimeException Se a leitura falhar por restrições de segurança.
      */
     public Object readField(Object instance, Field field) {
         boolean wasAccessible = field.canAccess(instance);
@@ -182,65 +198,42 @@ public final class ReflectionProcessor {
     }
 
     // =============================================
-    // PROCESSAMENTO DE ANOTAÇÕES (NOVO!)
-    // =============================================
-
-    /**
-     * Processa todos os campos anotados com @InjectView, @GetController, @InjectImage
-     * usando os respectivos managers.
-     *
-     * @param instance     instância a processar
-     * @param stageManager gerenciador de views (pode ser null)
-     * @param imageManager gerenciador de imagens (pode ser null)
-     */
-    public void processResourceAnnotations(Object instance,
-                                           Object stageManager,
-                                           Object imageManager) {
-        if (instance == null) return;
-
-        Class<?> type = instance.getClass();
-
-        // Processa @InjectView e @GetController via StageManager
-        if (stageManager != null) {
-            try {
-                Method processAnnotations = stageManager.getClass()
-                        .getMethod("processAnnotations", Object.class);
-                processAnnotations.invoke(stageManager, instance);
-            } catch (Exception e) {
-            }
-        }
-
-        // Processa @InjectImage via ImageManager
-        if (imageManager != null) {
-            try {
-                Method processAnnotations = imageManager.getClass()
-                        .getMethod("processAnnotations", Object.class);
-                processAnnotations.invoke(imageManager, instance);
-            } catch (Exception e) {
-            }
-        }
-    }
-
-    // =============================================
     // VERIFICAÇÃO DE ANOTAÇÕES
     // =============================================
 
     /**
-     * Verifica se um campo tem uma anotação específica.
+     * Verifica se um campo possui uma anotação específica.
+     *
+     * @param field      O campo a ser verificado.
+     * @param annotation O tipo da anotação a ser buscada.
+     * @return {@code true} se a anotação estiver presente, {@code false} caso contrário.
      */
     public boolean hasAnnotation(Field field, Class<? extends java.lang.annotation.Annotation> annotation) {
         return field.isAnnotationPresent(annotation);
     }
 
     /**
-     * Verifica se um método tem uma anotação específica.
+     * Verifica se um método possui uma anotação específica.
+     *
+     * @param method     O método a ser verificado.
+     * @param annotation O tipo da anotação a ser buscada.
+     * @return {@code true} se a anotação estiver presente, {@code false} caso contrário.
      */
     public boolean hasAnnotation(Method method, Class<? extends java.lang.annotation.Annotation> annotation) {
         return method.isAnnotationPresent(annotation);
     }
 
     /**
-     * Obtém o valor de uma anotação em um campo.
+     * Extrai o valor de uma propriedade específica a partir de uma anotação presente no campo.
+     *
+     * <p>Este método itera sobre as anotações do campo e tenta invocar o método getter
+     * informado. Se a anotação não possuir tal método ou ocorrer um erro, retorna {@code null}
+     * silenciosamente.</p>
+     *
+     * @param <T>         O tipo de retorno esperado.
+     * @param field       O campo anotado.
+     * @param methodName O nome do método getter na anotação (ex: "value").
+     * @return O valor da propriedade, ou {@code null} se indisponível.
      */
     @SuppressWarnings("unchecked")
     public <T> T getFieldAnnotationValue(Field field, String methodName) {

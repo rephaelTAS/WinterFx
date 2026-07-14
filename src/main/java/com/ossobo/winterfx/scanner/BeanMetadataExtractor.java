@@ -24,7 +24,7 @@ import java.util.*;
  * <p>Suporta injeção em:</p>
  * <ul>
  *   <li>Campos anotados com {@code @Inject}</li>
- *   <li>C construtores anotados com {@code @Inject}</li>
+ *   <li>Construtores anotados com {@code @Inject}</li>
  *   <li>Métodos anotados com {@code @Inject}</li>
  *   <li>Parâmetros de construtor/método com {@code @Inject}</li>
  * </ul>
@@ -96,12 +96,44 @@ public final class BeanMetadataExtractor {
     /**
      * Extrai método com {@code @PostConstruct} para inicialização do bean.
      *
+     * <p>Validações:</p>
+     * <ul>
+     *   <li>Método deve retornar {@code void}</li>
+     *   <li>Método não deve ter parâmetros</li>
+     * </ul>
+     *
      * @param type classe a ser inspecionada
      * @return método de inicialização, ou null se não existir
+     * @throws IllegalStateException se o método não atender aos requisitos
      */
     public Method extractPostConstruct(Class<?> type) {
         List<Method> methods = reflectionScanner.getMethodsWithAnnotation(type, PostConstruct.class);
-        return methods.isEmpty() ? null : methods.get(0);
+
+        if (methods.isEmpty()) {
+            return null;
+        }
+
+        Method method = methods.get(0);
+
+        // ✅ VALIDAÇÃO: @PostConstruct deve ser void e sem parâmetros
+        if (method.getReturnType() != void.class) {
+            throw new IllegalStateException(
+                    "@PostConstruct em " + type.getName() + "." + method.getName() +
+                            " deve retornar void"
+            );
+        }
+
+        if (method.getParameterCount() > 0) {
+            throw new IllegalStateException(
+                    "@PostConstruct em " + type.getName() + "." + method.getName() +
+                            " não deve ter parâmetros"
+            );
+        }
+
+        // ✅ Torna acessível
+        method.setAccessible(true);
+
+        return method;
     }
 
     /**

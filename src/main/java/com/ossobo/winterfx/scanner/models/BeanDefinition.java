@@ -1,6 +1,6 @@
 package com.ossobo.winterfx.scanner.models;
 
-import com.ossobo.winterfx.di.scopes.enums.ScopeType;
+import com.ossobo.winterfx.scanner.enums.ScopeType;
 
 import java.lang.reflect.Method;
 import java.util.*;

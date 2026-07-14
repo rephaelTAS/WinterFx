@@ -1,313 +1,206 @@
 package com.ossobo.winterfx.view;
 
 import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.notifications.enums.AlertType;
-import com.ossobo.winterfx.runtime.HandlerRegistry;
-import com.ossobo.winterfx.runtime.WinterFXProxyFactory;
-import com.ossobo.winterfx.view.floatingwindow.anotations.FloatingWindow;
-import com.ossobo.winterfx.view.anotations.InjectView;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.view.enums.ViewType;
+import com.ossobo.winterfx.resources.enums.ViewType;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
+import com.ossobo.winterfx.view.anotations.InjectView;
+import com.ossobo.winterfx.view.callback.ViewLoadedListener;
 import com.ossobo.winterfx.view.design.StyleManager;
 import com.ossobo.winterfx.view.loader.FXMLService;
 import com.ossobo.winterfx.view.loader.LoadedView;
-import com.ossobo.winterfx.view.refresh.RefreshManager;
-import com.ossobo.winterfx.view.refresh.RefreshableController;
+import com.ossobo.winterfx.view.lifecycle.ViewStateDestroyer;
 
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 /**
- * 🎬 StageManager v5.3
+ * 🎬 StageManager v11.0 — Fachada do módulo view.
  *
- * PONTO ÚNICO para carregamento de FXML + CSS + Injeção de Dependências.
- * Suporte a alertas UNDECORATED com temporizador.
+ * <p>PONTO ÚNICO para carregamento de FXML + CSS + Cache.</p>
+ *
+ * <p><b>Cache Inteligente com Lock por ViewId:</b></p>
+ * <ul>
+ *   <li><b>Singleton:</b> {@link #loadView(String)} - Usa cache, mesmo root reutilizado</li>
+ *   <li><b>Múltiplas Instâncias:</b> {@link #loadFreshView(String)} - SEMPRE novo root</li>
+ *   <li><b>Thread-Safe:</b> Lock por viewId</li>
+ * </ul>
+ *
+ * <p>NÃO conhece AlertManager, NotificationController, WebRequestMappingProcessor.
+ * Apenas carrega FXML e gerencia stages genéricos.</p>
+ *
+ * <p><b>MVVM Lifecycle:</b> Integração com {@link ViewStateDestroyer} para garantir
+ * que as propriedades reativas ocultas sejam desamarradas da memória ao limpar o cache.</p>
+ *
+ * @version 11.0 (MVVM Lifecycle Integration)
  */
 public class StageManager {
 
-    // 🆕 Cache de controllers ativos (carregados pelo JavaFX com @FXML)
-    private final Map<Class<?>, Object> activeControllers = new ConcurrentHashMap<>();
+    private static final Logger LOGGER = Logger.getLogger(StageManager.class.getName());
 
-    // =============================================
-    // DEPENDÊNCIAS
-    // =============================================
-
-    private final ResourceRegistry registry;
-    private FXMLService fxmlService;
-    private final StyleManager styleManager;
-    private final RefreshManager refreshManager;
-    private final DiContainer diContainer;
-    private final WinterFXProxyFactory winterFXProxyFactory;
-    private final HandlerRegistry handlerRegistry;
-
-    // =============================================
+    // ============================================================
     // CACHES
-    // =============================================
+    // ============================================================
 
     private final Map<String, LoadedView<?>> viewCache = new ConcurrentHashMap<>();
+    private final Map<String, ViewDescriptor> descriptorCache = new ConcurrentHashMap<>();
     private final Map<String, Stage> openStages = new ConcurrentHashMap<>();
-    private int dynamicStageCounter = 0;
+    private final Map<Class<?>, Object> activeControllers = new ConcurrentHashMap<>();
+    private final Map<String, ReentrantLock> viewLocks = new ConcurrentHashMap<>();
+
+    // ============================================================
+    // LISTENERS
+    // ============================================================
+
+    private final List<ViewLoadedListener> listeners = new CopyOnWriteArrayList<>();
+
+    // ============================================================
+    // ESTATÍSTICAS
+    // ============================================================
+
     private int cacheHits = 0;
     private int cacheMisses = 0;
+    private int freshLoads = 0;
+    private int dynamicStageCounter = 0;
 
-    // =============================================
+    // ============================================================
+    // DEPENDÊNCIAS
+    // ============================================================
+
+    private final ResourceRegistry registry;
+    private final DiContainer diContainer;
+    private final StyleManager styleManager;
+    private final ViewStateDestroyer viewStateDestroyer;
+    private FXMLService fxmlService;
+    private Stage primaryStage;
+
+    // ============================================================
     // CONSTRUTOR
-    // =============================================
+    // ============================================================
 
-    public StageManager(ResourceRegistry registry,
-                        DiContainer diContainer,
-                        StyleManager styleManager,
-                        WinterFXProxyFactory proxyFactory,
-                        HandlerRegistry handlerRegistry) {
-        this.registry = registry;
-        this.diContainer = diContainer;
-        this.styleManager = styleManager;
-        this.handlerRegistry = handlerRegistry;
-        this.winterFXProxyFactory = proxyFactory;
-        this.refreshManager = new RefreshManager();
+    public StageManager(ResourceRegistry registry, DiContainer diContainer, StyleManager styleManager, ViewStateDestroyer viewStateDestroyer) {
+        this.registry = Objects.requireNonNull(registry);
+        this.diContainer = Objects.requireNonNull(diContainer);
+        this.styleManager = Objects.requireNonNull(styleManager);
+        this.viewStateDestroyer = Objects.requireNonNull(viewStateDestroyer);
     }
 
-    public void setFxmlService(FXMLService fxmlService){
-        this.fxmlService = fxmlService;
+    // ============================================================
+    // SETTERS
+    // ============================================================
+
+    public void setFxmlService(FXMLService fxmlService) { this.fxmlService = fxmlService; }
+    public void setPrimaryStage(Stage primaryStage) { this.primaryStage = primaryStage; }
+
+    // ============================================================
+    // LISTENER MANAGEMENT
+    // ============================================================
+
+    public void addViewLoadedListener(ViewLoadedListener listener) {
+        if (listener != null) listeners.add(listener);
     }
 
-    // =============================================
-    // 🆕 CACHE DE CONTROLLERS ATIVOS
-    // =============================================
+    public void removeViewLoadedListener(ViewLoadedListener listener) {
+        if (listener != null) listeners.remove(listener);
+    }
 
-    private void registerActiveController(Object controller) {
-        if (controller != null) {
-            activeControllers.put(controller.getClass(), controller);
+    private void notifyViewLoaded(String viewId) {
+        if (listeners.isEmpty()) return;
+        for (ViewLoadedListener listener : listeners) {
+            try { listener.onViewLoaded(viewId); } catch (Exception ignored) {}
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T findActiveController(Class<T> type) {
-        return (T) activeControllers.get(type);
-    }
-
-    // =============================================
-    // 🔥 PROCESSAMENTO DE @InjectView
-    // =============================================
-
-    public void processAnnotations(Object bean) {
-        if (bean == null) return;
-        Class<?> clazz = bean.getClass();
-        for (Field field : clazz.getDeclaredFields()) {
-            InjectView injectView = field.getAnnotation(InjectView.class);
-            if (injectView != null) {
-                processInjectView(bean, field, injectView);
-            }
-        }
-    }
-
-    public void processFloatingWindows(Object controller) {
-        if (controller == null) return;
-        Class<?> clazz = controller.getClass();
-        Set<Method> methods = diContainer.findMethodsWithAnnotation(FloatingWindow.class);
-        for (Method method : methods) {
-            if (method.getDeclaringClass().equals(clazz)) {
-                FloatingWindow annotation = method.getAnnotation(FloatingWindow.class);
-            }
-        }
-    }
-
-    private void processInjectView(Object bean, Field field, InjectView annotation) {
-        String viewId = annotation.value();
-        try {
-            Optional<ViewDescriptor> optDescriptor = registry.findViewById(viewId);
-            if (optDescriptor.isEmpty()) {
-                if (annotation.required()) {
-                    throw new IllegalArgumentException("View não registrada: '" + viewId + "'");
-                }
-                return;
-            }
-
-            ViewDescriptor descriptor = optDescriptor.get();
-
-            if (annotation.newStage()) {
-                String title = !annotation.title().isEmpty() ? annotation.title() : descriptor.getTitle();
-                Stage stage = openInNewStage(viewId, title, descriptor);
-                field.setAccessible(true);
-                field.set(bean, stage);
-                return;
-            }
-
-            Parent view;
-            if (annotation.async()) {
-                loadViewAsync(viewId, descriptor, bean, field, annotation);
-                return;
-            } else {
-                view = loadViewAsParent(viewId, descriptor);
-            }
-            injectViewIntoField(bean, field, view, viewId, annotation.child());
-
-        } catch (Exception e) {
-            if (annotation.required()) {
-                throw new RuntimeException("Falha ao injetar view: " + viewId, e);
-            }
-        }
-    }
-
-    private void injectViewIntoField(Object bean, Field field, Parent view,
-                                     String viewId, String childId) throws IllegalAccessException {
-        field.setAccessible(true);
-        Class<?> fieldType = field.getType();
-
-        if (Pane.class.isAssignableFrom(fieldType)) {
-            Pane pane = (Pane) field.get(bean);
-            if (pane != null) {
-                pane.getChildren().clear();
-                if (childId != null && !childId.isEmpty()) {
-                    Node childNode = view.lookup("#" + childId);
-                    pane.getChildren().add(childNode != null ? childNode : view);
-                } else {
-                    pane.getChildren().add(view);
-                }
-            }
-        } else if (Parent.class.isAssignableFrom(fieldType) || Node.class.isAssignableFrom(fieldType)) {
-            field.set(bean, view);
-        }
-    }
-
-    // =============================================
-    // CARREGAMENTO DE VIEW FLUTUANTE
-    // =============================================
-
-    public LoadedView<?> loadFloatingView(String viewId, boolean fresh) {
-        ViewDescriptor descriptor = getDescriptor(viewId);
-        LoadedView<?> loadedView;
-        if (fresh) {
-            loadedView = fxmlService.loadFresh(descriptor, Object.class);
-        } else {
-            loadedView = fxmlService.load(descriptor, Object.class);
-        }
-        registerActiveController(loadedView.getController());
-        return loadedView;
-    }
-
-    // =============================================
-    // CARREGAMENTO DE VIEW (COM CACHE)
-    // =============================================
+    // ============================================================
+    // CARREGAMENTO DE VIEWS
+    // ============================================================
 
     @SuppressWarnings("unchecked")
     public <T> LoadedView<T> loadView(String viewId) {
-        ViewDescriptor descriptor = getDescriptor(viewId);
+        LoadedView<?> cached = viewCache.get(viewId);
+        if (cached != null) { cacheHits++; return (LoadedView<T>) cached; }
 
-        if (descriptor.getViewType() == ViewType.STATIC && viewCache.containsKey(viewId)) {
-            cacheHits++;
-            return (LoadedView<T>) viewCache.get(viewId);
-        }
+        ReentrantLock lock = viewLocks.computeIfAbsent(viewId, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            cached = viewCache.get(viewId);
+            if (cached != null) { cacheHits++; return (LoadedView<T>) cached; }
 
-        cacheMisses++;
-        LoadedView<T> loadedView = fxmlService.load(descriptor, (Class<T>) Object.class);
+            cacheMisses++;
+            ViewDescriptor descriptor = getDescriptor(viewId);
+            LoadedView<T> loadedView = fxmlService.load(descriptor, (Class<T>) Object.class);
 
-        if (loadedView.getController() != null) {
-            diContainer.injectDependencies(loadedView.getController());
+            styleManager.apply(loadedView.getRoot(), descriptor);
+            cacheView(viewId, loadedView, descriptor);
+            notifyViewLoaded(viewId);
             registerActiveController(loadedView.getController());
+
+            return loadedView;
+        } finally {
+            lock.unlock();
         }
-
-        styleManager.apply(loadedView.getRoot(), descriptor);
-
-        if (descriptor.getViewType() == ViewType.STATIC) {
-            viewCache.put(viewId, loadedView);
-        }
-
-        registerForRefresh(viewId, loadedView, descriptor);
-        return loadedView;
-    }
-
-    public Parent loadViewAsParent(String viewId, ViewDescriptor descriptor) {
-        if (descriptor.getViewType() == ViewType.STATIC && viewCache.containsKey(viewId)) {
-            cacheHits++;
-            return viewCache.get(viewId).getRoot();
-        }
-
-        cacheMisses++;
-        LoadedView<?> loadedView = fxmlService.load(descriptor, Object.class);
-
-        if (loadedView.getController() != null) {
-            diContainer.injectDependencies(loadedView.getController());
-            registerActiveController(loadedView.getController());
-        }
-
-        styleManager.apply(loadedView.getRoot(), descriptor);
-
-        if (descriptor.getViewType() == ViewType.STATIC) {
-            viewCache.put(viewId, loadedView);
-        }
-
-        registerForRefresh(viewId, loadedView, descriptor);
-        return loadedView.getRoot();
     }
 
     @SuppressWarnings("unchecked")
-    public <T> LoadedView<T> loadFreshView(String viewId, Consumer<T> configurator) {
+    public <T> LoadedView<T> loadFreshView(String viewId) {
+        freshLoads++;
         ViewDescriptor descriptor = getDescriptor(viewId);
-        LoadedView<T> loadedView = fxmlService.loadFresh(
-                descriptor, (Class<T>) Object.class, (Consumer<T>) configurator);
-
-        if (loadedView.getController() != null) {
-            diContainer.injectDependencies(loadedView.getController());
-            registerActiveController(loadedView.getController());
-        }
-
+        LoadedView<T> loadedView = fxmlService.load(descriptor, (Class<T>) Object.class);
         styleManager.apply(loadedView.getRoot(), descriptor);
         return loadedView;
     }
 
-    private void loadViewAsync(String viewId, ViewDescriptor descriptor,
-                               Object bean, Field field, InjectView annotation) {
-        CompletableFuture.supplyAsync(() -> loadViewAsParent(viewId, descriptor))
-                .thenAccept(root -> {
-                    Platform.runLater(() -> {
-                        try {
-                            injectViewIntoField(bean, field, root, viewId, annotation.child());
-                        } catch (Exception e) {
-                        }
-                    });
-                });
+    public LoadedView<?> loadFloatingView(String viewId, boolean singleton) {
+        return singleton ? loadView(viewId) : loadFreshView(viewId);
     }
 
-    // =============================================
-    // GERENCIAMENTO DE STAGES
-    // =============================================
+    // ============================================================
+    // MÉTODOS PARA HANDLERS
+    // ============================================================
 
-    public Stage openInNewStage(String viewId, String title, ViewDescriptor descriptor) {
-        LoadedView<?> loadedView = fxmlService.loadFresh(descriptor, Object.class, null);
-        Parent root = loadedView.getRoot();
+    public Parent loadViewAsParent(String viewId, ViewDescriptor descriptor) {
+        return loadView(viewId).getRoot();
+    }
 
-        if (loadedView.getController() != null) {
-            diContainer.injectDependencies(loadedView.getController());
-            registerActiveController(loadedView.getController());
-        }
+    public Parent loadViewAsParent(String viewId) {
+        return loadViewAsParent(viewId, getDescriptor(viewId));
+    }
 
-        styleManager.apply(root, descriptor);
+    public ViewDescriptor swapFxml(String viewId) {
+        return getDescriptor(viewId);
+    }
+
+    // ============================================================
+    // STAGE MANAGEMENT
+    // ============================================================
+
+    public Stage openInNewStage(String viewId, String title) {
+        ViewDescriptor descriptor = getDescriptor(viewId);
+        LoadedView<?> loadedView = loadView(viewId);
 
         Stage stage = new Stage();
-        stage.setTitle(title != null ? title : viewId);
+        stage.setTitle(title != null ? title : descriptor.getTitle());
 
         if (descriptor.getStageStyle() != null) {
             stage.initStyle(descriptor.getStageStyle().toJavaFX());
         }
 
-        Scene scene = new Scene(root, descriptor.getWidth(), descriptor.getHeight());
+        Scene scene = new Scene(loadedView.getRoot(), descriptor.getWidth(), descriptor.getHeight());
         stage.setScene(scene);
         stage.setResizable(descriptor.isResizable());
         stage.setAlwaysOnTop(descriptor.isAlwaysOnTop());
@@ -316,117 +209,11 @@ public class StageManager {
 
         String stageKey = descriptor.getViewType() == ViewType.DYNAMIC
                 ? viewId + "-" + (++dynamicStageCounter) : viewId;
-        openStages.put(stageKey, stage);
 
+        openStages.put(stageKey, stage);
         stage.setOnHidden(e -> openStages.remove(stageKey));
         stage.show();
         return stage;
-    }
-
-    /**
-     * Abre um alerta padrão (método antigo — compatibilidade).
-     */
-    public Stage openAlert(String viewId) {
-        ViewDescriptor descriptor = registry.findAlertById(viewId)
-                .orElseThrow(() -> new IllegalArgumentException("Alerta não registrado: '" + viewId + "'"));
-
-        LoadedView<?> loadedView = fxmlService.loadFresh(descriptor, Object.class, null);
-        Parent root = loadedView.getRoot();
-
-        if (loadedView.getController() != null) {
-            diContainer.injectDependencies(loadedView.getController());
-            registerActiveController(loadedView.getController());
-        }
-
-        Stage alertStage = new Stage();
-        alertStage.setTitle(viewId);
-        alertStage.initStyle(descriptor.getStageStyle().toJavaFX());
-
-        if (descriptor.getModality() != null) {
-            alertStage.initModality(switch (descriptor.getModality()) {
-                case APPLICATION_MODAL -> Modality.APPLICATION_MODAL;
-                case WINDOW_MODAL      -> Modality.WINDOW_MODAL;
-                default                -> Modality.NONE;
-            });
-        }
-
-        alertStage.setScene(new Scene(root));
-        alertStage.showAndWait();
-        return alertStage;
-    }
-
-    /**
-     * 🆕 Abre um alerta UNDECORATED com fechamento automático.
-     *
-     * @param viewId ID da view de notificação
-     * @param tipo   Tipo do alerta (define o temporizador)
-     * @return Stage do alerta
-     */
-    public Stage openAlertUndecorated(String viewId, AlertType tipo) {
-        ViewDescriptor descriptor = registry.findAlertById(viewId)
-                .orElseThrow(() -> new IllegalArgumentException("Alerta não registrado: '" + viewId + "'"));
-
-        LoadedView<?> loadedView = fxmlService.loadFresh(descriptor, Object.class);
-        Parent root = loadedView.getRoot();
-
-        if (loadedView.getController() != null) {
-            diContainer.injectDependencies(loadedView.getController());
-            registerActiveController(loadedView.getController());
-        }
-
-        Stage alertStage = new Stage();
-        alertStage.initStyle(StageStyle.UNDECORATED);
-        alertStage.setScene(new Scene(root));
-        alertStage.centerOnScreen();
-        alertStage.setAlwaysOnTop(true);
-
-        long duracao = switch (tipo) {
-            case SUCCESS -> 3000;
-            case INFO, WARNING -> 5000;
-            default -> 0;
-        };
-
-        if (duracao > 0) {
-            final Stage stage = alertStage;
-            new Thread(() -> {
-                try { Thread.sleep(duracao); } catch (Exception ignored) {}
-                Platform.runLater(() -> {
-                    if (stage.isShowing()) {
-                        stage.close();
-                    }
-                });
-            }).start();
-        }
-
-        alertStage.show();
-        return alertStage;
-    }
-
-    // =============================================
-    // REFRESH
-    // =============================================
-
-    private void registerForRefresh(String viewId, LoadedView<?> loadedView, ViewDescriptor descriptor) {
-        if (descriptor.getViewType() == ViewType.DYNAMIC && loadedView.getController() != null) {
-            Object ctrl = loadedView.getController();
-            if (ctrl instanceof RefreshableController refreshable) {
-                refreshManager.register(viewId, loadedView.getRoot(), refreshable);
-            }
-        }
-    }
-
-    // =============================================
-    // API PÚBLICA
-    // =============================================
-
-    public <T> T getController(String viewId) {
-        LoadedView<?> loaded = loadView(viewId);
-        return (T) loaded.getController();
-    }
-
-    public Parent getCachedView(String viewId) {
-        LoadedView<?> loaded = viewCache.get(viewId);
-        return loaded != null ? loaded.getRoot() : null;
     }
 
     public Stage getOpenStage(String viewId) { return openStages.get(viewId); }
@@ -441,73 +228,119 @@ public class StageManager {
         openStages.clear();
     }
 
-    public void clearCache() {
-        viewCache.clear();
-        activeControllers.clear();
-        cacheHits = 0;
-        cacheMisses = 0;
+    public Stage getPrimaryStage() { return primaryStage; }
+
+    // ============================================================
+    // CONTROLLERS
+    // ============================================================
+
+    private void registerActiveController(Object controller) {
+        if (controller != null) activeControllers.put(controller.getClass(), controller);
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> T getActiveController(Class<T> type) { return (T) activeControllers.get(type); }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getController(String viewId) {
+        return (T) loadView(viewId).getController();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T findActiveController(Class<T> type) { return (T) activeControllers.get(type); }
+
+    // ============================================================
+    // DESCRIPTOR
+    // ============================================================
+
+    public ViewDescriptor getDescriptor(String viewId) {
+        ViewDescriptor cached = descriptorCache.get(viewId);
+        if (cached != null) return cached;
+        ViewDescriptor descriptor = registry.findViewById(viewId)
+                .orElseThrow(() -> new IllegalArgumentException("View não registrada: '" + viewId + "'"));
+        descriptorCache.put(viewId, descriptor);
+        return descriptor;
+    }
+
+    // ============================================================
+    // CACHE
+    // ============================================================
+
+    public boolean isViewCached(String viewId) { return viewCache.containsKey(viewId); }
     public int getCacheSize() { return viewCache.size(); }
+    public int getCacheHits() { return cacheHits; }
+    public int getCacheMisses() { return cacheMisses; }
+    public int getFreshLoads() { return freshLoads; }
+
+    public double getHitRate() {
+        long total = cacheHits + cacheMisses;
+        return total > 0 ? (cacheHits * 100.0) / total : 0.0;
+    }
+
+    public void clearCache() {
+        // 🧹 [MVVM] Destroi o estado reativo de TODAS as views antes de limpar o mapa
+        viewCache.values().forEach(loaded -> {
+            try {
+                viewStateDestroyer.destroy(loaded);
+            } catch (Exception e) {
+                LOGGER.warning("Erro ao destruir estado MVVM durante limpeza geral: " + e.getMessage());
+            }
+        });
+
+        viewCache.clear();
+        descriptorCache.clear();
+        activeControllers.clear();
+        viewLocks.clear();
+        listeners.clear();
+        cacheHits = 0;
+        cacheMisses = 0;
+        freshLoads = 0;
+    }
+
+    public void evictView(String viewId) {
+        LoadedView<?> loaded = viewCache.remove(viewId);
+
+        // 🧹 [MVVM] Destroi o estado reativo da view específica antes de perder a referência
+        if (loaded != null) {
+            try {
+                viewStateDestroyer.destroy(loaded);
+            } catch (Exception e) {
+                LOGGER.warning("Erro ao destruir estado MVVM ao evictar view " + viewId + ": " + e.getMessage());
+            }
+
+            if (loaded.getController() != null) {
+                activeControllers.remove(loaded.getController().getClass());
+            }
+        }
+
+        descriptorCache.remove(viewId);
+        viewLocks.remove(viewId);
+    }
+
+    private void cacheView(String viewId, LoadedView<?> loadedView, ViewDescriptor descriptor) {
+        viewCache.put(viewId, loadedView);
+        descriptorCache.put(viewId, descriptor);
+    }
+
+    // ============================================================
+    // GETTERS
+    // ============================================================
+
     public ResourceRegistry getRegistry() { return registry; }
     public FXMLService getFxmlService() { return fxmlService; }
 
-    private ViewDescriptor getDescriptor(String viewId) {
-        return registry.findViewById(viewId)
-                .orElseThrow(() -> new IllegalArgumentException("View não registrada: '" + viewId + "'"));
-    }
+    // ============================================================
+    // DIAGNÓSTICO
+    // ============================================================
 
-    public ViewDescriptor swapFxml(String viewId){
-        return getDescriptor(viewId);
-    }
-
-    // =============================================
-    // PRIMARY STAGE E ALERTAS
-    // =============================================
-
-    private javafx.stage.Stage primaryStage;
-
-    /**
-     * Define o Stage principal da aplicação.
-     *
-     * @param primaryStage Stage principal
-     */
-    public void setPrimaryStage(javafx.stage.Stage primaryStage) {
-        this.primaryStage = primaryStage;
-    }
-
-    /**
-     * Retorna o Stage principal da aplicação.
-     *
-     * @return Stage principal
-     */
-    public javafx.stage.Stage getPrimaryStage() {
-        return primaryStage;
-    }
-
-    /**
-     * Abre um alerta UNDECORATED com ID para gerenciamento.
-     *
-     * @param viewId ID da view de alerta
-     * @param tipo Tipo do alerta
-     * @param id ID único do alerta
-     * @return Stage do alerta
-     */
-    public javafx.stage.Stage openAlertUndecoratedWithId(String viewId, AlertType tipo, String id) {
-        return openAlertUndecorated(viewId, tipo);
-    }
-
-    /**
-     * Abre um alerta UNDECORATED e aguarda resultado.
-     *
-     * @param viewId ID da view de alerta
-     * @param tipo Tipo do alerta
-     * @return true se confirmado, false se cancelado
-     */
-    public boolean openAlertUndecoratedWithResult(String viewId, AlertType tipo) {
-        javafx.stage.Stage stage = openAlertUndecorated(viewId, tipo);
-        stage.showAndWait();
-        // TODO: Implementar retorno baseado na resposta do usuário
-        return true;
+    public void printStats() {
+        System.out.println("=== STAGE MANAGER STATS ===");
+        System.out.println("Views em cache: " + viewCache.size());
+        System.out.println("Stages abertos: " + openStages.size());
+        System.out.println("Cache Hits: " + cacheHits);
+        System.out.println("Cache Misses: " + cacheMisses);
+        System.out.println("Fresh Loads: " + freshLoads);
+        System.out.println("Hit Rate: " + String.format("%.2f", getHitRate()) + "%");
+        System.out.println("=============================");
     }
 }

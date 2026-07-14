@@ -1,13 +1,6 @@
 package com.ossobo.winterfx.resources.descriptor;
 
-import com.ossobo.winterfx.notifications.enums.AlertType;
-import com.ossobo.winterfx.resources.enums.ResourceOrigin;
-import com.ossobo.winterfx.resources.enums.ResourceType;
-import com.ossobo.winterfx.view.enums.CssMode;
-import com.ossobo.winterfx.view.enums.ModeUse;
-import com.ossobo.winterfx.view.enums.StageStyle;
-import com.ossobo.winterfx.view.enums.ViewType;
-import com.ossobo.winterfx.view.floatingwindow.enums.Modality;
+import com.ossobo.winterfx.resources.enums.*;
 
 import java.net.URL;
 import java.util.Collections;
@@ -39,6 +32,11 @@ public final class ViewDescriptor extends ResourceDescriptor {
     private final double opacity;
     private final StageStyle stageStyle;
     private final URL iconUrl;
+
+    // ========== NOVOS CAMPOS (String) ==========
+    private final String icon;          // ← @RegisterView.icon()
+    private final String sound;         // ← @RegisterView.sound()
+    private final String alertIcon;     // ← @RegisterView.alertIcon()
 
     private final boolean eager;
     private final int loadOrder;
@@ -95,6 +93,11 @@ public final class ViewDescriptor extends ResourceDescriptor {
         this.stageStyle = Objects.requireNonNullElse(builder.stageStyle, StageStyle.DECORATED);
         this.iconUrl = builder.iconUrl;
 
+        // ========== NOVOS CAMPOS ==========
+        this.icon = builder.icon;
+        this.sound = builder.sound;
+        this.alertIcon = builder.alertIcon;
+
         this.eager = builder.eager;
         this.loadOrder = builder.loadOrder;
         this.closeOnExit = builder.closeOnExit;
@@ -120,6 +123,8 @@ public final class ViewDescriptor extends ResourceDescriptor {
         this.cancelText = builder.cancelText != null ? builder.cancelText : "Cancelar";
     }
 
+    // ========== GETTERS ==========
+
     public ViewType getViewType() { return viewType; }
     public Class<?> getControllerClass() { return controllerClass; }
     public boolean isManagedController() { return managedController; }
@@ -144,6 +149,11 @@ public final class ViewDescriptor extends ResourceDescriptor {
     public double getOpacity() { return opacity; }
     public StageStyle getStageStyle() { return stageStyle; }
     public URL getIconUrl() { return iconUrl; }
+
+    // ========== NOVOS GETTERS ==========
+    public String getIcon() { return icon; }
+    public String getSound() { return sound; }
+    public String getAlertIcon() { return alertIcon; }
 
     public boolean isEager() { return eager; }
     public int getLoadOrder() { return loadOrder; }
@@ -205,6 +215,11 @@ public final class ViewDescriptor extends ResourceDescriptor {
         private StageStyle stageStyle = StageStyle.DECORATED;
         private URL iconUrl;
 
+        // ========== NOVOS CAMPOS ==========
+        private String icon;
+        private String sound;
+        private String alertIcon;
+
         private boolean eager;
         private int loadOrder;
         private boolean closeOnExit;
@@ -228,6 +243,8 @@ public final class ViewDescriptor extends ResourceDescriptor {
         private long autoCloseMillis;
         private String confirmText = "OK";
         private String cancelText = "Cancelar";
+
+        // ========== SETTERS ==========
 
         public Builder id(String id) { this.id = id; return this; }
         public Builder fxmlUrl(URL url) { this.fxmlUrl = url; return this; }
@@ -255,6 +272,11 @@ public final class ViewDescriptor extends ResourceDescriptor {
         public Builder opacity(double opacity) { this.opacity = opacity; return this; }
         public Builder stageStyle(StageStyle ss) { this.stageStyle = ss; return this; }
         public Builder iconUrl(URL iconUrl) { this.iconUrl = iconUrl; return this; }
+
+        // ========== NOVOS SETTERS ==========
+        public Builder icon(String icon) { this.icon = icon; return this; }
+        public Builder sound(String sound) { this.sound = sound; return this; }
+        public Builder alertIcon(String alertIcon) { this.alertIcon = alertIcon; return this; }
 
         public Builder eager(boolean eager) { this.eager = eager; return this; }
         public Builder loadOrder(int order) { this.loadOrder = order; return this; }

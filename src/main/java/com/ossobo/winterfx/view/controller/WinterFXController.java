@@ -1,26 +1,20 @@
-// WinterFXController.java v2.0 - 2026-06-14
+// WinterFXController.java v3.0 - 2026-07-01
 // Interface base com interceptação embutida e pipeline condicional.
 //
-// PIPELINE CONDICIONAL v2.0:
-//   - FASE BEFORE: executa TODOS handlers BEFORE (@OnConfirmation)
+// PIPELINE CONDICIONAL v3.0:
+//   - FASE BEFORE: CORRIGIDA! Agora usa executeBeforePhase (não executa todos)
 //   - EXECUÇÃO: captura exceção do método
 //   - FASE AFTER:
 //     • Se erro: executa apenas @OnError, @OnException (SÓ erro)
 //     • Se sucesso: executa apenas @OnSuccess, @NewScene, @SwapFxml (SÓ sucesso)
 //
-// Vantagens v2.0:
-//   - ✅ @OnError e @OnSuccess MUTUAMENTE EXCLUSIVOS
-//   - ✅ NUNCA ambos executam simultaneamente
-//   - ✅ @NewScene e @SwapFxml só executam se sucesso
-//   - ✅ @OnError só executa se erro
-//   - ✅ Stack trace limpo da exceção original
-//
-// @version 2.0 - Pipeline condicional com execução exclusiva de erro/sucesso
+// @version 3.0 - Bug fix: Duplo disparo resolvido e OnConfirmation funcionando
 package com.ossobo.winterfx.view.controller;
 
 import com.ossobo.winterfx.bootstrap.WinterApplication;
 import com.ossobo.winterfx.runtime.HandlerRegistry;
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
+import com.ossobo.winterfx.runtime.handler.PipelineInterruptedException;
 import javafx.event.ActionEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -28,66 +22,12 @@ import java.lang.reflect.Method;
 /**
  * Interface base para TODOS os controllers do WinterFX com interceptação embutida.
  *
- * <p><b>Pipeline de Interceptação:</b></p>
- * <ol>
- *   <li><b>FASE BEFORE:</b> executa handlers BEFORE (@OnConfirmation, validações)</li>
- *   <li><b>EXECUÇÃO:</b> executa método e captura exceção (se houver)</li>
- *   <li><b>FASE AFTER (CONDICIONAL):</b>
- *     <ul>
- *       <li>Se erro: executa apenas @OnError, @OnException</li>
- *       <li>Se sucesso: executa apenas @OnSuccess, @NewScene, @SwapFxml</li>
- *     </ul>
- *   </li>
- * </ol>
- *
- * <p><b>Exemplo:</b></p>
- * <pre>
- * {@code
- * @Controller(proxy = false)
- * @RegisterView(id = "login", fxml = "...")
- * public class LoginController implements WinterFXController {
- *
- *     @OnError(titulo = "Campos Obrigatórios")
- *     @OnSuccess(descricao = "Login realizado!")
- *     @NewScene(view = "main")
- *     public void handleLogin(ActionEvent event) {
- *         String username = usuario.getText();
- *         String password = senha.getText();
- *
- *         if (username.isEmpty() || password.isEmpty()) {
- *             throw new IllegalArgumentException("Campos obrigatórios");
- *         }
- *
- *         // Se sucesso → @OnSuccess + @NewScene (NUNCA @OnError)
- *         // Se erro → @OnError (NUNCA @OnSuccess + @NewScene)
- *     }
- * }
- * }
- * </pre>
- *
- * @version 2.0 - Pipeline condicional com execução exclusiva de erro/sucesso
+ * @version 3.0 - Pipeline corrigido
  */
 public interface WinterFXController {
 
     /**
      * Método genérico que intercepta e processa anotações com pipeline condicional.
-     *
-     * <p><b>Fluxo:</b></p>
-     * <ol>
-     *   <li>Verifica se método tem anotações de interceptação</li>
-     *   <li>Se NÃO tem: executa método diretamente</li>
-     *   <li>Se tem:
-     *     <ol>
-     *       <li>FASE BEFORE: executa handlers BEFORE</li>
-     *       <li>EXECUÇÃO: executa método e captura exceção</li>
-     *       <li>FASE AFTER:</li>
-     *         <ul>
-     *           <li>Se erro: {@link HandlerRegistry#executeErrorPhase}</li>
-     *           <li>Se sucesso: {@link HandlerRegistry#executeSuccessPhase}</li>
-     *         </ul>
-     *     </ol>
-     *   </li>
-     * </ol>
      *
      * @param methodName Nome do método a ser invocado
      * @param event ActionEvent do JavaFX
@@ -105,9 +45,18 @@ public interface WinterFXController {
             HandlerRegistry registry = WinterApplication.getInstance().getHandlerRegistry();
             AnnotationContext ctx = new AnnotationContext(this, method, new Object[]{event});
 
-            // ========== FASE BEFORE (independente do resultado) ==========
-            // Apenas handlers BEFORE: @OnConfirmation, validações preliminares
-            registry.executeByPhase(method, ctx, true);
+            // ========== FASE BEFORE (CORRIGIDA!) ==========
+            try {
+                // ✅ CORRETO: Agora usa o método específico que filtra apenas os handlers isBeforePhase()
+                registry.executeBeforePhase(method, ctx);
+            } catch (PipelineInterruptedException e) {
+                // ✅ CORRETO: Se o @OnConfirmation foi cancelado, o handler lança essa exceção.
+                // Nós capturamos aqui e simplesmente ABORTAMOS a execução do método.
+                return;
+            } catch (Exception e) {
+                // Qualquer outro erro inesperado na fase Before também interrompe
+                return;
+            }
 
             // ========== EXECUÇÃO DO MÉTODO (captura exceção) ==========
             Object result = null;

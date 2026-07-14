@@ -5,16 +5,156 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1bf19146-2294-41a8-b430-6bedb89510cb" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/GetMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/Payload.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/PostMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/RouteVar.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/UI.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationCriticalController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationErrorController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationInfoController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationSuccessController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationWarningController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/AnnotationContext.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/AnnotationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/ResourceModule.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/AlertType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/Modality.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/pipeline/PipelineExecutor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/sound/SoundManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/sound/enums/SoundType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/uiRefresh/Rotas.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/uiRefresh/model/Params.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/uiRefresh/model/ResponseData.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/uiRefresh/processor/ApiDispatcher.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/uiRefresh/processor/RouteHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/uiRefresh/processor/WebRequestMappingProcessor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/LazyViewProxy.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/alert/AlertManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/GetController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/binding/BindEngine.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/binding/ThreadSafeStringProperty.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/callback/ViewLoadedListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/controller/GetControllerInjector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/FloatingWindowResourceInjector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/injection/ReactiveViewInjector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/injection/ViewCompositionInjector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/injection/ViewState.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/lifecycle/ViewStateDestroyer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound/success.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/OwnerWindowProvider/OwnerWindowProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/OwnerWindowProvider/OwnerWindowProvider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/Scope.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/Scope.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/UseInterfaceProxy.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/RequestMapping.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap/WinterApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap/WinterApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/BootSequence.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/BootSequence.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/DiContainer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/DiContainer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/aot/InstanceFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/aot/InstanceFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/configuration/ConfigurationManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/configuration/ConfigurationManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/DependencyInjector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/DependencyInjector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/FieldInjector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/FieldInjector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/FloatingWindowInjector.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/ImageInjector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/ImageResourceInjector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/InjectionManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/InjectionManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/MethodInjector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/MethodInjector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/ValueInjector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/ValueInjector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/ViewInjector.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstanceCreator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstanceCreator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstantiationStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstantiationStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstantiationStrategyManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/InstantiationStrategyManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/strategies/ConstructorInstantiationStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/strategies/ConstructorInstantiationStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/strategies/FactoryMethodStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/instantiation/strategies/FactoryMethodStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/LifecycleManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/LifecycleManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/events/LifecycleEventPublisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/events/LifecycleEventPublisher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/interfaces/DependencyLifecycleListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/interfaces/DependencyLifecycleListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/listener/LifecycleLogger.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/lifecycle/listener/LifecycleLogger.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/reflection/ReflectionCache.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/reflection/ReflectionCache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/reflection/ReflectionProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/reflection/ReflectionProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/resolver/DependencyResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/resolver/DependencyResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/resolver/methods/CircularDependencyDetector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/resolver/methods/CircularDependencyDetector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/scopes/ScopeManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/scopes/ScopeManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/scopes/enums/ScopeType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/enums/ScopeType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/ImageManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/ImageManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/anotations/RegisterImage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/anotations/RegisterImage.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/enums/ImageType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/intercept/ControllerProxyFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/intercept/ControllerProxyFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/NotificationManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/NotificationManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/anotations/RegisterNotification.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/anotations/RegisterNotification.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/ConfirmationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/ConfirmationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/controller/NotificationControllerImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/enums/AlertType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/model/NotificationInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/model/NotificationInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/registry/NotificationViewRegistrar.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/resolver/NotificationViewResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/resolver/NotificationViewResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/descriptor/ImageDescriptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/descriptor/ImageDescriptor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/descriptor/ViewDescriptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/descriptor/ViewDescriptor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/ResourceType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/ResourceType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/loader/ResourceLoader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/resolver/ImageAnnotationResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/resolver/ImageAnnotationResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/resolver/ViewAnnotationResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/resolver/ViewAnnotationResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/HandlerRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/HandlerRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/WinterApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/WinterFXProxyFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/WinterFXProxyFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/BaseNotificationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/BaseNotificationHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/NewSceneHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/handler/NewSceneHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnConfirmationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnConfirmationHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnCriticalHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnCriticalHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnErrorHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnErrorHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnInfoHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnInfoHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnSuccessHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnSuccessHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/OnWarningHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications/handler/OnWarningHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/SwapFxmlHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/handler/SwapFxmlHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime/handler/SwapImageHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/imagemanager/handler/SwapImageHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanAnnotationScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanAnnotationScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanMetadataExtractor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanMetadataExtractor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ResourceAnnotationScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/ResourceAnnotationScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/BeanDefinition.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/models/BeanDefinition.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/BeanRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/BeanRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/ResourceRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/ResourceRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/StageManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/StageManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/FXMLAction.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/InjectView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/InjectView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/RegisterView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/RegisterView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/controller/WinterFXController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/controller/WinterFXController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/design/StyleManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/design/StyleManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/enums/CssMode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/CssMode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/enums/ModeUse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/ModeUse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/enums/StageStyle.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/StageStyle.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/enums/ViewAnimation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/ViewAnimation.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/enums/ViewType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/enums/ViewType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/FloatingWindowManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/FloatingWindowManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/anotations/FloatingWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/anotations/FloatingWindow.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/enums/Modality.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader/FXMLService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader/FXMLService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader/LoadedView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/loader/LoadedView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/refresh/RefreshManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/refresh/RefreshableController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/module-info.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/module-info.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/confirmation.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/confirmation.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/error.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/error.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/info.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/info.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/success.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/success.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/warning.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/notifications/warning.fxml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="240" />
+  </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="Interface" />
         <option value="Class" />
       </list>
     </option>
@@ -22,63 +162,67 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.4630471726963987" />
-      <entry key="MS500" value="3.4994179406888732" />
-      <entry key="S2" value="5.291203727754287" />
-      <entry key="S5" value="6.654863061951445" />
-      <entry key="S10" value="7.58793386864772" />
-      <entry key="S30" value="9.518842481294092" />
-      <entry key="S60" value="11.989602392264269" />
-      <entry key="M2" value="14.975445445766823" />
-      <entry key="M5" value="22.416163110688288" />
-      <entry key="M10" value="33.558078430119856" />
-      <entry key="M15" value="41.625211138290474" />
-      <entry key="M30" value="55.8720044515502" />
-      <entry key="H1" value="69.69937987118237" />
-      <entry key="H2" value="83.06444960358934" />
-      <entry key="H4" value="104.11217709233017" />
-      <entry key="D1" value="256.41119180844805" />
-      <entry key="W1" value="373.0001671566296" />
+      <entry key="MS100" value="1.059539874877746" />
+      <entry key="MS500" value="1.5688026140217108" />
+      <entry key="S2" value="1.8717673899755054" />
+      <entry key="S5" value="2.114457962437971" />
+      <entry key="S10" value="2.7439552827058726" />
+      <entry key="S30" value="4.271225232397329" />
+      <entry key="S60" value="5.010869146006448" />
+      <entry key="M2" value="5.469385697219982" />
+      <entry key="M5" value="5.7783917143951244" />
+      <entry key="M10" value="5.890537647797363" />
+      <entry key="M15" value="5.970368029565972" />
+      <entry key="M30" value="6.884901086884665" />
+      <entry key="H1" value="11.035376382405586" />
+      <entry key="H2" value="19.980852733518542" />
+      <entry key="H4" value="36.10845583981747" />
+      <entry key="D1" value="157.81104967982293" />
+      <entry key="W1" value="516.2375742840142" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="5.347710709497266E-15" />
-      <entry key="MS500" value="0.0013984069738292412" />
-      <entry key="S2" value="0.193378592664667" />
-      <entry key="S5" value="0.5182819516452298" />
-      <entry key="S10" value="0.7217198629930484" />
-      <entry key="S30" value="1.017982465737701" />
-      <entry key="S60" value="1.295731763222293" />
-      <entry key="M2" value="1.5852215025878664" />
-      <entry key="M5" value="2.413463287880061" />
-      <entry key="M10" value="4.06378019584116" />
-      <entry key="M15" value="5.33971677110202" />
-      <entry key="M30" value="7.457183740905516" />
-      <entry key="H1" value="9.179548212490614" />
-      <entry key="H2" value="11.761272089409179" />
-      <entry key="H4" value="23.516944149243454" />
-      <entry key="D1" value="116.51413133281713" />
-      <entry key="W1" value="171.79924579192195" />
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="1.3081906490931438E-236" />
+      <entry key="S30" value="4.4473232224922945E-79" />
+      <entry key="S60" value="1.5725213746578586E-39" />
+      <entry key="M2" value="1.0548202403035991E-19" />
+      <entry key="M5" value="8.782743376789897E-8" />
+      <entry key="M10" value="8.528181212189136E-4" />
+      <entry key="M15" value="0.01941338083519008" />
+      <entry key="M30" value="0.5557286891977434" />
+      <entry key="H1" value="3.7377373279567085" />
+      <entry key="H2" value="10.831989491482735" />
+      <entry key="H4" value="20.11124502502454" />
+      <entry key="D1" value="64.28709108334947" />
+      <entry key="W1" value="201.4971474340407" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.4171327111930072" />
-      <entry key="MS500" value="3.3794219153052705" />
-      <entry key="S2" value="5.09179109464017" />
-      <entry key="S5" value="6.859387698106932" />
-      <entry key="S10" value="8.108535074203049" />
-      <entry key="S30" value="10.452805364393441" />
-      <entry key="S60" value="13.237102983391487" />
-      <entry key="M2" value="16.53342384387589" />
-      <entry key="M5" value="24.81352801644018" />
-      <entry key="M10" value="37.60696780042169" />
-      <entry key="M15" value="46.95113912707213" />
-      <entry key="M30" value="63.31880040703454" />
-      <entry key="H1" value="78.8721446418325" />
-      <entry key="H2" value="94.82140745824782" />
-      <entry key="H4" value="127.62554864032683" />
-      <entry key="D1" value="372.92299242788704" />
-      <entry key="W1" value="544.7989329895918" />
+      <entry key="MS100" value="0.11705160304180079" />
+      <entry key="MS500" value="1.133676221301382" />
+      <entry key="S2" value="1.7386521926385181" />
+      <entry key="S5" value="2.057915351180941" />
+      <entry key="S10" value="2.7134966470822373" />
+      <entry key="S30" value="4.259495205895915" />
+      <entry key="S60" value="5.004630659370911" />
+      <entry key="M2" value="5.4661512049240875" />
+      <entry key="M5" value="5.7770669954839775" />
+      <entry key="M10" value="5.890713990126226" />
+      <entry key="M15" value="5.9892182877435225" />
+      <entry key="M30" value="7.439032124849232" />
+      <entry key="H1" value="14.769175019940546" />
+      <entry key="H2" value="30.807892856069184" />
+      <entry key="H4" value="56.21543343833683" />
+      <entry key="D1" value="222.09630745466302" />
+      <entry key="W1" value="717.7340576459218" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -93,36 +237,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "Merging main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/rtas/11_Programação/Back_End/Java",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "reference.settings.project.maven.repository.indices",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/rtas/11_Programação/Back_End/Java/WinterFx/src/main/java/com/ossobo/winterfx/notifications&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.project.maven.repository.indices&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CreateClassDialog.RecentsKey">
+      <recent name="com.ossobo.winterfx.view.refresh" />
+      <recent name="com.ossobo.winterfx.sound" />
       <recent name="com.ossobo.winterfx.runtime.handler" />
       <recent name="com.ossobo.winterfx.view.loader.interceptation.intercept" />
       <recent name="com.ossobo.winterfx.view.loader" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/notifications" />
+      <recent name="$PROJECT_DIR$/src/main/resources/META-INF/winterfx/assets/sound" />
       <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view" />
       <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/runtime" />
       <recent name="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx" />
@@ -145,8 +296,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.25134.95" />
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.25134.95" />
+        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.26222.65" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.26222.65" />
       </set>
     </attachedChunks>
   </component>
@@ -166,25 +317,11 @@
       <workItem from="1781263120967" duration="13549000" />
       <workItem from="1781289420559" duration="12648000" />
       <workItem from="1781308277434" duration="18329000" />
+      <workItem from="1784020519879" duration="351000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/RegisterView.java</url>
-          <line>24</line>
-          <properties class="com.ossobo.winterfx.view.anotations.RegisterView">
-            <option name="EMULATED" value="true" />
-            <option name="WATCH_EXIT" value="false" />
-          </properties>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
