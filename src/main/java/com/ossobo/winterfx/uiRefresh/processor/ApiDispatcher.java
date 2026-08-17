@@ -1,17 +1,23 @@
 package com.ossobo.winterfx.uiRefresh.processor;
 
 import com.ossobo.winterfx.anotations.GetMapping;
-import com.ossobo.winterfx.anotations.Payload;
 import com.ossobo.winterfx.anotations.PostMapping;
 import com.ossobo.winterfx.anotations.RequestMapping;
-import com.ossobo.winterfx.anotations.RouteVar;
 import com.ossobo.winterfx.anotations.UI;
 import com.ossobo.winterfx.di.DiContainer;
+import com.ossobo.winterfx.uiRefresh.model.ParameterResolver;
+import com.ossobo.winterfx.uiRefresh.model.PayloadResolver;
 import com.ossobo.winterfx.uiRefresh.model.ResponseData;
+import com.ossobo.winterfx.uiRefresh.model.RouteRequest;
+import com.ossobo.winterfx.uiRefresh.model.RouteVarResolver;
+import com.ossobo.winterfx.uiRefresh.model.UIResolver;
+import javafx.application.Platform;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,8 +34,17 @@ public class ApiDispatcher {
     private final Map<String, RouteHandler> postRoutes = new HashMap<>();
     private final DiContainer container;
 
+    // 1. Lista de resolvedores de parâmetros
+    private final List<ParameterResolver> resolvers;
+
     public ApiDispatcher(DiContainer container) {
         this.container = container;
+        // 2. Inicializa os resolvedores
+        this.resolvers = List.of(
+                new RouteVarResolver(),
+                new PayloadResolver(),
+                new UIResolver()
+        );
         scanControllers();
     }
 
@@ -89,10 +104,25 @@ public class ApiDispatcher {
         RouteHandler handler = getRoutes.getOrDefault(rota, postRoutes.get(rota));
         if (handler == null) return ResponseData.error("Rota inexistente: " + rota);
 
+        Method method = handler.method();
+
+        // Proteção para o JavaFX: Se houver parâmetros @UI e não estivermos na JavaFX Thread,
+        // despachamos para a Thread correta para evitar exceções de UI.
+        boolean hasUiParam = Arrays.stream(method.getParameters())
+                .anyMatch(p -> p.isAnnotationPresent(UI.class));
+
+        if (hasUiParam && !Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> dispatch(rota, params));
+            return ResponseData.success(); // Retorna sucesso genérico para não bloquear a thread atual
+        }
+
         try {
-            Method method = handler.method();
             method.setAccessible(true);
-            Object[] resolvedArgs = resolveArgs(method, params);
+
+            // 3. Passa o request para os resolvers
+            RouteRequest request = new RouteRequest(rota, params);
+            Object[] resolvedArgs = resolveArgs(method, request);
+
             return method.invoke(handler.bean(), resolvedArgs);
         } catch (Exception e) {
             return ResponseData.error(e.getMessage());
@@ -127,26 +157,28 @@ public class ApiDispatcher {
     /**
      * Faz o "casamento" (matching) entre o Mapa enviado e as anotações do método.
      */
-    private Object[] resolveArgs(Method method, Map<String, Object> params) {
+    private Object[] resolveArgs(Method method, RouteRequest request) {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
 
         for (int i = 0; i < parameters.length; i++) {
             Parameter param = parameters[i];
+            boolean resolved = false;
 
-            if (param.isAnnotationPresent(Payload.class)) {
-                String key = param.getAnnotation(Payload.class).value();
-                args[i] = params.get(key);
-            } else if (param.isAnnotationPresent(UI.class)) {
-                String key = param.getAnnotation(UI.class).value();
-                args[i] = params.get(key);
-            } else if (param.isAnnotationPresent(RouteVar.class)) {
-                String key = param.getAnnotation(RouteVar.class).value();
-                args[i] = params.get(key);
-            } else {
+            // 4. Procura qual resolver suporta aquele parâmetro
+            for (ParameterResolver resolver : resolvers) {
+                if (resolver.supports(param)) {
+                    args[i] = resolver.resolve(param, request);
+                    resolved = true;
+                    break;
+                }
+            }
+
+            if (!resolved) {
                 throw new IllegalArgumentException(
                         "Parâmetro '" + param.getName() + "' no método '" + method.getName() +
-                                "' não possui anotação de roteamento (@Payload, @UI ou @RouteVar).");
+                                "' não possui anotação de roteamento suportada (@Payload, @UI ou @RouteVar)."
+                );
             }
         }
         return args;

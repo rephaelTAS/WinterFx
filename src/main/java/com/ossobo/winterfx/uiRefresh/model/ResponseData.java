@@ -1,7 +1,8 @@
 package com.ossobo.winterfx.uiRefresh.model;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Envelope padrão para o transporte de dados no sistema de roteamento interno do WinterFX.
@@ -28,8 +29,8 @@ public class ResponseData {
 
     private boolean success;
     private String message;
-    private Map<String, Object> data = new ConcurrentHashMap<>();
-    private Map<String, String> errors = new ConcurrentHashMap<>();
+    private final Map<String, Object> data = new LinkedHashMap<>();
+    private final Map<String, String> errors = new LinkedHashMap<>();
 
     /**
      * Construtor padrão que inicializa o estado da resposta como sucesso.
@@ -109,12 +110,16 @@ public class ResponseData {
      *
      * @return O mapa de dados.
      */
-    public Map<String, Object> getData() { return data; }
+    public Map<String, Object> getData() {
+        return Collections.unmodifiableMap(data);
+    }
 
     /**
      * Retorna o mapa imutável contendo os erros por campo, se houver.
      *
      * @return O mapa de erros de validação.
      */
-    public Map<String, String> getErrors() { return errors; }
+    public Map<String, String> getErrors() {
+        return Collections.unmodifiableMap(errors);
+    }
 }

@@ -46,13 +46,13 @@ public final class Rotas {
      * Executa um método pelo nome dentro do controller da rota especificada.
      *
      * @param rota  A rota do controller (ex: "catalogo_form").
-     * @param acao O nome do método a ser executado (ex: "clear").
+     * @param action O nome do método a ser executado (ex: "clear").
      * @return O que o método retornou, ou ResponseData de erro.
      */
-    public static Object executAction(String rota, String acao) {
+    public static Object executeAction(String rota, String action) {
         return WinterApplication.getInstance()
                 .getApiDispatcher()
-                .dispatchAction(rota, acao);
+                .dispatchAction(rota, action);
     }
 
     /**
