@@ -1,16 +1,16 @@
-package com.ossobo.winterfx.uiRefresh.processor;
+package com.ossobo.winterfx.router.processor;
 
 import com.ossobo.winterfx.anotations.GetMapping;
 import com.ossobo.winterfx.anotations.PostMapping;
 import com.ossobo.winterfx.anotations.RequestMapping;
 import com.ossobo.winterfx.anotations.UI;
 import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.uiRefresh.model.ParameterResolver;
-import com.ossobo.winterfx.uiRefresh.model.PayloadResolver;
-import com.ossobo.winterfx.uiRefresh.model.ResponseData;
-import com.ossobo.winterfx.uiRefresh.model.RouteRequest;
-import com.ossobo.winterfx.uiRefresh.model.RouteVarResolver;
-import com.ossobo.winterfx.uiRefresh.model.UIResolver;
+import com.ossobo.winterfx.router.model.ParameterResolver;
+import com.ossobo.winterfx.router.model.PayloadResolver;
+import com.ossobo.winterfx.router.model.ResponseData;
+import com.ossobo.winterfx.router.model.RouteRequest;
+import com.ossobo.winterfx.router.model.RouteVarResolver;
+import com.ossobo.winterfx.router.model.UIResolver;
 import javafx.application.Platform;
 
 import java.lang.reflect.Method;
@@ -97,7 +97,7 @@ public class ApiDispatcher {
      * e monta o array de argumentos na ordem correta exigida pela reflexão.</p>
      *
      * @param rota    O caminho da rota.
-     * @param params O mapa de parâmetros construído via {@link com.ossobo.winterfx.uiRefresh.model.Params}.
+     * @param params O mapa de parâmetros construído via {@link com.ossobo.winterfx.router.model.Params}.
      * @return O resultado da invocação do método.
      */
     public Object dispatch(String rota, Map<String, Object> params) {

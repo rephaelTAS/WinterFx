@@ -1,4 +1,4 @@
-package com.ossobo.winterfx.uiRefresh.model;
+package com.ossobo.winterfx.router.model;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -9,7 +9,7 @@ import java.util.Map;
  *
  * <p>Análogo ao {@code ResponseEntity} do Spring MVC, porém adaptado para aplicações JavaFX.
  * Todo método anotado com {@code @GetMapping} ou {@code @PostMapping} e invocado pelo
- * {@link com.ossobo.winterfx.uiRefresh.processor.ApiDispatcher} deve retornar uma instância
+ * {@link com.ossobo.winterfx.router.processor.ApiDispatcher} deve retornar uma instância
  * desta classe.</p>
  *
  * <p>Estrutura padrão do envelope:</p>

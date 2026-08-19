@@ -11,13 +11,13 @@ import java.lang.annotation.Target;
  * (escrita, execução ou mutação) no sistema de roteamento interno do WinterFX.
  *
  * <p>Quando aplicada a um método dentro de um controlador anotado com {@code @RequestMapping},
- * o {@link com.ossobo.winterfx.uiRefresh.processor.ApiDispatcher} registará esse método
+ * o {@link com.ossobo.winterfx.router.processor.ApiDispatcher} registará esse método
  * no mapa de rotas do tipo POST. Por convenção do framework, métodos anotados com
  * {@code @PostMapping} devem ser utilizados para salvar, deletar, atualizar dados ou
  * executar lógicas de negócio que alterem o estado da aplicação.</p>
  *
  * <p>O método anotado <b>deve</b> obrigatoriamente retornar um objeto
- * {@link com.ossobo.winterfx.uiRefresh.model.ResponseData}.</p>
+ * {@link com.ossobo.winterfx.router.model.ResponseData}.</p>
  *
  * @see com.ossobo.winterfx.anotations.RequestMapping
  * @see com.ossobo.winterfx.anotations.GetMapping

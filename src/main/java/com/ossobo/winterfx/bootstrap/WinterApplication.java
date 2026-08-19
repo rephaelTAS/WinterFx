@@ -17,7 +17,7 @@ import com.ossobo.winterfx.scanner.ScannerEngine;
 import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.sound.SoundManager;
-import com.ossobo.winterfx.uiRefresh.processor.ApiDispatcher;
+import com.ossobo.winterfx.router.processor.ApiDispatcher;
 import com.ossobo.winterfx.view.controller.GetControllerInjector;
 import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.view.alert.AlertManager;

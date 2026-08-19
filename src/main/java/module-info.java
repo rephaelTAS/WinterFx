@@ -67,6 +67,7 @@ module com.ossobo.winterfx {
     opens com.ossobo.winterfx.notifications.controller to javafx.fxml;
     opens com.ossobo.winterfx.notifications.model to javafx.fxml;
     opens com.ossobo.winterfx.resources.descriptor to javafx.fxml;
+    opens com.ossobo.winterfx.event;
     exports com.ossobo.winterfx.anotations;
     exports com.ossobo.winterfx.view.anotations;
     exports com.ossobo.winterfx.view.design.anotations;
@@ -79,7 +80,7 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.runtime;
     exports com.ossobo.winterfx.runtime.handler;
     exports com.ossobo.winterfx.intercept;
-
+    exports com.ossobo.winterfx.event;
 
     exports com.ossobo.winterfx.di.injection;
     exports com.ossobo.winterfx.di.instantiation;
@@ -88,12 +89,12 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.di.resolver.methods;
     exports com.ossobo.winterfx.di.scopes.interfaces;
     exports com.ossobo.winterfx.di.configuration;
-    exports com.ossobo.winterfx.uiRefresh.model;
-    exports com.ossobo.winterfx.uiRefresh.processor;
+    exports com.ossobo.winterfx.router.model;
+    exports com.ossobo.winterfx.router.processor;
     exports com.ossobo.winterfx.imagemanager.handler;
     exports com.ossobo.winterfx.view.handler;
     exports com.ossobo.winterfx.view.resolver;
     exports com.ossobo.winterfx.imagemanager.resolver;
     opens com.ossobo.winterfx.view.controller to javafx.fxml;
-    exports com.ossobo.winterfx.uiRefresh;
+    exports com.ossobo.winterfx.router;
 }

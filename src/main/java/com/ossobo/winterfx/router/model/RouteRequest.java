@@ -1,4 +1,4 @@
-package com.ossobo.winterfx.uiRefresh.model;
+package com.ossobo.winterfx.router.model;
 
 import java.util.Map;
 import java.util.Objects;

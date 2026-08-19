@@ -1,8 +1,7 @@
-package com.ossobo.winterfx.uiRefresh;
+package com.ossobo.winterfx.router;
 
 import com.ossobo.winterfx.bootstrap.WinterApplication;
-import com.ossobo.winterfx.uiRefresh.model.Params;
-import com.ossobo.winterfx.uiRefresh.model.ResponseData;
+import com.ossobo.winterfx.router.model.Params;
 
 /**
  * Fachada estática de alto nível para o sistema de rotas internas do WinterFX.

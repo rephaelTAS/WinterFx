@@ -20,6 +20,7 @@ Inspirado na simplicidade do ecossistema Spring, adaptado para a realidade e a m
 * 🚀 Quick Start
 * 🔌 Internal Routing API
 * 📦 ResponseData & Params
+* 📡 Event System
 * 📚 Anotações Core
 * 🪟 Janelas Flutuantes
 * 🔄 Interceptação de Métodos (Pipeline)
@@ -265,20 +266,20 @@ public class UsuarioController implements WinterFXController {
 
     @PostMapping("atualizar")
     public ResponseData atualizar(
-        @RouteVar("id") Long id,
-        @Payload("usuario") Usuario usuario,
-        @UI("painelForm") Pane painel,
-        @UI("statusLabel") Label status
+            @RouteVar("id") Long id,
+            @Payload("usuario") Usuario usuario,
+            @UI("painelForm") Pane painel,
+            @UI("statusLabel") Label status
     ) {
         usuarioService.atualizar(id, usuario);
-        
+
         // Manipulação direta e segura da UI
         painel.setStyle("-fx-background-color: green;");
         status.setText("Atualizado!");
 
         return ResponseData.success()
-            .withData("usuario", usuario)
-            .withData("mensagem", "Atualizado com sucesso");
+                .withData("usuario", usuario)
+                .withData("mensagem", "Atualizado com sucesso");
     }
 
     @GetMapping("buscar")
@@ -296,19 +297,19 @@ Para disparar a rota, use a fachada Rotas e o builder Params. O emissor não con
 ```java
 // 1. POST enviando Objeto (@Payload), UI (@UI) e Primitivo (@RouteVar)
 Rotas.post("usuarios/atualizar",
-Params.with("id", 10L)
+           Params.with("id", 10L)
 .and("usuario", usuarioObjeto)
 .and("statusLabel", minhaLabel)
 .and("painelForm", meuPainel)
 );
 
 // 2. GET enviando apenas um parâmetro simples
-Rotas.get("usuarios/buscar",
-Params.with("id", 10L)
+        Rotas.get("usuarios/buscar",
+                  Params.with("id", 10L)
 );
 
 // 3. Executa ação específica pelo nome do método (útil para métodos void como "limpar")
-Rotas.executeAction("usuarios", "limpar");
+        Rotas.executeAction("usuarios", "limpar");
 ```
 
 ## ⚡ Thread Safety Automática (A Mágica do @UI)
@@ -341,8 +342,8 @@ O Params é um builder imutável que garante que as chaves textuais sejam casada
 
 ```java
 Params params = Params.with("produto", produto)
-.and("modo", "edicao")
-.and("labelStatus", labelDaTela);
+        .and("modo", "edicao")
+        .and("labelStatus", labelDaTela);
 
 Rotas.post("catalogo_form/setProduto", params);
 ```
@@ -372,14 +373,102 @@ Na View que disparou a rota, você pode tratar o retorno facilmente:
 Object respostaObj = Rotas.get("usuarios/buscar", Params.with("id", 10L));
 
 if (respostaObj instanceof ResponseData resposta) {
-if (resposta.isSuccess()) {
+        if (resposta.isSuccess()) {
 Usuario user = (Usuario) resposta.getData().get("usuario");
 // Atualiza a UI...
 } else {
-System.out.println("Erro: " + resposta.getMessage());
-}
+        System.out.println("Erro: " + resposta.getMessage());
+        }
+        }
+```
+
+---
+
+# 📡 Event System (EventBus)
+
+Enquanto o Internal Routing lida com requisições diretas (Request/Response), o Event System lida com a comunicação transversal (Fire-and-Forget). Inspirado no ApplicationEventPublisher do Spring, ele permite que um módulo avise o resto da aplicação sobre algo que aconteceu, sem conhecer os receptores.
+
+## Rotas vs Eventos: Quando usar?
+
+| Característica | Internal Routing (Rotas)           | Event System (EventBus)                   |
+| -------------- | ---------------------------------- | ----------------------------------------- |
+| Comunicação    | Direta (Ponto-a-Ponto)             | Broadcast (Um para Muitos)                |
+| Retorno        | Exige retorno (ResponseData)       | Ignora retorno (void)                     |
+| Acoplamento    | Emissor conhece a rota do receptor | Emissor não conhece quem vai ouvir        |
+| Uso Ideal      | "Salve este usuário e me dê o ID"  | "O usuário foi salvo, atualizem as telas" |
+
+## 1. Publicando um Evento
+
+Qualquer classe gerenciada pelo WinterFX (@Service, @Controller, @Repository) pode publicar eventos injetando o EventBus.
+
+```java
+@Service
+public class PedidoService {
+
+    @Inject private EventBus eventBus;
+
+    public void finalizarPedido(Pedido pedido) {
+        // 1. Salva no banco...
+        repositorio.save(pedido);
+
+        // 2. Publica o evento para a aplicação inteira
+        eventBus.publish(new PedidoFinalizadoEvent(pedido.getId(), pedido.getTotal()));
+    }
 }
 ```
+
+## 2. Ouvindo Eventos com @EventListener (A Mágica)
+
+Não é necessário fazer eventBus.subscribe() no @PostConstruct. O WinterFX escaneia seus beans em busca da anotação @EventListener e faz a assinatura automaticamente. O tipo do evento é definido pelo tipo do parâmetro no método.
+
+### Em Controllers (Atualização de UI)
+
+Se o listener está num @Controller(proxy = false), o WinterFX executa o método automaticamente na JavaFX Application Thread. Zero Platform.runLater() na mão!
+
+```java
+@Controller(proxy = false)
+@RegisterView(id = "dashboard", fxml = "/fxml/dashboard.fxml")
+public class DashboardController implements WinterFXController {
+
+    @FXML private Label lblTotalVendas;
+
+    // O WinterFX registra isso automaticamente no EventBus!
+    // Como estamos num Controller, isso roda na Thread do JavaFX.
+    @EventListener
+    public void onPedidoFinalizado(PedidoFinalizadoEvent event) {
+        lblTotalVendas.setText("Total: R$ " + event.getTotal());
+    }
+}
+```
+
+### Em Services (Tarefas em Background)
+
+Se a tarefa for demorada (ex: enviar um e-mail, gerar relatório), basta anotar com @Async. O WinterFX colocará a execução em uma Thread de background, sem travar a interface do usuário.
+
+```java
+@Service
+public class NotificacaoService {
+
+    @Inject private EmailSender emailSender;
+
+    // Escuta o evento e roda em background (não trava a UI)
+    @EventListener
+    @Async
+    public void enviarEmailConfirmacao(PedidoFinalizadoEvent event) {
+        emailSender.enviar("Pedido confirmado! Total: " + event.getTotal());
+    }
+}
+```
+
+## ⚙️ Gerenciamento de Ciclo de Vida (Zero Memory Leaks)
+
+Em frameworks tradicionais, usar eventos em telas que abrem e fecham causa vazamento de memória, pois o EventBus mantém referências aos Controllers destruídos.
+
+No WinterFX, isso é automático:
+
+Quando um @FloatingWindow ou uma View é fechada/destruída, o framework identifica isso e remove automaticamente todas as assinaturas de @EventListener daquele Controller específico da memória.
+
+Você foca apenas na regra de negócio. O framework cuida da memória.
 
 ---
 
@@ -394,6 +483,60 @@ System.out.println("Erro: " + resposta.getMessage());
 | `@Repository`                | Acesso a dados                             | true                |
 | `@Configuration`             | Configuração do framework                  | -                   |
 | `@PostConstruct`             | Inicialização após injeção de dependências | -                   |
+
+## Registro de recursos
+
+REGISTRO DE VIEWS (FXML)
+
+import com.ossobo.winterfx.resources.enums.ViewType;
+
+@Controller(proxy = false)
+@RegisterView(
+id = "login",                    // ID único da view
+fxml = "/fxmls/login.fxml",      // Caminho do FXML
+title = "Login",                 // Título da janela
+width = 400,                     // Largura
+height = 300,                    // Altura
+centered = true,                 // Centralizar na tela
+resizable = false,               // Não redimensionável
+primaryCss = "/css/login.css",   // CSS principal
+additionalCss = {"/css/styles.css"}, // CSSs adicionais
+viewType = ViewType.STATIC,      // Tipo de view
+eager = true,                    // Carregar antecipadamente
+rolesAllowed = {"ADMIN", "GESTOR"}, // Papéis permitidos
+authenticated = true             // Requer autenticação
+)
+public class LoginController {
+
+REGISTRO DE IMAGENS
+
+
+import com.ossobo.winterfx.imagemanager.anotations.RegisterImage;
+import com.ossobo.winterfx.imagemanager.anotations.RegisterImages;
+import com.ossobo.winterfx.resources.enums.ResourceOrigin;
+import com.ossobo.winterfx.resources.enums.ViewAnimation;
+
+@RegisterImages({
+@RegisterImage(
+id = "logo",
+src = "/images/logo.png",
+imageType = ViewAnimation.ImageType.IMAGE,
+preferredWidth = 200,
+preferredHeight = 80,
+preserveRatio = true
+),
+@RegisterImage(
+id = "user_icon",
+src = "/icons/user.png",
+imageType = ViewAnimation.ImageType.ICON
+),
+@RegisterImage(
+id = "login_bg",
+src = "/images/login/bg_login.jpg",
+imageType = ViewAnimation.ImageType.BACKGROUND
+)
+})
+public final class AppImageConfig {
 
 ## Injeção de Recursos e UI Dinâmica
 

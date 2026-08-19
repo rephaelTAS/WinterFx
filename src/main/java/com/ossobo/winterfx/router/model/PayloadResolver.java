@@ -1,4 +1,4 @@
-package com.ossobo.winterfx.uiRefresh.model;
+package com.ossobo.winterfx.router.model;
 
 import com.ossobo.winterfx.anotations.Payload;
 import java.lang.reflect.Parameter;
