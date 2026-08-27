@@ -2,74 +2,48 @@ package com.ossobo.winterfx.router;
 
 import com.ossobo.winterfx.bootstrap.WinterApplication;
 import com.ossobo.winterfx.router.model.Params;
+import com.ossobo.winterfx.router.model.RouteBindingException;
+import com.ossobo.winterfx.router.processor.ApiDispatcher;
 
-/**
- * Fachada estática de alto nível para o sistema de rotas internas do WinterFX.
- *
- * <p>Oferece métodos para envio de dados simples, ou execução semântica
- * baseada em anotações (onde a ordem dos parâmetros não importa).</p>
- */
 public final class Rotas {
 
     private Rotas() {}
 
-    /**
-     * Executa uma rota casando os parâmetros via anotações (@Payload, @UI, @RouteVar).
-     * A ordem dos parâmetros no {@code Params} não precisa bater com a do método.
-     */
-    public static Object get(String rota, Params params) {
-        return WinterApplication.getInstance()
-                .getApiDispatcher()
-                .dispatch(rota, params.build());
-    }
+    // ---------- GET: leitura ----------
+    public static Object get(String rota)                { return d().dispatchGet(rota); }
+    public static Object get(String rota, Params params) { return d().dispatchGet(rota, params.build()); }
 
-    /**
-     * Executa uma rota baseado estritamente na ordem posicional dos argumentos (Legado).
-     */
-    public static Object get(String rota, Object... argumentos) {
-        return WinterApplication.getInstance()
-                .getApiDispatcher()
-                .dispatch(rota, argumentos);
-    }
+    // ---------- PUT: escrita/atualização ----------
+    public static Object put(String rota, Params params) { return d().dispatchPut(rota, params.build()); }
+    public static Object put(String rota, Object... args){ return d().dispatchPut(rota, args); }
 
-    /**
-     * Busca dados em uma rota GET sem argumentos.
-     */
-    public static Object get(String rota) {
-        return WinterApplication.getInstance()
-                .getApiDispatcher()
-                .dispatch(rota);
-    }
+    // ---------- DELETE: remoção ----------
+    public static Object delete(String rota, Params params) { return d().dispatchDelete(rota, params.build()); }
 
-    /**
-     * Executa um método pelo nome dentro do controller da rota especificada.
-     *
-     * @param rota  A rota do controller (ex: "catalogo_form").
-     * @param action O nome do método a ser executado (ex: "clear").
-     * @return O que o método retornou, ou ResponseData de erro.
-     */
-    public static Object executeAction(String rota, String action) {
-        return WinterApplication.getInstance()
-                .getApiDispatcher()
-                .dispatchAction(rota, action);
-    }
+    // ---------- EXEC: comandos/processos ----------
+    public static Object exec(String rota)               { return d().dispatchExec(rota); }
+    public static Object exec(String rota, Params params){ return d().dispatchExec(rota, params.build()); }
 
-    /**
-     * Envia dados via POST baseado em ordem posicional (Legado).
-     */
-    public static Object post(String rota, Object... argumentos) {
-        return WinterApplication.getInstance()
-                .getApiDispatcher()
-                .dispatch(rota, argumentos);
-    }
+    // ---------- UI: TRANSPORTE de componentes visuais ----------
+    public static Object ui(String rota, Params params)  { return d().dispatchUi(rota, params.build()); }
+    public static Object ui(String rota)                 { return d().dispatchUi(rota); }
 
-    /**
-     * Utilitário para evitar cast manual ao usar o {@code get}.
-     */
+    // ---------- auxiliares ----------
+    public static Object executeAction(String rota, String action) { return d().dispatchAction(rota, action); }
+
     @SuppressWarnings("unchecked")
     public static <T> T receiveAs(String rota, Class<T> tipo) {
-        Object resultado = get(rota);
-        if (resultado == null) return null;
-        return (T) resultado;
+        Object result = get(rota);
+        if (result == null) return null;
+        if (!tipo.isInstance(result)) {
+            throw new RouteBindingException(
+                    "Rota '" + rota + "' retornou " + result.getClass().getSimpleName()
+                            + ", esperava " + tipo.getSimpleName());
+        }
+        return (T) result;
+    }
+
+    private static ApiDispatcher d() {
+        return WinterApplication.getInstance().getApiDispatcher();
     }
 }

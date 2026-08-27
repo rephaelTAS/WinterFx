@@ -1,12 +1,3 @@
-/*
- * ResourceGuard v1.0
- *
- * Responsabilidade: validar duplicidade, tipo incompatível, id inválido e recurso ausente.
- * Entrada: descriptor ou id.
- * Saída: erro claro ou resultado válido.
- * Depende de: ResourceRegistry, ResourceType.
- */
-
 package com.ossobo.winterfx.resources.guard;
 
 import com.ossobo.winterfx.resources.descriptor.ResourceDescriptor;
@@ -14,54 +5,34 @@ import com.ossobo.winterfx.resources.enums.ResourceType;
 import com.ossobo.winterfx.resources.excecoes.ResourceValidationException;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 
+import java.util.Collection;
 import java.util.Objects;
 
 /**
- * 🛡️ ResourceGuard v1.0
- * <p>
- * Validador de consistência para recursos.
- * Garante que apenas recursos válidos sejam registrados e consumidos.
- * </p>
+ * 🛡️ ResourceGuard v3.0
  *
- * <pre>
- * Uso típico:
- *   guard.validateForRegistration(descriptor);
- *   guard.validateExists("main-view", ResourceType.FXML);
- * </pre>
+ * Validador de consistência para recursos.
+ * Usa interface Record-style.
  */
 public final class ResourceGuard {
 
+    private static final System.Logger LOGGER = System.getLogger(ResourceGuard.class.getName());
+
     private final ResourceRegistry registry;
 
-    /**
-     * Construtor que recebe o registry como dependência.
-     */
     public ResourceGuard(ResourceRegistry registry) {
         this.registry = registry;
     }
 
-    // ===== VALIDAÇÃO DE REGISTRO =====
-
-    /**
-     * Valida um descriptor antes do registro.
-     * Verifica: ID, URL, unicidade e consistência de tipo.
-     *
-     * @param descriptor Descriptor a ser validado
-     * @throws ResourceValidationException Se validação falhar
-     */
     public void validateForRegistration(ResourceDescriptor descriptor) {
         Objects.requireNonNull(descriptor, "Descriptor não pode ser nulo");
 
-        validateId(descriptor.getId());
+        validateId(descriptor.id());
         validateUrl(descriptor);
         validateUniqueness(descriptor);
         validateTypeConsistency(descriptor);
     }
 
-    /**
-     * Valida o formato do ID.
-     * Aceita apenas: letras, números, ponto, underline e hífen.
-     */
     private void validateId(String id) {
         if (id == null || id.isBlank()) {
             throw new ResourceValidationException("ID do recurso não pode ser vazio");
@@ -74,45 +45,35 @@ public final class ResourceGuard {
         }
     }
 
-    /**
-     * Valida se a URL não é nula.
-     */
     private void validateUrl(ResourceDescriptor descriptor) {
-        if (descriptor.getUrl() == null) {
+        if (descriptor.url() == null) {
             throw new ResourceValidationException(
-                    "URL não pode ser nula para o recurso: " + descriptor.getId()
+                    "URL não pode ser nula para o recurso: " + descriptor.id()
             );
         }
     }
 
-    /**
-     * Valida se o ID já não está registrado.
-     */
     private void validateUniqueness(ResourceDescriptor descriptor) {
-        registry.findById(descriptor.getId()).ifPresent(existing -> {
+        registry.findById(descriptor.id()).ifPresent(existing -> {
             throw new ResourceValidationException(
                     String.format("Recurso com ID '%s' já registrado (tipo: %s, origem: %s)",
-                            descriptor.getId(), existing.getResourceType(), existing.getOrigin())
+                            descriptor.id(), existing.resourceType(), existing.origin())
             );
         });
     }
 
-    /**
-     * Valida consistência entre extensão do arquivo e tipo declarado.
-     * Apenas emite warning, não bloqueia o registro.
-     */
     private void validateTypeConsistency(ResourceDescriptor descriptor) {
-        String url = descriptor.getUrl().toString().toLowerCase();
-        ResourceType declaredType = descriptor.getResourceType();
-        ResourceType detectedType = detectTypeFromUrl(url);
+        var url = descriptor.url().toString().toLowerCase();
+        var declaredType = descriptor.resourceType();
+        var detectedType = detectTypeFromUrl(url);
 
         if (detectedType != ResourceType.UNKNOWN && detectedType != declaredType) {
+            LOGGER.log(System.Logger.Level.WARNING,
+                    "Tipo declarado ({0}) diverge da extensão detectada ({1}) no recurso: {2}",
+                    declaredType, detectedType, descriptor.id());
         }
     }
 
-    /**
-     * Detecta o tipo do recurso baseado na extensão da URL.
-     */
     private ResourceType detectTypeFromUrl(String url) {
         if (url.endsWith(".fxml")) return ResourceType.FXML;
         if (url.endsWith(".css")) return ResourceType.CSS;
@@ -123,22 +84,13 @@ public final class ResourceGuard {
         return ResourceType.UNKNOWN;
     }
 
-    // ===== VALIDAÇÃO DE CONSUMO =====
-
-    /**
-     * Valida existência de recurso antes do consumo.
-     *
-     * @param id Identificador do recurso
-     * @param expectedType Tipo esperado
-     * @throws ResourceValidationException Se recurso não existe ou tipo incompatível
-     */
     public void validateExists(String id, ResourceType expectedType) {
         registry.findById(id).ifPresentOrElse(
                 descriptor -> {
-                    if (descriptor.getResourceType() != expectedType) {
+                    if (descriptor.resourceType() != expectedType) {
                         throw new ResourceValidationException(
                                 String.format("Recurso '%s' é do tipo %s, mas %s era esperado",
-                                        id, descriptor.getResourceType(), expectedType)
+                                        id, descriptor.resourceType(), expectedType)
                         );
                     }
                 },
@@ -148,37 +100,16 @@ public final class ResourceGuard {
         );
     }
 
-    /**
-     * Valida se múltiplos recursos existem.
-     *
-     * @param ids Lista de identificadores
-     * @param expectedType Tipo esperado para todos
-     * @throws ResourceValidationException Se algum recurso não existe ou tipo incompatível
-     */
-    public void validateAllExist(java.util.Collection<String> ids, ResourceType expectedType) {
+    public void validateAllExist(Collection<String> ids, ResourceType expectedType) {
         for (String id : ids) {
             validateExists(id, expectedType);
         }
     }
 
-    // ===== VERIFICAÇÕES (SEM LANÇAR EXCEÇÃO) =====
-
-    /**
-     * Verifica se um ID está disponível para registro.
-     *
-     * @param id Identificador a verificar
-     * @return true se disponível
-     */
     public boolean isIdAvailable(String id) {
         return registry.findById(id).isEmpty();
     }
 
-    /**
-     * Verifica se um descriptor é válido (sem lançar exceção).
-     *
-     * @param descriptor Descriptor a validar
-     * @return true se válido
-     */
     public boolean isValid(ResourceDescriptor descriptor) {
         try {
             validateForRegistration(descriptor);
@@ -188,15 +119,6 @@ public final class ResourceGuard {
         }
     }
 
-    // ===== SUGESTÕES =====
-
-    /**
-     * Sugere IDs alternativos baseados em um ID base.
-     * Útil quando há colisão de nomes.
-     *
-     * @param baseId ID base desejado
-     * @return ID sugerido com sufixo numérico
-     */
     public String suggestAlternativeId(String baseId) {
         if (isIdAvailable(baseId)) {
             return baseId;

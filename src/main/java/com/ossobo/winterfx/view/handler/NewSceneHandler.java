@@ -1,12 +1,12 @@
-// NewSceneHandler.java v3.0 - 2026-07-01
+// NewSceneHandler.java v4.0 - 2026-08-23
 // Handler para @NewScene com troca de cena e execução condicional AFTER.
-// DESACOPLADO: StageManager injetado, sem dependência do WinterApplication.
+// DESACOPLADO: Usa ResourceModule (Fachada) em vez de ResourceRegistry.
 package com.ossobo.winterfx.view.handler;
 
+import com.ossobo.winterfx.resources.ResourceModule;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
 import com.ossobo.winterfx.runtime.handler.AnnotationHandler;
-import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.view.anotations.NewScene;
 import com.ossobo.winterfx.view.loader.LoadedView;
@@ -19,22 +19,25 @@ import javafx.stage.Stage;
 import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Handler para {@code @NewScene} — troca de cena após sucesso do método.
  *
  * <p>Dependências injetadas via construtor — NÃO acessa {@code WinterApplication}.</p>
  *
- * @version 3.0 (01/07/2026)
+ * @version 4.0 (23/08/2026)
  */
 public class NewSceneHandler implements AnnotationHandler<NewScene> {
 
-    private final StageManager stageManager;
-    private final ResourceRegistry registry;
+    private static final System.Logger LOGGER = System.getLogger(NewSceneHandler.class.getName());
 
-    public NewSceneHandler(StageManager stageManager, ResourceRegistry registry) {
-        this.stageManager = stageManager;
-        this.registry = registry;
+    private final StageManager stageManager;
+    private final ResourceModule resourceModule;
+
+    public NewSceneHandler(StageManager stageManager, ResourceModule resourceModule) {
+        this.stageManager = Objects.requireNonNull(stageManager);
+        this.resourceModule = Objects.requireNonNull(resourceModule);
     }
 
     @Override
@@ -47,26 +50,30 @@ public class NewSceneHandler implements AnnotationHandler<NewScene> {
         return NewScene.class;
     }
 
+    /**
+     * Executa a troca de cena após o sucesso do método anotado.
+     * Usa ResourceModule.requireView() para obter o ViewDescriptor.
+     */
     @Override
     public void handle(AnnotationContext context, NewScene annotation) {
         try {
-            if (stageManager == null || registry == null) return;
+            if (stageManager == null || resourceModule == null) return;
+
+            // ✅ Usa ResourceModule.requireView() - Fail-Fast e O(1)
+            ViewDescriptor descriptor = resourceModule.requireView(annotation.view());
 
             LoadedView<?> loadedView = stageManager.loadView(annotation.view());
-            Parent root = loadedView.getRoot();
+            Parent root = loadedView.root();
 
-            ViewDescriptor descriptor = registry.findViewById(annotation.view()).orElse(null);
-            if (descriptor == null) return;
-
-            double width = annotation.width() > 0 ? annotation.width() : descriptor.getWidth();
-            double height = annotation.height() > 0 ? annotation.height() : descriptor.getHeight();
+            double width = annotation.width() > 0 ? annotation.width() : descriptor.width();
+            double height = annotation.height() > 0 ? annotation.height() : descriptor.height();
 
             Scene newScene = new Scene(root, width, height);
 
-            URL primaryCss = descriptor.getPrimaryCss();
+            URL primaryCss = descriptor.primaryCss();
             if (primaryCss != null) newScene.getStylesheets().add(primaryCss.toExternalForm());
 
-            List<URL> additionalCss = descriptor.getAdditionalCss();
+            List<URL> additionalCss = descriptor.additionalCss();
             if (additionalCss != null) {
                 for (URL css : additionalCss) newScene.getStylesheets().add(css.toExternalForm());
             }
@@ -75,7 +82,7 @@ public class NewSceneHandler implements AnnotationHandler<NewScene> {
             if (stage == null) stage = new Stage();
 
             final Stage finalStage = stage;
-            final String title = annotation.title().isEmpty() ? descriptor.getTitle() : annotation.title();
+            final String title = annotation.title().isEmpty() ? descriptor.title() : annotation.title();
             final boolean centered = annotation.centered();
 
             Platform.runLater(() -> {
@@ -85,7 +92,12 @@ public class NewSceneHandler implements AnnotationHandler<NewScene> {
                 finalStage.show();
             });
 
-        } catch (Exception ignored) {}
+            LOGGER.log(System.Logger.Level.INFO, "Nova cena exibida: {0}", annotation.view());
+
+        } catch (Exception e) {
+            LOGGER.log(System.Logger.Level.ERROR,
+                    "Erro ao trocar para nova cena: " + annotation.view(), e);
+        }
     }
 
     @Override public boolean isBeforePhase() { return false; }

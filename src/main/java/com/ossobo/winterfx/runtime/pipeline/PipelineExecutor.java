@@ -1,32 +1,27 @@
+// PipelineExecutor.java v7.0 - 2026-08-22
+// Orquestrador com verificação canAccess() para JPMS
 package com.ossobo.winterfx.runtime.pipeline;
 
 import com.ossobo.winterfx.runtime.HandlerRegistry;
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
- * PipelineExecutor v6.0 — DESACOPLADO
+ * PipelineExecutor v7.0 — JPMS-SAFE + DRY
  *
  * <p>Orquestrador genérico de pipeline de interceptação.
  * NÃO conhece anotações específicas nem módulos externos.</p>
  *
  * <p><b>Fluxo:</b></p>
  * <ol>
- *   <li>FASE BEFORE — delega ao {@link HandlerRegistry#executeBeforePhase(Method, AnnotationContext)}</li>
- *   <li>EXECUÇÃO — invoca o método real</li>
- *   <li>FASE AFTER:
- *     <ul>
- *       <li>Se erro → {@link HandlerRegistry#executeErrorPhase(Method, AnnotationContext)}</li>
- *       <li>Se sucesso → {@link HandlerRegistry#executeSuccessPhase(Method, AnnotationContext)}</li>
- *     </ul>
- *   </li>
+ *   <li>FASE BEFORE — delegada ao {@link HandlerRegistry}</li>
+ *   <li>EXECUÇÃO — invoca método com verificação JPMS</li>
+ *   <li>FASE AFTER — delegada ao {@link HandlerRegistry}</li>
  * </ol>
  *
- * <p>Cada módulo registra seus próprios handlers no {@link HandlerRegistry}.
- * O PipelineExecutor apenas orquestra as fases, sem saber o que cada handler faz.</p>
- *
- * @version 6.0 (01/07/2026)
+ * @version 7.0 (22/08/2026) - JPMS-Safe: canAccess() antes de setAccessible()
  */
 public final class PipelineExecutor {
 
@@ -42,10 +37,12 @@ public final class PipelineExecutor {
      * @param target Objeto alvo (controller)
      * @param method Método a ser executado
      * @param args   Argumentos do método
-     * @return true se executou com sucesso, false se houve erro
+     * @return Resultado da execução ou null se interrompido
+     * @throws Throwable Se ocorrer erro não tratado
      */
-    public boolean execute(Object target, Method method, Object... args) {
-        AnnotationContext ctx = new AnnotationContext(target, method, args);
+    public Object execute(Object target, Method method, Object... args) throws Throwable {
+        // Cria contexto com timestamp inicial
+        AnnotationContext ctx = AnnotationContext.before(target, method, args);
 
         // ============================================================
         // FASE 1: BEFORE
@@ -54,31 +51,49 @@ public final class PipelineExecutor {
             handlerRegistry.executeBeforePhase(method, ctx);
         } catch (Exception e) {
             // Handler BEFORE interrompeu o pipeline (ex: usuário cancelou)
-            return false;
+            return null;
         }
 
         // ============================================================
-        // FASE 2: EXECUÇÃO DO MÉTODO
+        // FASE 2: EXECUÇÃO DO MÉTODO (JPMS-SAFE)
         // ============================================================
-        Object result = null;
+        Object result;
         Throwable error = null;
 
         try {
-            method.setAccessible(true);
+            // VERIFICAÇÃO JPMS: só setAccessible se não tiver acesso
+            if (!method.canAccess(target)) {
+                method.setAccessible(true);
+            }
             result = method.invoke(target, args);
-        } catch (Throwable e) {
-            error = e.getCause() != null ? e.getCause() : e;
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            error = cause;
+            result = null;
+        } catch (IllegalAccessException e) {
+            // Falha crítica de acesso
+            throw new IllegalStateException(
+                    "Não foi possível acessar método " + method.getName() +
+                            " em " + target.getClass().getName(), e
+            );
         }
 
         // ============================================================
         // FASE 3: AFTER (CONDICIONAL)
         // ============================================================
         if (error != null) {
-            handlerRegistry.executeErrorPhase(method, ctx.withError(error));
-            return false;
+            AnnotationContext errorCtx = ctx.withError(error);
+            handlerRegistry.executeErrorPhase(method, errorCtx);
+
+            // Se há handlers de erro, não relança
+            if (handlerRegistry.hasErrorHandlers(method)) {
+                return null;
+            }
+            throw error;
         } else {
-            handlerRegistry.executeSuccessPhase(method, ctx.withResult(result));
-            return true;
+            AnnotationContext successCtx = ctx.withResult(result);
+            handlerRegistry.executeSuccessPhase(method, successCtx);
+            return result;
         }
     }
 }

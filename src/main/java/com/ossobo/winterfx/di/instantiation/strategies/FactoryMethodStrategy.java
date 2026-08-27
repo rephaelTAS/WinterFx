@@ -58,8 +58,8 @@ public final class FactoryMethodStrategy implements InstantiationStrategy {
      */
     @Override
     public Object instantiate(BeanDefinition definition) throws Exception {
-        Class<?> factoryClass = definition.getFactoryClass();
-        Method factoryMethod = definition.getFactoryMethod();
+        Class<?> factoryClass = definition.factoryClass();
+        Method factoryMethod = definition.factoryMethod();
 
         Object factoryInstance = dependencyResolver.getBean(factoryClass);
         Object[] args = resolveArguments(factoryMethod);

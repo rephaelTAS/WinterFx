@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ViewState {
 
+
     // Mapa que liga o nome do campo (ex: "lblStatus") à sua propriedade reativa
     private final Map<String, ObservableValue<?>> reactiveProperties = new ConcurrentHashMap<>();
 

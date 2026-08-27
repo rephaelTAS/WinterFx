@@ -111,7 +111,7 @@ public class OnExceptionHandler extends BaseNotificationHandler<OnException> {
         if (ctx.hasError()) {
             runOnFx(() -> {
                 // Captura exceção do contexto
-                Throwable error = ctx.getError();
+                Throwable error = ctx.error();
 
                 // Loga exceção (opcional, para debugging)
                 // LOGGER.warn(() -> "❌ Exceção processada: " + error.getMessage(), error);

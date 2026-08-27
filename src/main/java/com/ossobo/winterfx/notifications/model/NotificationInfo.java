@@ -1,14 +1,16 @@
+// NotificationInfo.java v2.0 - 2026-08-22
+// Migrado de classe imutável manual para Record Java 17+
 package com.ossobo.winterfx.notifications.model;
 
-
 import com.ossobo.winterfx.notifications.enums.NotificationType;
-import com.ossobo.winterfx.resources.enums.CssMode;
 import com.ossobo.winterfx.resources.enums.Modality;
 
+import java.util.Objects;
+
 /**
- * 📋 NotificationInfo v1.0
+ * 📋 NotificationInfo v2.0
  *
- * Representa os dados de uma notificação/alerta.
+ * Representa os dados imutáveis de uma notificação/alerta (Record Java 17+).
  *
  * <p>Campos:
  * <ul>
@@ -19,36 +21,43 @@ import com.ossobo.winterfx.resources.enums.Modality;
  *   <li><b>tipo</b> - Tipo da notificação (SUCCESS, ERROR, WARNING, INFO)</li>
  *   <li><b>modalidade</b> - Se bloqueia ou não (MODAL, NAO_MODAL)</li>
  * </ul>
+ *
+ * @version 2.0 (22/08/2026) - Transformado em Record
  */
-public final class NotificationInfo {
+public record NotificationInfo(
+        String titulo,
+        String descricao,
+        String detalhes,
+        String origem,
+        NotificationType tipo,
+        Modality modalidade
+) {
 
+    /**
+     * Construtor compacto para validação e limpeza de nulos.
+     */
+    public NotificationInfo {
+        Objects.requireNonNull(titulo, "titulo é obrigatório");
+        Objects.requireNonNull(descricao, "descricao é obrigatório");
+        if (titulo.isEmpty()) throw new IllegalArgumentException("titulo não pode ser vazio");
+        if (descricao.isEmpty()) throw new IllegalArgumentException("descricao não pode ser vazio");
 
-
-    private final String titulo;
-    private final String descricao;
-    private final String detalhes;
-    private final String origem;
-    private final NotificationType tipo;
-    private final Modality modalidade;
-
-    private NotificationInfo(Builder builder) {
-        this.titulo = builder.titulo;
-        this.descricao = builder.descricao;
-        this.detalhes = builder.detalhes;
-        this.origem = builder.origem;
-        this.tipo = builder.tipo;
-        this.modalidade = builder.modalidade;
+        detalhes = (detalhes != null && !detalhes.isBlank()) ? detalhes : null;
+        tipo = Objects.requireNonNullElse(tipo, NotificationType.INFO);
+        modalidade = Objects.requireNonNullElse(modalidade, Modality.NAO_MODAL);
     }
 
-    public String getTitulo()        { return titulo; }
-    public String getDescricao()     { return descricao; }
-    public String getDetalhes()      { return detalhes; }
-    public String getOrigem()        { return origem; }
-    public NotificationType getTipo() { return tipo; }
-    public Modality getModalidade() { return modalidade; }
+    // ===== Métodos de Negócio =====
 
-    public boolean hasDetalhes()     { return detalhes != null && !detalhes.isEmpty(); }
-    public boolean isModal()         { return modalidade == Modality.MODAL; }
+    public boolean hasDetalhes() {
+        return detalhes != null && !detalhes.isEmpty();
+    }
+
+    public boolean isModal() {
+        return modalidade == Modality.MODAL;
+    }
+
+    // ===== Builder =====
 
     public static Builder builder() {
         return new Builder();
@@ -117,13 +126,8 @@ public final class NotificationInfo {
         }
 
         public NotificationInfo build() {
-            if (titulo == null || titulo.isEmpty()) {
-                throw new IllegalArgumentException("titulo é obrigatório");
-            }
-            if (descricao == null || descricao.isEmpty()) {
-                throw new IllegalArgumentException("descricao é obrigatório");
-            }
-            return new NotificationInfo(this);
+            // Validações são delegadas ao construtor compacto do Record
+            return new NotificationInfo(titulo, descricao, detalhes, origem, tipo, modalidade);
         }
     }
 

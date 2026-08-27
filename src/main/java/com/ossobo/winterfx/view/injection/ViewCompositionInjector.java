@@ -1,13 +1,13 @@
 package com.ossobo.winterfx.view.injection;
 
 import com.ossobo.winterfx.di.injection.DependencyInjector;
+import com.ossobo.winterfx.resources.ResourceModule;
+import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
 import com.ossobo.winterfx.scanner.ReflectionScanner;
 import com.ossobo.winterfx.view.anotations.InjectView;
 import com.ossobo.winterfx.view.callback.ViewLoadedListener;
 import com.ossobo.winterfx.view.controller.WinterFXController;
 import com.ossobo.winterfx.view.loader.LoadedView;
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.LazyViewProxy;
 import com.ossobo.winterfx.view.StageManager;
 
@@ -22,42 +22,40 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
 
 /**
- * ViewCompositionInjector v4.0 — Arquitetura MVVM
+ * ViewCompositionInjector v5.0 — Arquitetura MVVM
  *
  * <p>Responsável pela COMPOSIÇÃO de Views (injetar View B dentro da View A).
  * No padrão MVVM do WinterFx, este injetor NÃO lida com o estado reativo dos campos,
  * mas sim com a estrutura visual em árvore das telas.</p>
  *
- * <p>Mantém as features avançadas: Lazy Proxy, Injeção Tardia e Bind de Layout.</p>
+ * <p><b>v5.0:</b> Desacoplado de ResourceRegistry, agora usa ResourceModule (Fachada).</p>
  *
- * @version 4.0 (MVVM Adaptation)
+ * @version 5.0 (23/08/2026)
  */
 public class ViewCompositionInjector implements DependencyInjector, ViewLoadedListener {
 
-    private static final Logger LOGGER = Logger.getLogger(ViewCompositionInjector.class.getName());
+    private static final Logger LOGGER = System.getLogger(ViewCompositionInjector.class.getName());
 
     private final ReflectionScanner reflectionScanner;
-    private final ResourceRegistry resourceRegistry;
+    private final ResourceModule resourceModule;
     private final StageManager stageManager;
-
-    // [NOVO] Referência ao estado da View PAI para gerenciamento de ciclo de vida em cascata
     private final ViewState parentViewState;
 
     private final Map<String, List<InjectionRequest>> pendingInjections = new ConcurrentHashMap<>();
 
     public ViewCompositionInjector(ReflectionScanner reflectionScanner,
-                                   ResourceRegistry resourceRegistry,
+                                   ResourceModule resourceModule,
                                    StageManager stageManager,
                                    ViewState parentViewState) {
-        this.reflectionScanner = reflectionScanner;
-        this.resourceRegistry = resourceRegistry;
-        this.stageManager = stageManager;
+        this.reflectionScanner = Objects.requireNonNull(reflectionScanner);
+        this.resourceModule = Objects.requireNonNull(resourceModule);
+        this.stageManager = Objects.requireNonNull(stageManager);
         this.parentViewState = parentViewState;
     }
 
@@ -76,7 +74,7 @@ public class ViewCompositionInjector implements DependencyInjector, ViewLoadedLi
 
     @Override
     public void inject(Object instance, Class<?> type) {
-        if (resourceRegistry == null || stageManager == null) return;
+        if (resourceModule == null || stageManager == null) return;
 
         List<Field> viewFields = reflectionScanner.getFieldsWithAnnotation(type, InjectView.class);
 
@@ -85,13 +83,8 @@ public class ViewCompositionInjector implements DependencyInjector, ViewLoadedLi
             String viewId = annotation.value();
 
             try {
-                Optional<ViewDescriptor> optDescriptor = resourceRegistry.findViewById(viewId);
-                if (optDescriptor.isEmpty()) {
-                    if (annotation.required()) {
-                        throw new IllegalArgumentException("View não registrada para composição: '" + viewId + "'");
-                    }
-                    continue;
-                }
+                // ✅ Usa ResourceModule.requireView() - Fail-Fast e O(1)
+                ViewDescriptor descriptor = resourceModule.requireView(viewId);
 
                 Class<?> fieldType = field.getType();
 
@@ -105,6 +98,7 @@ public class ViewCompositionInjector implements DependencyInjector, ViewLoadedLi
                 if (annotation.required()) {
                     throw new RuntimeException("Falha na composição da view: " + viewId, e);
                 }
+                LOGGER.log(Logger.Level.DEBUG, "View opcional não encontrada: " + viewId);
             }
         }
     }
@@ -114,17 +108,17 @@ public class ViewCompositionInjector implements DependencyInjector, ViewLoadedLi
     // ============================================================
 
     private void injectViewDirect(Object instance, Field field, String viewId, InjectView annotation) {
-        if (stageManager.isViewCached(viewId)) {
+        try {
+            // O StageManager.loadView() JÁ verifica o cache internamente.
+            // Se tiver no cache, ele retorna do cache. Se não tiver, ele carrega do FXML.
+            // Remover o if/else anterior elimina o deadlock da injeção pendente.
             LoadedView<?> loadedView = stageManager.loadView(viewId);
-            try {
-                injectIntoField(instance, field, loadedView.getRoot(), annotation.child());
-            } catch (IllegalAccessException e) {
-                LOGGER.warning(() -> "Falha ao injetar view na composição: " + viewId);
-            }
-            return;
-        }
 
-        registerPendingViewInjection(instance, field, viewId, annotation.child());
+            injectIntoField(instance, field, loadedView.root(), annotation.child());
+
+        } catch (Exception e) {
+            LOGGER.log(Logger.Level.WARNING, "Falha ao injetar view na composição: " + viewId, e);
+        }
     }
 
     // ============================================================
@@ -159,7 +153,7 @@ public class ViewCompositionInjector implements DependencyInjector, ViewLoadedLi
     private void injectControllerDirect(Object instance, Field field, String viewId) {
         try {
             LoadedView<?> loaded = stageManager.loadView(viewId);
-            Object controller = loaded.getController();
+            Object controller = loaded.controller();
             if (controller != null) {
                 field.setAccessible(true);
                 field.set(instance, controller);
@@ -183,7 +177,7 @@ public class ViewCompositionInjector implements DependencyInjector, ViewLoadedLi
         LoadedView<?> loaded = stageManager.loadView(viewId);
         for (InjectionRequest req : requests) {
             try {
-                injectIntoField(req.instance, req.field, loaded.getRoot(), req.childId);
+                injectIntoField(req.instance, req.field, loaded.root(), req.childId);
             } catch (Exception ignored) {}
         }
     }

@@ -1,10 +1,11 @@
-// HandlerRegistry.java v3.0 - 2026-07-01
-// Registro central de handlers com cache por Method. Lookup O(1).
-// Pipeline condicional: BEFORE, AFTER_SUCCESS, AFTER_ERROR.
+// HandlerRegistry.java v5.0 - 2026-08-22
+// Registro central de handlers com cache de anotações para performance O(1)
+// Pipeline condicional: BEFORE, AFTER_SUCCESS, AFTER_ERROR
 //
-// DESACOPLADO: não conhece anotações específicas, apenas AnnotationHandler<T>.
+// OTIMIZAÇÃO: Cacheia Handler + Annotation em um Record imutável,
+// eliminando chamadas repetidas a method.getAnnotation() durante execução.
 //
-// @version 3.0 - executeBeforePhase + hasErrorHandlers + matchesPhase removido
+// @version 5.0 (22/08/2026) - Cache de anotações + List.copyOf() + var
 package com.ossobo.winterfx.runtime;
 
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
@@ -13,7 +14,6 @@ import com.ossobo.winterfx.runtime.handler.AnnotationHandler;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,17 +33,24 @@ import java.util.concurrent.ConcurrentHashMap;
  *   </li>
  * </ol>
  *
- * <p>NÃO conhece anotações concretas. Opera apenas com {@link AnnotationHandler}
- * e seu contrato de fases ({@code isBeforePhase}, {@code isSuccessOnly}, {@code isErrorOnly}).</p>
+ * <p><b>Performance:</b> Cacheia {@code Handler + Annotation} em um Record imutável,
+ * eliminando chamadas repetidas a {@code method.getAnnotation()} durante execução.</p>
  *
- * @version 3.0 (01/07/2026)
+ * @version 5.0 (22/08/2026) - Cache de anotações com CachedHandler
  */
 public final class HandlerRegistry {
+
+    /**
+     * Record interno imutável que agrupa Handler + Anotação já resolvida.
+     * Elimina chamadas a method.getAnnotation() durante a execução do pipeline.
+     */
+    private record CachedHandler(AnnotationHandler<?> handler, Annotation annotation) {}
 
     private final Map<Class<? extends Annotation>, AnnotationHandler<?>> handlers =
             new ConcurrentHashMap<>();
 
-    private final Map<Method, List<AnnotationHandler<?>>> cache =
+    // Cache: Method → Lista de CachedHandler (Handler + Annotation já resolvidos)
+    private final Map<Method, List<CachedHandler>> cache =
             new ConcurrentHashMap<>();
 
     // ==================== REGISTRO ====================
@@ -53,7 +60,7 @@ public final class HandlerRegistry {
      */
     public <A extends Annotation> void register(AnnotationHandler<A> handler) {
         handlers.put(handler.getAnnotationType(), handler);
-        cache.clear();
+        cache.clear(); // Invalida cache ao registrar novo handler
     }
 
     /**
@@ -61,7 +68,7 @@ public final class HandlerRegistry {
      */
     public void unregister(Class<? extends Annotation> annotationType) {
         handlers.remove(annotationType);
-        cache.clear();
+        cache.clear(); // Invalida cache ao remover handler
     }
 
     // ==================== CONSULTA ====================
@@ -87,7 +94,7 @@ public final class HandlerRegistry {
      */
     public boolean hasErrorHandlers(Method method) {
         return getHandlers(method).stream()
-                .anyMatch(h -> h.isAfterPhase() && h.isErrorOnly());
+                .anyMatch(entry -> entry.handler().isAfterPhase() && entry.handler().isErrorOnly());
     }
 
     public int size() {
@@ -102,74 +109,80 @@ public final class HandlerRegistry {
 
     /**
      * Executa handlers da fase BEFORE.
+     * O(1) no cache — sem reflexão durante execução.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public void executeBeforePhase(Method method, AnnotationContext ctx) {
-        for (AnnotationHandler<?> handler : getHandlers(method)) {
-            if (handler.isBeforePhase()) {
-                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-                if (annotation != null) {
-                    ((AnnotationHandler) handler).handle(ctx, annotation);
-                }
+        for (var entry : getHandlers(method)) {
+            if (entry.handler().isBeforePhase()) {
+                @SuppressWarnings("unchecked")
+                var typedHandler = (AnnotationHandler<Annotation>) entry.handler();
+                typedHandler.handle(ctx, entry.annotation());
             }
         }
     }
 
     /**
      * Executa handlers da fase AFTER — SUCESSO.
+     * O(1) no cache — sem reflexão durante execução.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public void executeSuccessPhase(Method method, AnnotationContext ctx) {
-        for (AnnotationHandler<?> handler : getHandlers(method)) {
-            if (handler.isAfterPhase() && handler.isSuccessOnly()) {
-                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-                if (annotation != null) {
-                    ((AnnotationHandler) handler).handle(ctx, annotation);
-                }
+        for (var entry : getHandlers(method)) {
+            if (entry.handler().isAfterPhase() && entry.handler().isSuccessOnly()) {
+                @SuppressWarnings("unchecked")
+                var typedHandler = (AnnotationHandler<Annotation>) entry.handler();
+                typedHandler.handle(ctx, entry.annotation());
             }
         }
     }
 
     /**
      * Executa handlers da fase AFTER — ERRO.
+     * O(1) no cache — sem reflexão durante execução.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public void executeErrorPhase(Method method, AnnotationContext ctx) {
-        for (AnnotationHandler<?> handler : getHandlers(method)) {
-            if (handler.isAfterPhase() && handler.isErrorOnly()) {
-                Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-                if (annotation != null) {
-                    ((AnnotationHandler) handler).handle(ctx, annotation);
-                }
+        for (var entry : getHandlers(method)) {
+            if (entry.handler().isAfterPhase() && entry.handler().isErrorOnly()) {
+                @SuppressWarnings("unchecked")
+                var typedHandler = (AnnotationHandler<Annotation>) entry.handler();
+                typedHandler.handle(ctx, entry.annotation());
             }
         }
     }
 
     /**
      * Executa todos os handlers (independente de fase).
+     * O(1) no cache — sem reflexão durante execução.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public void execute(Method method, AnnotationContext ctx) {
-        for (AnnotationHandler<?> handler : getHandlers(method)) {
-            Annotation annotation = method.getAnnotation(handler.getAnnotationType());
-            if (annotation != null) {
-                ((AnnotationHandler) handler).handle(ctx, annotation);
-            }
+        for (var entry : getHandlers(method)) {
+            @SuppressWarnings("unchecked")
+            var typedHandler = (AnnotationHandler<Annotation>) entry.handler();
+            typedHandler.handle(ctx, entry.annotation());
         }
     }
 
     // ==================== CACHE ====================
 
-    private List<AnnotationHandler<?>> getHandlers(Method method) {
+    /**
+     * Retorna lista de handlers cacheados para o método.
+     *
+     * <p><b>Otimização:</b> Resolve anotações UMA VEZ no build do cache,
+     * eliminando chamadas a {@code method.getAnnotation()} durante execução.</p>
+     */
+    private List<CachedHandler> getHandlers(Method method) {
         return cache.computeIfAbsent(method, m -> {
-            List<AnnotationHandler<?>> result = new ArrayList<>();
+            var result = new ArrayList<CachedHandler>();
+
             for (Annotation annotation : m.getAnnotations()) {
-                AnnotationHandler<?> handler = handlers.get(annotation.annotationType());
+                var handler = handlers.get(annotation.annotationType());
                 if (handler != null) {
-                    result.add(handler);
+                    // Cacheia o handler E a instância da anotação em um único objeto imutável
+                    result.add(new CachedHandler(handler, annotation));
                 }
             }
-            return Collections.unmodifiableList(result);
+
+            // List.copyOf() é mais idiomático e imutável para Java 17+
+            return List.copyOf(result);
         });
     }
 }

@@ -1,8 +1,13 @@
 package com.ossobo.winterfx.router.model;
 
 import com.ossobo.winterfx.anotations.RouteVar;
+
 import java.lang.reflect.Parameter;
 
+/**
+ * RouteVarResolver v3.0.
+ * Java 17+ com Switch Expression e Pattern Matching.
+ */
 public final class RouteVarResolver implements ParameterResolver {
 
     @Override
@@ -12,9 +17,9 @@ public final class RouteVarResolver implements ParameterResolver {
 
     @Override
     public Object resolve(Parameter p, RouteRequest request) {
-        RouteVar ann = p.getAnnotation(RouteVar.class);
-        String key   = ann.value();
-        Object value = request.get(key);
+        var ann = p.getAnnotation(RouteVar.class);
+        var key = ann.value();
+        var value = request.get(key);
 
         if (value == null) {
             if (p.getType().isPrimitive()) {
@@ -24,7 +29,7 @@ public final class RouteVarResolver implements ParameterResolver {
             return null;
         }
 
-        Class<?> expected = boxed(p.getType());
+        var expected = boxed(p.getType());
         if (!expected.isInstance(value)) {
             throw new RouteBindingException(String.format(
                     "Tipo incompatível em @RouteVar(\"%s\"): esperado %s, recebido %s",
@@ -33,15 +38,20 @@ public final class RouteVarResolver implements ParameterResolver {
         return value;
     }
 
-    private static Class<?> boxed(Class<?> t) {
-        if (t == int.class)     return Integer.class;
-        if (t == long.class)    return Long.class;
-        if (t == boolean.class) return Boolean.class;
-        if (t == double.class)  return Double.class;
-        if (t == float.class)   return Float.class;
-        if (t == short.class)   return Short.class;
-        if (t == byte.class)    return Byte.class;
-        if (t == char.class)    return Character.class;
-        return t;
+    /**
+     * ✅ Switch Expression com Pattern Matching para boxing.
+     */
+    private static Class<?> boxed(Class<?> type) {
+        return switch (type.getName()) {
+            case "int" -> Integer.class;
+            case "long" -> Long.class;
+            case "boolean" -> Boolean.class;
+            case "double" -> Double.class;
+            case "float" -> Float.class;
+            case "short" -> Short.class;
+            case "byte" -> Byte.class;
+            case "char" -> Character.class;
+            default -> type;
+        };
     }
 }

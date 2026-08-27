@@ -1,29 +1,22 @@
 module com.ossobo.winterfx {
+    // JavaFX Core
     requires transitive javafx.controls;
     requires transitive javafx.fxml;
     requires transitive javafx.graphics;
     requires transitive javafx.base;
     requires transitive javafx.media;
 
-
-    requires org.objectweb.asm;
-    requires org.objectweb.asm.tree;
-    requires org.objectweb.asm.commons;
-
-    requires org.slf4j;
-    requires org.reflections;
+    // Core: Escaneamento e Proxies (Alinhado com o POM)
     requires io.github.classgraph;
-    requires java.sql;
-    requires com.google.gson;
-    requires com.google.common;
-    requires org.controlsfx.controls;
-    requires org.kordamp.ikonli.javafx;
-    requires org.kordamp.ikonli.core;
-    requires org.kordamp.bootstrapfx.core;
-    requires org.checkerframework.checker.qual;
     requires net.bytebuddy;
-    requires java.instrument;
 
+    // Opcionais: 'requires static' exige a lib na compilação, mas não no runtime do cliente final
+    requires static org.controlsfx.controls;
+    requires static org.kordamp.ikonli.javafx;
+    requires static org.kordamp.ikonli.core;
+    requires static org.kordamp.bootstrapfx.core;
+
+    // Exports
     exports com.ossobo.winterfx.bootstrap;
     exports com.ossobo.winterfx.exceptions;
     exports com.ossobo.winterfx.view.floatingwindow;
@@ -53,7 +46,6 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.notifications;
     exports com.ossobo.winterfx.notifications.model;
     exports com.ossobo.winterfx.notifications.controller;
-    exports com.ossobo.winterfx.notifications.resolver;
     exports com.ossobo.winterfx.notifications.exceptions;
     exports com.ossobo.winterfx.notifications.core;
     exports com.ossobo.winterfx.runtime.pipeline;
@@ -61,27 +53,16 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.view.floatingwindow.anotations;
     exports com.ossobo.winterfx.notifications.anotations;
     exports com.ossobo.winterfx.view.controller;
-
-    opens com.ossobo.winterfx.view to javafx.fxml;
-    opens com.ossobo.winterfx.view.loader to javafx.fxml;
-    opens com.ossobo.winterfx.notifications.controller to javafx.fxml;
-    opens com.ossobo.winterfx.notifications.model to javafx.fxml;
-    opens com.ossobo.winterfx.resources.descriptor to javafx.fxml;
-    opens com.ossobo.winterfx.event;
     exports com.ossobo.winterfx.anotations;
     exports com.ossobo.winterfx.view.anotations;
     exports com.ossobo.winterfx.view.design.anotations;
     exports com.ossobo.winterfx.notifications.enums;
     exports com.ossobo.winterfx.scanner;
-
-
     exports com.ossobo.winterfx.di.scopes.implementations;
     exports com.ossobo.winterfx.di.lifecycle;
     exports com.ossobo.winterfx.runtime;
     exports com.ossobo.winterfx.runtime.handler;
     exports com.ossobo.winterfx.intercept;
-    exports com.ossobo.winterfx.event;
-
     exports com.ossobo.winterfx.di.injection;
     exports com.ossobo.winterfx.di.instantiation;
     exports com.ossobo.winterfx.di.lifecycle.events;
@@ -93,8 +74,14 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.router.processor;
     exports com.ossobo.winterfx.imagemanager.handler;
     exports com.ossobo.winterfx.view.handler;
-    exports com.ossobo.winterfx.view.resolver;
-    exports com.ossobo.winterfx.imagemanager.resolver;
-    opens com.ossobo.winterfx.view.controller to javafx.fxml;
     exports com.ossobo.winterfx.router;
+    exports com.ossobo.winterfx.event;
+
+    // Opens para JavaFX FXML
+    opens com.ossobo.winterfx.view to javafx.fxml;
+    opens com.ossobo.winterfx.view.loader to javafx.fxml;
+    opens com.ossobo.winterfx.notifications.controller to javafx.fxml;
+    opens com.ossobo.winterfx.notifications.model to javafx.fxml;
+    opens com.ossobo.winterfx.resources.descriptor to javafx.fxml;
+    opens com.ossobo.winterfx.view.controller to javafx.fxml;
 }

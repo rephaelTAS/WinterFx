@@ -1,153 +1,129 @@
+// WinterErrorHandler.java v3.0 - 2026-08-22
+// Sem catches vazios e sem fallbackWinterFx()
 package com.ossobo.winterfx.notifications.core;
 
-import com.ossobo.winterfx.notifications.NotificationManager;
-import com.ossobo.winterfx.notifications.model.UserFriendlyMessage;
 import com.ossobo.winterfx.anotations.Component;
 import com.ossobo.winterfx.anotations.Inject;
+import com.ossobo.winterfx.notifications.NotificationManager;
 import com.ossobo.winterfx.notifications.enums.NotificationType;
+import com.ossobo.winterfx.notifications.model.UserFriendlyMessage;
+
+import java.util.Objects;
 
 /**
- * 🛡️ WinterFX Error Handler v12
+ * WinterFX Error Handler - Sem catches vazios.
  *
- * Propósito: Coordenar o tratamento de erros usando o NotificationManager v4.0.
- *
- * Princípio: "Orquestração sobre implementação"
- *
- * <p><b>🔥 v12:</b> Atualizado para NotificationManager v4.0 (info, warn, erro, critical).</p>
+ * @version 3.0 (22/08/2026) - Removido fallbackWinterFx() e catches vazios
  */
 @Component
 public class WinterErrorHandler {
 
-    private static final int COMPREHENSION_TIME_LIMIT_MS = 3000;
+    private static final System.Logger LOGGER = System.getLogger(WinterErrorHandler.class.getName());
 
     @Inject
-    private NotificationManager nm;
-
-    private final ErrorTranslator translator = new ErrorTranslator();
-    private final ComplexityCalculator calculator = new ComplexityCalculator();
-    private final AlertDisplay display = new AlertDisplay();
+    private NotificationManager notificationManager;
 
     public void registrarErro(Exception ex, String contexto) {
+        Objects.requireNonNull(ex, "ex não pode ser null");
+
         try {
-            NotificationType level = determinarNivelAlerta(ex);
-            UserFriendlyMessage message = translator.criarMensagem(ex, contexto);
-            message = calculator.validarCompreensao(message);
-            display.exibir(level, message, nm);
+            var level = determinarNivelAlerta(ex);
+            var message = criarMensagem(ex, contexto);
+            exibirNotificacao(level, message);
         } catch (Exception handlerError) {
-            display.fallback(ex, contexto, handlerError, nm);
+            // Fail-Fast: nunca engolir exceções
+            LOGGER.log(System.Logger.Level.ERROR, "Falha ao processar erro: " + contexto, handlerError);
+            exibirFallback(ex);
         }
     }
 
     private NotificationType determinarNivelAlerta(Exception ex) {
-        String className = ex.getClass().getSimpleName().toLowerCase();
-        String message = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
-        if (className.contains("sql") || message.contains("connection")) return NotificationType.ERROR;
-        if (className.contains("validation") || message.contains("invalid")) return NotificationType.ERROR;
-        if (className.contains("business") || message.contains("rule")) return NotificationType.WARNING;
+        var className = ex.getClass().getSimpleName().toLowerCase();
+        var message = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+
+        if (className.contains("sql") || message.contains("connection")) {
+            return NotificationType.ERROR;
+        }
+        if (className.contains("validation") || message.contains("invalid")) {
+            return NotificationType.ERROR;
+        }
+        if (className.contains("business") || message.contains("rule")) {
+            return NotificationType.WARNING;
+        }
         return NotificationType.INFO;
     }
 
-    private static class ErrorTranslator {
-        UserFriendlyMessage criarMensagem(Exception ex, String contexto) {
-            return new UserFriendlyMessage.Builder()
-                    .title(formatarTitulo(contexto))
-                    .body(traduzirParaUsuario(ex.getMessage(), ex))
-                    .action(sugerirAcao(ex))
-                    .context(contexto)
-                    .build();
+    private UserFriendlyMessage criarMensagem(Exception ex, String contexto) {
+        var titulo = formatarTitulo(contexto);
+        var corpo = traduzirParaUsuario(ex.getMessage(), ex);
+        var acao = sugerirAcao(ex);
+
+        return new UserFriendlyMessage.Builder()
+                .title(titulo)
+                .body(corpo)
+                .action(acao)
+                .context(contexto)
+                .build();
+    }
+
+    private String traduzirParaUsuario(String technicalMessage, Exception ex) {
+        if (technicalMessage == null) {
+            return "Ocorreu um erro inesperado.";
         }
 
-        private String traduzirParaUsuario(String technicalMessage, Exception ex) {
-            if (technicalMessage == null) return "Ocorreu um erro inesperado.";
-            String lowerMessage = technicalMessage.toLowerCase();
-            if (lowerMessage.contains("connection refused")) return "Servidor indisponível. Tente novamente.";
-            if (lowerMessage.contains("null pointer")) return "Informação não encontrada.";
-            if (lowerMessage.contains("sql")) return "Problema ao processar dados.";
-            if (lowerMessage.contains("invalid")) return "Dados inválidos.";
-            return technicalMessage.length() > 100 ? technicalMessage.substring(0, 100) + "..." : technicalMessage;
+        var lower = technicalMessage.toLowerCase();
+        if (lower.contains("connection refused")) return "Servidor indisponível. Tente novamente.";
+        if (lower.contains("null pointer")) return "Informação não encontrada.";
+        if (lower.contains("sql")) return "Problema ao processar dados.";
+        if (lower.contains("invalid")) return "Dados inválidos.";
+
+        return technicalMessage.length() > 100 ? technicalMessage.substring(0, 100) + "..." : technicalMessage;
+    }
+
+    private String sugerirAcao(Exception ex) {
+        var message = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        if (message.contains("connection")) return "Verifique sua conexão.";
+        if (message.contains("invalid")) return "Corrija os dados.";
+        return "Tente novamente. Se persistir, contate o suporte.";
+    }
+
+    private String formatarTitulo(String contexto) {
+        if (contexto == null || contexto.isEmpty()) return "Erro no Sistema";
+        if (contexto.contains(".")) {
+            contexto = contexto.split("\\.")[contexto.split("\\.").length - 1];
+        }
+        return contexto.replaceAll("([a-z])([A-Z])", "$1 $2") + " - Erro";
+    }
+
+    private void exibirNotificacao(NotificationType level, UserFriendlyMessage message) {
+        if (notificationManager == null) {
+            LOGGER.log(System.Logger.Level.WARNING, "NotificationManager não disponível");
+            return;
         }
 
-        private String sugerirAcao(Exception ex) {
-            String message = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
-            if (message.contains("connection")) return "Verifique sua conexão.";
-            if (message.contains("invalid")) return "Corrija os dados.";
-            return "Tente novamente. Se persistir, contate o suporte.";
-        }
-
-        private String formatarTitulo(String contexto) {
-            if (contexto == null || contexto.isEmpty()) return "Erro no Sistema";
-            if (contexto.contains(".")) contexto = contexto.split("\\.")[contexto.split("\\.").length - 1];
-            return contexto.replaceAll("([a-z])([A-Z])", "$1 $2") + " - Erro";
+        switch (level) {
+            case ERROR -> notificationManager.erro(message.getTitle(), message.getBody());
+            case WARNING -> notificationManager.warn(message.getTitle(), message.getBody());
+            case SUCCESS -> notificationManager.info(message.getTitle(), message.getBody());
+            default -> notificationManager.info(message.getTitle(), message.getBody());
         }
     }
 
-    private static class ComplexityCalculator {
-        private static final int MS_POR_PALAVRA = 275;
+    /**
+     * Fallback de emergência - NUNCA engole exceções.
+     */
+    private void exibirFallback(Exception ex) {
+        // Log é OBRIGATÓRIO
+        LOGGER.log(System.Logger.Level.ERROR, "Erro crítico no sistema", ex);
 
-        UserFriendlyMessage validarCompreensao(UserFriendlyMessage message) {
-            int complexidade = calcularComplexidade(message.getBody());
-            if (complexidade > COMPREHENSION_TIME_LIMIT_MS) {
-                String corpoSimplificado = simplificarMensagem(message.getBody());
-                return new UserFriendlyMessage.Builder()
-                        .title(message.getTitle()).body(corpoSimplificado)
-                        .action(message.getAction()).context(message.getContext())
-                        .complexity(calcularComplexidade(corpoSimplificado)).build();
-            }
-            return message;
-        }
-
-        private int calcularComplexidade(String mensagem) {
-            if (mensagem == null || mensagem.trim().isEmpty()) return 0;
-            String[] palavras = mensagem.trim().split("\\s+");
-            int estimatedTime = palavras.length * MS_POR_PALAVRA;
-            estimatedTime += contarTermosTecnicos(mensagem) * 100;
-            if (palavras.length > 15) estimatedTime += 150;
-            return Math.max(500, Math.min(estimatedTime, 5000));
-        }
-
-        private int contarTermosTecnicos(String texto) {
-            if (texto == null) return 0;
-            String lowerText = texto.toLowerCase();
-            String[] techTerms = {"sql", "database", "api", "exception", "error"};
-            int count = 0;
-            for (String term : techTerms) { if (lowerText.contains(term)) count++; }
-            return count;
-        }
-
-        private String simplificarMensagem(String mensagem) {
-            if (mensagem == null || mensagem.length() <= 100) return mensagem;
-            String simplified = mensagem.substring(0, 100).trim();
-            if (!simplified.endsWith(".") && !simplified.endsWith("!")) simplified += "...";
-            return simplified;
-        }
-    }
-
-    private class AlertDisplay {
-        void exibir(NotificationType level, UserFriendlyMessage message, NotificationManager manager) {
+        // Tenta notificar o usuário
+        if (notificationManager != null) {
             try {
-                String titulo = message.getTitle();
-                String corpo = message.getBody();
-
-                switch (level) {
-                    case ERROR   -> manager.erro(titulo, corpo);
-                    case WARNING -> manager.warn(titulo, corpo);
-                    case SUCCESS -> manager.info(titulo, corpo);
-                    default      -> manager.info(titulo, corpo);
-                }
+                notificationManager.erro("Erro Crítico", "Ocorreu um erro no sistema. Verifique os logs.");
             } catch (Exception e) {
-                fallbackWinterFx(message);
+                // Último recurso: log apenas
+                LOGGER.log(System.Logger.Level.ERROR, "Falha ao exibir fallback", e);
             }
-        }
-
-        void fallback(Exception originalError, String contexto, Throwable handlerError,
-                      NotificationManager manager) {
-            try {
-                manager.erro("Erro no Sistema", "Ocorreu um erro crítico.");
-            } catch (Exception e) {
-            }
-        }
-
-        private void fallbackWinterFx(UserFriendlyMessage message) {
         }
     }
 }

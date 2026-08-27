@@ -1,32 +1,23 @@
-/*
- * ResourceCache v1.0 (OPCIONAL)
- *
- * Responsabilidade: guardar resultados já resolvidos, se fizer sentido.
- * Entrada: chave do recurso e objeto resolvido.
- * Saída: acesso rápido ao recurso já preparado.
- * Depende de: política de cache.
- */
-
 package com.ossobo.winterfx.resources.cache;
 
-import java.lang.ref.SoftReference;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
- * 💾 ResourceCache v1.0 (OPCIONAL)
+ * 💾 ResourceCache v3.0
  * <p>
  * Cache genérico para recursos resolvidos.
- * Usa SoftReference para permitir GC sob pressão de memória.
+ * Usa referências fortes (Hard Reference) - recursos carregados são imutáveis.
+ * Thread-safe com computeIfAbsent atômico.
  * </p>
  *
  * @param <T> Tipo do recurso cacheado (Parent, Image, AudioClip, etc)
  */
 public class ResourceCache<T> {
 
-    private final Map<String, SoftReference<T>> cache = new ConcurrentHashMap<>();
+    private final Map<String, T> cache = new ConcurrentHashMap<>();
     private final String cacheName;
 
     /**
@@ -37,27 +28,15 @@ public class ResourceCache<T> {
     }
 
     /**
-     * Obtém do cache ou computa e armazena.
+     * Obtém do cache ou computa e armazena de forma ATÔMICA.
+     * computeIfAbsent garante que apenas UMA thread fará a carga pesada.
      *
      * @param key Chave do recurso
      * @param loader Função para carregar o recurso se não estiver em cache
      * @return Recurso cacheado ou recém-carregado
      */
     public T getOrCompute(String key, Function<String, T> loader) {
-        SoftReference<T> ref = cache.get(key);
-        T value = (ref != null) ? ref.get() : null;
-
-        if (value != null) {
-            return value;
-        }
-
-        value = loader.apply(key);
-
-        if (value != null) {
-            cache.put(key, new SoftReference<>(value));
-        }
-
-        return value;
+        return cache.computeIfAbsent(key, loader);
     }
 
     /**
@@ -65,7 +44,7 @@ public class ResourceCache<T> {
      */
     public void put(String key, T value) {
         if (key != null && value != null) {
-            cache.put(key, new SoftReference<>(value));
+            cache.put(key, value);
         }
     }
 
@@ -73,9 +52,7 @@ public class ResourceCache<T> {
      * Obtém do cache sem computar.
      */
     public Optional<T> get(String key) {
-        SoftReference<T> ref = cache.get(key);
-        return Optional.ofNullable(ref)
-                .map(SoftReference::get);
+        return Optional.ofNullable(cache.get(key));
     }
 
     /**
@@ -93,27 +70,24 @@ public class ResourceCache<T> {
     }
 
     /**
-     * Verifica se existe no cache e está válido.
+     * Verifica se existe no cache.
      */
     public boolean contains(String key) {
-        SoftReference<T> ref = cache.get(key);
-        return ref != null && ref.get() != null;
+        return cache.containsKey(key);
     }
 
     /**
-     * Retorna o número de entradas no cache (incluindo referências expiradas).
+     * Retorna o número de entradas no cache.
      */
     public int size() {
         return cache.size();
     }
 
     /**
-     * Retorna o número de entradas válidas (não coletadas pelo GC).
+     * Retorna o número de entradas válidas (igual a size() com cache forte).
      */
     public long validSize() {
-        return cache.values().stream()
-                .filter(ref -> ref.get() != null)
-                .count();
+        return cache.size();
     }
 
     public String getName() {
@@ -122,7 +96,6 @@ public class ResourceCache<T> {
 
     @Override
     public String toString() {
-        return String.format("ResourceCache[%s, %d/%d válidos]",
-                cacheName, validSize(), cache.size());
+        return String.format("ResourceCache[%s, %d entradas]", cacheName, cache.size());
     }
 }

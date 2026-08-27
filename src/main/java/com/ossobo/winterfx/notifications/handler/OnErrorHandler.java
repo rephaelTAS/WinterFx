@@ -87,7 +87,7 @@ public class OnErrorHandler extends BaseNotificationHandler<OnError> {
      *
      * <p><b>Fluxo:</b></p>
      * <ol>
-     *   <li>Captura exceção do {@link AnnotationContext#getError()}</li>
+     *   <li>Captura exceção do {@link AnnotationContext#error()}</li>
      *   <li>Se exceção tem mensagem: usa mensagem da exceção</li>
      *   <li>Se exceção null: usa {@link OnError#detalhe()}</li>
      *   <li>Exibe notificação de erro no thread JavaFX</li>
@@ -100,7 +100,7 @@ public class OnErrorHandler extends BaseNotificationHandler<OnError> {
     public void handle(AnnotationContext ctx, OnError ann) {
         runOnFx(() -> {
             // Captura exceção do contexto
-            Throwable error = ctx.getError();
+            Throwable error = ctx.error();
 
             // Usa mensagem da exceção ou detalhe da anotação
             String mensagem = error != null ? error.getMessage() : ann.detalhe();

@@ -7,7 +7,7 @@
 
     <groupId>com.ossobo</groupId>
     <artifactId>WinterFx</artifactId>
-    <version>13.1.5</version>
+    <version>20.0.1</version>
     <packaging>jar</packaging>
 
     <name>WinterFx</name>
@@ -41,15 +41,9 @@
         <mockito.version>5.11.0</mockito.version>
         <testfx.version>4.0.18</testfx.version>
 
-        <reflections.version>0.10.2</reflections.version>
         <classgraph.version>4.8.168</classgraph.version>
-        <guava.version>33.2.1-jre</guava.version>
-        <gson.version>2.10.1</gson.version>
-        <javassist.version>3.29.2-GA</javassist.version>
-        <slf4j.version>2.0.16</slf4j.version>
 
         <controlsfx.version>11.2.0</controlsfx.version>
-        <formsfx.version>11.7.0</formsfx.version>
         <validatorfx.version>0.4.0</validatorfx.version>
         <ikonli.version>12.3.1</ikonli.version>
         <bootstrapfx.version>0.4.0</bootstrapfx.version>
@@ -74,35 +68,21 @@
     </repositories>
 
     <dependencies>
-
+        <!-- CORE: Escaneamento de classpath (Substitui a lib 'reflections') -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>${classgraph.version}</version>
         </dependency>
 
+        <!-- CORE: Criação de proxies dinâmicos e AOP (Substitui Javassist e ASM explícito) -->
         <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-commons</artifactId>
-            <version>9.7</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
-            <version>9.7</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-tree</artifactId>
-            <version>9.7</version>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.14.12</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>${reflections.version}</version>
-        </dependency>
-
+        <!-- JAVAFX CORE: 'provided' pois quem usa o framework fornece a JVM JavaFX -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -128,13 +108,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- JAVAFX OPCIONAL: Mídias e Web -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-media</artifactId>
             <version>${javafx.version}</version>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-web</artifactId>
@@ -148,44 +128,43 @@
             <optional>true</optional>
         </dependency>
 
-
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
-            <version>1.14.12</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-            <version>${javassist.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>${guava.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${gson.version}</version>
-        </dependency>
-
+        <!-- UI OPCIONAL: Temas e Ícones -->
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-javafx</artifactId>
             <version>${ikonli.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-core</artifactId>
             <version>${ikonli.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-fontawesome5-pack</artifactId>
+            <version>${ikonli.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-material2-pack</artifactId>
+            <version>${ikonli.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-feather-pack</artifactId>
+            <version>${ikonli.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>org.kordamp.bootstrapfx</groupId>
             <artifactId>bootstrapfx-core</artifactId>
             <version>${bootstrapfx.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
@@ -227,25 +206,7 @@
             </exclusions>
         </dependency>
 
-        <dependency>
-            <groupId>org.kordamp.ikonli</groupId>
-            <artifactId>ikonli-fontawesome5-pack</artifactId>
-            <version>${ikonli.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.kordamp.ikonli</groupId>
-            <artifactId>ikonli-material2-pack</artifactId>
-            <version>${ikonli.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.kordamp.ikonli</groupId>
-            <artifactId>ikonli-feather-pack</artifactId>
-            <version>${ikonli.version}</version>
-            <optional>true</optional>
-        </dependency>
-
+        <!-- TESTES -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

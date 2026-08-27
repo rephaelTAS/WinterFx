@@ -1,8 +1,10 @@
+// ImageCache.java v3.0 - 2026-08-22
+// Cache com Hard Reference + LRU Eviction (Sem SoftReference)
 package com.ossobo.winterfx.imagemanager.image;
 
 import javafx.scene.image.Image;
 
-import java.lang.ref.SoftReference;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -12,24 +14,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Gerenciador de registro de imagens, responsável por mapear chaves únicas
- * para recursos de imagem (objetos Image ou caminhos de recurso).
- * Ele carrega os mapeamentos a partir de um arquivo de propriedades externo
- * na inicialização e pode ser usado para registrar imagens programaticamente.
+ * Gerenciador de cache de imagens com Hard Reference + LRU Eviction.
  *
- * É um singleton gerenciado pelo DIContainer.
+ * <p><b>Características:</b></p>
+ * <ul>
+ *   <li>✅ Hard Reference: evita coleta agressiva do GC (Java 9+)</li>
+ *   <li>✅ LRU Eviction: remove as imagens menos acessadas quando atinge limite</li>
+ *   <li>✅ Métricas: hits, misses, evictions, hit ratio</li>
+ *   <li>✅ Thread-safe: uso de ReentrantLock</li>
+ * </ul>
  *
- * 🎯 IMAGE CACHE - Com SoftReference + LRU Eviction + Métricas
- * Design Pattern: Cache com política de limpeza inteligente
+ * @version 3.0 (22/08/2026) - Removido SoftReference (causa raiz de bugs), Hard Reference
  */
-public class ImageCache {
+public final class ImageCache {
 
-    // 🔥 CONFIGURAÇÃO DO CACHE
+    // Configuração
     private static final int DEFAULT_MAX_SIZE = 500;
-    private static final long CLEANUP_INTERVAL_MS = 30000; // 30 segundos
 
-    // 🔥 ESTRUTURAS DE DADOS
-    private final Map<String, SoftReference<Image>> cache = new ConcurrentHashMap<>();
+    // Estruturas de dados - HARD REFERENCE (sem SoftReference)
+    private final Map<String, Image> cache = new ConcurrentHashMap<>();
     private final Map<String, Long> accessTimes = new LinkedHashMap<>(16, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
@@ -37,22 +40,36 @@ public class ImageCache {
         }
     };
 
-    // 🔥 CONTROLE E MÉTRICAS
+    // Controle
     private final ReentrantLock cleanupLock = new ReentrantLock();
     private final AtomicInteger hits = new AtomicInteger(0);
     private final AtomicInteger misses = new AtomicInteger(0);
     private final AtomicInteger evictions = new AtomicInteger(0);
     private volatile int maxSize = DEFAULT_MAX_SIZE;
-    private volatile long lastCleanup = System.currentTimeMillis();
-
-    public ImageCache() {
-        schedulePeriodicCleanup();
-    }
-
-    // ===== MÉTODO PRINCIPAL: PUT =====
 
     /**
-     * ✅ ADICIONA IMAGEM COM SOFTREFERENCE + ATUALIZA LRU
+     * Record imutável para estatísticas do cache.
+     */
+    public record CacheStats(
+            int currentSize,
+            int maxSize,
+            int hits,
+            int misses,
+            int evictions,
+            double hitRatio
+    ) {
+        @Override
+        public String toString() {
+            return String.format("CacheStats[size=%d/%d, hits=%d, misses=%d, evictions=%d, ratio=%.1f%%]",
+                    currentSize, maxSize, hits, misses, evictions, hitRatio * 100);
+        }
+    }
+
+    // ===== PUT =====
+
+    /**
+     * Adiciona imagem ao cache com Hard Reference.
+     * Se atingir o limite máximo, aplica evicção LRU.
      */
     public void put(String key, Image image) {
         ImageUtils.validateKey(key);
@@ -60,13 +77,13 @@ public class ImageCache {
 
         cleanupLock.lock();
         try {
-            // 🔥 EVICTION CHECK
+            // Eviction check
             if (cache.size() >= maxSize) {
                 performEviction();
             }
 
-            // 🔥 ADICIONA COM SOFTREFERENCE
-            cache.put(key, new SoftReference<>(image));
+            // HARD REFERENCE: Elimina coleta agressiva do GC
+            cache.put(key, image);
             accessTimes.put(key, System.currentTimeMillis());
 
         } finally {
@@ -74,32 +91,26 @@ public class ImageCache {
         }
     }
 
-    // ===== MÉTODO PRINCIPAL: GET =====
+    // ===== GET =====
 
     /**
-     * ✅ RECUPERA IMAGEM COM SOFTREFERENCE + ATUALIZA LRU
+     * Recupera imagem do cache com Hard Reference.
+     * Atualiza LRU em caso de sucesso.
      */
     public Optional<Image> get(String key) {
+        ImageUtils.validateKey(key);
+
         cleanupLock.lock();
         try {
-            SoftReference<Image> ref = cache.get(key);
-
-            if (ref == null) {
-                misses.incrementAndGet();
-                return Optional.empty();
-            }
-
-            Image image = ref.get();
+            // HARD REFERENCE: Busca direta, sem SoftReference
+            var image = cache.get(key);
 
             if (image == null) {
-                // 🔥 SOFTREFERENCE FOI COLETADA PELO GC
-                cache.remove(key);
-                accessTimes.remove(key);
                 misses.incrementAndGet();
                 return Optional.empty();
             }
 
-            // 🔥 ATUALIZA LRU
+            // Atualiza LRU
             accessTimes.put(key, System.currentTimeMillis());
             hits.incrementAndGet();
 
@@ -110,19 +121,21 @@ public class ImageCache {
         }
     }
 
-    // ===== MÉTODOS DE MANUTENÇÃO =====
+    // ===== EVICTION =====
 
     /**
-     * 🔥 EVICTION POLICY - LRU (Least Recently Used)
+     * Aplica política de evicção LRU.
+     * Remove as imagens menos acessadas até atingir 90% do limite.
      */
     private void performEviction() {
         cleanupLock.lock();
         try {
-            int removed = 0;
+            var targetSize = (int) (maxSize * 0.9);
+            var toRemove = Math.max(1, cache.size() - targetSize);
+            var removed = 0;
 
-            // REMOVE MAIS ANTIGOS PRIMEIRO
-            while (cache.size() > maxSize * 0.9 && !accessTimes.isEmpty()) {
-                String oldestKey = accessTimes.keySet().iterator().next();
+            while (removed < toRemove && !accessTimes.isEmpty()) {
+                var oldestKey = accessTimes.keySet().iterator().next();
                 cache.remove(oldestKey);
                 accessTimes.remove(oldestKey);
                 removed++;
@@ -134,63 +147,15 @@ public class ImageCache {
         }
     }
 
-    /**
-     * 🔥 LIMPEZA PERIÓDICA DE SOFTREFERENCES COLETADAS
-     */
-    private void performCleanup() {
-        cleanupLock.lock();
-        try {
-            long now = System.currentTimeMillis();
-            if (now - lastCleanup < CLEANUP_INTERVAL_MS) {
-                return;
-            }
-
-            // REMOVE ENTRIES COLETADAS PELO GC
-            cache.entrySet().removeIf(entry -> {
-                if (entry.getValue().get() == null) {
-                    accessTimes.remove(entry.getKey());
-                    return true;
-                }
-                return false;
-            });
-
-            lastCleanup = now;
-
-        } finally {
-            cleanupLock.unlock();
-        }
-    }
-
-    /**
-     * 🔥 AGENDAMENTO DE CLEANUP AUTOMÁTICO
-     */
-    private void schedulePeriodicCleanup() {
-        Thread cleanupThread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    Thread.sleep(CLEANUP_INTERVAL_MS);
-                    performCleanup();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        });
-
-        cleanupThread.setDaemon(true);
-        cleanupThread.setName("ImageCache-Cleanup");
-        cleanupThread.start();
-    }
-
-    // ===== MÉTODOS DE CONSULTA E CONTROLE =====
+    // ===== CONSULTA =====
 
     public boolean contains(String key) {
-        return get(key).isPresent(); // Usa get() para verificar SoftReference
+        return cache.containsKey(key);
     }
 
     public void clear() {
         cleanupLock.lock();
         try {
-            int size = cache.size();
             cache.clear();
             accessTimes.clear();
             hits.set(0);
@@ -225,40 +190,25 @@ public class ImageCache {
         }
     }
 
-    // ===== MÉTRICAS DE PERFORMANCE =====
+    // ===== MÉTRICAS =====
 
-    public int getHitCount() {
-        return hits.get();
-    }
+    public CacheStats getStats() {
+        var total = hits.get() + misses.get();
+        var ratio = total > 0 ? (double) hits.get() / total : 0.0;
 
-    public int getMissCount() {
-        return misses.get();
-    }
-
-    public int getEvictionCount() {
-        return evictions.get();
-    }
-
-    public double getHitRatio() {
-        int total = hits.get() + misses.get();
-        return total > 0 ? (double) hits.get() / total : 0.0;
-    }
-
-    public Map<String, Object> getStats() {
-        Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("currentSize", cache.size());
-        stats.put("maxSize", maxSize);
-        stats.put("hits", hits.get());
-        stats.put("misses", misses.get());
-        stats.put("evictions", evictions.get());
-        stats.put("hitRatio", String.format("%.2f%%", getHitRatio() * 100));
-        stats.put("lastCleanup", lastCleanup);
-        return stats;
+        return new CacheStats(
+                cache.size(),
+                maxSize,
+                hits.get(),
+                misses.get(),
+                evictions.get(),
+                ratio
+        );
     }
 
     @Override
     public String toString() {
-        return String.format("ImageCache[size=%d, hits=%d, misses=%d, ratio=%.1f%%]",
-                cache.size(), hits.get(), misses.get(), getHitRatio() * 100);
+        var stats = getStats();
+        return stats.toString();
     }
 }

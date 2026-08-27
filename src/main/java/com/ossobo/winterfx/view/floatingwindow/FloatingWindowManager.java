@@ -1,15 +1,13 @@
-// FloatingWindowManager.java v8.0 - 2026-07-03
-// Com modalStack para cadeia modal (abrir janelas uma dentro da outra)
+// FloatingWindowManager.java v10.0 - 2026-08-24
+// LAZY: injeta apenas o wrapper, view carregada apenas no show()
+// DESACOPLADO: StageManager faz o loading, FXMLService faz o binding
 package com.ossobo.winterfx.view.floatingwindow;
 
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
+import com.ossobo.winterfx.resources.ResourceModule;
 import com.ossobo.winterfx.resources.enums.Modality;
-import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 import com.ossobo.winterfx.view.StageManager;
 import com.ossobo.winterfx.view.floatingwindow.anotations.FloatingWindow;
-import com.ossobo.winterfx.view.loader.LoadedView;
 
-import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -17,31 +15,32 @@ import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
 
 /**
- * 🪟 FloatingWindowManager v8.0
+ * 🪟 FloatingWindowManager v10.0 - LAZY
  *
- * <p>Suporte completo a janelas flutuantes com cadeia modal.</p>
+ * <p><b>Princípio:</b> O FloatingWindowManager é o PALCO.</p>
+ * <p>Ele configura a janela (tamanho, modal, undecorated, etc.) mas NÃO carrega a view.</p>
+ * <p>A view só é carregada quando {@link StageForFloatingWindow#show()} é chamado.</p>
  *
- * <p><b>Recursos:</b></p>
- * <ul>
- *   <li><b>singleton = true:</b> Reutiliza o mesmo Stage (cache)</li>
- *   <li><b>singleton = false:</b> Cria NOVO Stage a cada chamada</li>
- *   <li><b>modalStack:</b> Pilha de janelas modais para cadeia A → B → C</li>
- *   <li><b>autoClose:</b> Fecha ao perder foco</li>
- *   <li><b>resolveOwner:</b> Owner por anotação, cadeia modal ou janela ativa</li>
- * </ul>
+ * <p><b>Fluxo:</b></p>
+ * <ol>
+ *   <li>@FloatingWindow é processado → injeta StageForFloatingWindow (LAZY)</li>
+ *   <li>Usuário chama formfuncionario.show()</li>
+ *   <li>StageForFloatingWindow → StageManager.loadFloatingView()</li>
+ *   <li>StageManager → FXMLService.load() → rebindButtons()</li>
+ * </ol>
  *
- * @version 8.0 (03/07/2026)
+ * @version 10.0 (24/08/2026) - LAZY + Desacoplamento
  */
 public class FloatingWindowManager {
 
-    private static final Logger LOGGER = Logger.getLogger(FloatingWindowManager.class.getName());
+    private static final Logger LOGGER = System.getLogger(FloatingWindowManager.class.getName());
 
-    private final ResourceRegistry registry;
+    private final ResourceModule resourceModule;
     private final StageManager stageManager;
 
     private final Map<String, Stage> managedWindows = new ConcurrentHashMap<>();
@@ -52,9 +51,9 @@ public class FloatingWindowManager {
     // CONSTRUTOR
     // ============================================================
 
-    public FloatingWindowManager(ResourceRegistry registry, StageManager stageManager) {
-        this.registry = registry;
-        this.stageManager = stageManager;
+    public FloatingWindowManager(ResourceModule resourceModule, StageManager stageManager) {
+        this.resourceModule = Objects.requireNonNull(resourceModule);
+        this.stageManager = Objects.requireNonNull(stageManager);
     }
 
     // ============================================================
@@ -73,132 +72,94 @@ public class FloatingWindowManager {
     }
 
     // ============================================================
-    // PROCESSAMENTO PRINCIPAL
+    // PROCESSAMENTO PRINCIPAL - INJEÇÃO LAZY
     // ============================================================
 
+    /**
+     * Processa a anotação @FloatingWindow - INJEÇÃO LAZY.
+     *
+     * <p>NÃO carrega a view agora. Apenas valida que a view existe
+     * e injeta um {@link StageForFloatingWindow} que carregará a view
+     * quando {@code show()} for chamado.</p>
+     */
     private void processFloatingWindow(Object bean, Field field, FloatingWindow annotation) {
         String viewId = annotation.viewId();
-        boolean singleton = annotation.singleton();
 
         try {
-            ViewDescriptor descriptor = registry.findViewById(viewId)
-                    .orElseThrow(() -> new IllegalArgumentException("View não registrada: '" + viewId + "'"));
+            // ✅ APENAS VALIDA que a view existe (Fail-Fast no bootstrap)
+            resourceModule.requireView(viewId);
 
-            // ============================================================
-            // SINGLETON: reutiliza Stage existente
-            // ============================================================
-
-            if (singleton) {
-                Stage existing = managedWindows.get(viewId);
-                if (existing != null && existing.isShowing()) {
-                    existing.toFront();
-                    field.setAccessible(true);
-                    field.set(bean, existing);
-                    return;
-                }
-            }
-
-            // ============================================================
-            // CARREGA A VIEW
-            // ============================================================
-
-            LoadedView<?> loadedView = stageManager.loadFloatingView(viewId, singleton);
-
-            // ============================================================
-            // CRIA O STAGE
-            // ============================================================
-
-            Stage stage = new Stage();
-            stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
-            stage.setTitle(!annotation.title().isEmpty() ? annotation.title() : descriptor.getTitle());
-
-            javafx.stage.Modality modality = convertModality(annotation.modality());
-            stage.initModality(modality);
-
-            Window owner = resolveOwner(annotation.owner());
-            if (owner != null && owner != stage) {
-                stage.initOwner(owner);
-            }
-
-            Scene scene = new Scene(
-                    loadedView.getRoot(),
-                    annotation.width() > 0 ? annotation.width() : descriptor.getWidth(),
-                    annotation.height() > 0 ? annotation.height() : descriptor.getHeight()
+            // ✅ CRIA O WRAPPER LAZY (NÃO carrega a view agora)
+            var window = new StageForFloatingWindow(
+                    stageManager,
+                    viewId,
+                    annotation.singleton(),
+                    annotation.title(),
+                    annotation.width(),
+                    annotation.height(),
+                    annotation.resizable(),
+                    annotation.alwaysOnTop(),
+                    true,
+                    annotation.autoClose(),
+                    annotation.autoOpen(),
+                    annotation.modality(),
+                    annotation.owner(),
+                    this  // Referência ao FloatingWindowManager para gerenciar a janela
             );
-            stage.setScene(scene);
-            stage.setResizable(annotation.resizable());
-            stage.setAlwaysOnTop(annotation.alwaysOnTop());
 
-            if (descriptor.isCentered()) {
-                stage.centerOnScreen();
-            }
-
-            if (annotation.autoClose()) {
-                stage.focusedProperty().addListener((obs, oldVal, newVal) -> {
-                    if (!newVal && stage.isShowing()) {
-                        stage.close();
-                    }
-                });
-            }
-
-            // ============================================================
-            // MODAL STACK — cadeia modal (A → B → C)
-            // ============================================================
-
-            if (modality != javafx.stage.Modality.NONE) {
-                stage.setOnShown(e -> modalStack.push(stage));
-            }
-            stage.setOnHidden(e -> {
-                modalStack.remove(stage);
-                if (singleton) {
-                    managedWindows.remove(viewId);
-                }
-            });
-
-            // ============================================================
-            // REGISTRA E INJETA
-            // ============================================================
-
-            if (singleton) {
-                managedWindows.put(viewId, stage);
-            } else {
-                String stageKey = viewId + "-" + (++instanceCounter);
-                managedWindows.put(stageKey, stage);
-            }
-
+            // ✅ INJETA O WRAPPER no campo
             field.setAccessible(true);
-            field.set(bean, stage);
+            field.set(bean, window);
 
-            if (annotation.autoOpen()) {
-                stage.show();
-            }
-
-            String mode = singleton ? "SINGLETON" : "MÚLTIPLA";
-            LOGGER.info(() -> "🪟 @FloatingWindow: " + viewId +
-                    " → " + field.getName() +
-                    " [" + mode + "]" +
-                    " (instances: " + managedWindows.size() + ")" +
-                    " (modalStack: " + modalStack.size() + ")");
+            LOGGER.log(Logger.Level.INFO, "🪟 @FloatingWindow LAZY: {0} → {1} [aguardando show()]",
+                    viewId, field.getName());
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "❌ Erro ao processar @FloatingWindow: " + viewId, e);
+            LOGGER.log(Logger.Level.ERROR, "❌ Erro ao processar @FloatingWindow: " + viewId, e);
+            // Não lança exceção para não quebrar o bootstrap
         }
     }
 
     // ============================================================
-    // UTILIDADES
+    // MÉTODOS CHAMADOS PELO StageForFloatingWindow
     // ============================================================
 
-    private javafx.stage.Modality convertModality(Modality m) {
-        return switch (m) {
-            case APPLICATION_MODAL -> javafx.stage.Modality.APPLICATION_MODAL;
-            case WINDOW_MODAL -> javafx.stage.Modality.WINDOW_MODAL;
-            case NONE -> javafx.stage.Modality.NONE;
-            default -> javafx.stage.Modality.NONE;
-        };
+    /**
+     * Registra uma janela no gerenciamento.
+     * Chamado pelo StageForFloatingWindow quando a janela é criada.
+     */
+    public void registerWindow(String key, Stage stage) {
+        managedWindows.put(key, stage);
+        LOGGER.log(Logger.Level.DEBUG, "Janela registrada: {0}", key);
     }
 
-    private Window resolveOwner(String ownerId) {
+    /**
+     * Remove uma janela do gerenciamento.
+     * Chamado pelo StageForFloatingWindow quando a janela é fechada.
+     */
+    public void unregisterWindow(String key) {
+        managedWindows.remove(key);
+        LOGGER.log(Logger.Level.DEBUG, "Janela removida: {0}", key);
+    }
+
+    /**
+     * Adiciona uma janela à pilha modal.
+     */
+    public void pushModalStack(Stage stage) {
+        modalStack.push(stage);
+    }
+
+    /**
+     * Remove uma janela da pilha modal.
+     */
+    public void popModalStack(Stage stage) {
+        modalStack.remove(stage);
+    }
+
+    /**
+     * Resolve o owner da janela.
+     */
+    public Window resolveOwner(String ownerId) {
         // 1. Owner explícito por anotação
         if (ownerId != null && !ownerId.isEmpty()) {
             Stage stage = managedWindows.get(ownerId);
@@ -208,7 +169,7 @@ public class FloatingWindowManager {
         // 2. Cadeia modal: última janela modal na pilha
         if (!modalStack.isEmpty()) {
             Stage top = modalStack.peek();
-            if (top.isShowing()) return top;
+            if (top != null && top.isShowing()) return top;
         }
 
         // 3. Fallback: janela ativa
@@ -216,6 +177,25 @@ public class FloatingWindowManager {
                 .filter(w -> w instanceof Stage && w.isShowing())
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Converte Modality enum para JavaFX Modality.
+     */
+    public javafx.stage.Modality convertModality(Modality m) {
+        return switch (m) {
+            case APPLICATION_MODAL -> javafx.stage.Modality.APPLICATION_MODAL;
+            case WINDOW_MODAL -> javafx.stage.Modality.WINDOW_MODAL;
+            case NONE -> javafx.stage.Modality.NONE;
+            default -> javafx.stage.Modality.NONE;
+        };
+    }
+
+    /**
+     * Gera uma chave única para janelas não-singleton.
+     */
+    public String generateKey(String viewId) {
+        return viewId + "-" + (++instanceCounter);
     }
 
     // ============================================================
@@ -239,11 +219,15 @@ public class FloatingWindowManager {
         managedWindows.values().forEach(Stage::close);
         managedWindows.clear();
         modalStack.clear();
-        LOGGER.info("🪟 Todas as janelas fechadas");
+        LOGGER.log(Logger.Level.INFO, "🪟 Todas as janelas fechadas");
     }
 
     public Stage getWindow(String viewId) {
         return managedWindows.get(viewId);
+    }
+
+    public StageManager getStageManager() {
+        return stageManager;
     }
 
     // ============================================================
@@ -251,20 +235,20 @@ public class FloatingWindowManager {
     // ============================================================
 
     public void diagnostic() {
-        System.out.println("=== 🪟 FLOATING WINDOW MANAGER DIAGNÓSTICO ===");
-        System.out.println("Total de janelas: " + managedWindows.size());
-        System.out.println("Modal stack: " + modalStack.size());
-        System.out.println("Janelas abertas:");
+        LOGGER.log(Logger.Level.INFO, "=== 🪟 FLOATING WINDOW MANAGER DIAGNÓSTICO ===");
+        LOGGER.log(Logger.Level.INFO, "Total de janelas: {0}", managedWindows.size());
+        LOGGER.log(Logger.Level.INFO, "Modal stack: {0}", modalStack.size());
+        LOGGER.log(Logger.Level.INFO, "Janelas abertas:");
         for (Map.Entry<String, Stage> entry : managedWindows.entrySet()) {
             String status = entry.getValue().isShowing() ? "🟢 ABERTA" : "🔴 FECHADA";
-            System.out.println("  " + entry.getKey() + " → " + status);
+            LOGGER.log(Logger.Level.INFO, "  {0} → {1}", entry.getKey(), status);
         }
         if (!modalStack.isEmpty()) {
-            System.out.println("Cadeia modal:");
+            LOGGER.log(Logger.Level.INFO, "Cadeia modal:");
             for (Stage s : modalStack) {
-                System.out.println("  → " + s.getTitle());
+                LOGGER.log(Logger.Level.INFO, "  → {0}", s.getTitle());
             }
         }
-        System.out.println("================================================");
+        LOGGER.log(Logger.Level.INFO, "================================================");
     }
 }

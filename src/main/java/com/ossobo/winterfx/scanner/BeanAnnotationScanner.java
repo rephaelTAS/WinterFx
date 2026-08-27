@@ -15,13 +15,6 @@ import java.util.*;
 
 /**
  * Scanner de beans do WinterFX.
- *
- * <p>Recebe um ScanResult compartilhado do ScannerEngine.</p>
- *
- * <p>Responsabilidade: identificar classes anotadas com {@code @Controller},
- * {@code @Service}, {@code @Repository}, {@code @Component} e
- * {@code @Configuration} + {@code @Bean}, extraindo seus metadados
- * e registrando no {@link BeanRegistry}.</p>
  */
 public final class BeanAnnotationScanner {
 
@@ -77,54 +70,42 @@ public final class BeanAnnotationScanner {
 
     /**
      * Registra um componente (Controller, Service, Repository, Component).
-     *
-     * <p>Extrai todos os metadados necessários e registra no BeanRegistry.</p>
-     *
-     * @param type tipo do componente
-     * @param registry registro de beans
      */
     private void registerComponent(Class<?> type, BeanRegistry registry) {
         String beanName = getBeanName(type);
         ScopeType scopeType = determineScope(type);
         List<InjectionPoint> dependencies = metadataExtractor.extractInjectionPoints(type);
 
-        // ✅ VALIDA @PostConstruct ANTES de registrar
+        // extractPostConstruct já valida e lança exceção se inválido
         Method postConstruct = metadataExtractor.extractPostConstruct(type);
-        validatePostConstruct(type, postConstruct);
-
         Method preDestroy = metadataExtractor.extractPreDestroy(type);
 
         boolean primary = type.isAnnotationPresent(Primary.class);
         String qualifier = extractQualifier(type);
         Map<String, String> values = metadataExtractor.extractValues(type);
 
-        registry.registerDefinition(new BeanDefinition(
+        registry.registerDefinition(BeanDefinition.component(
                 beanName, type, scopeType, dependencies, postConstruct, preDestroy,
                 primary, qualifier, values));
     }
 
     /**
      * Registra uma classe de configuração com seus beans factory.
-     *
-     * @param configClass classe de configuração
-     * @param registry registro de beans
      */
     private void registerConfiguration(Class<?> configClass, BeanRegistry registry) {
         String beanName = getConfigBeanName(configClass);
         ScopeType scopeType = determineScope(configClass);
         List<InjectionPoint> dependencies = metadataExtractor.extractInjectionPoints(configClass);
 
-        // ✅ VALIDA @PostConstruct ANTES de registrar
+        // extractPostConstruct já valida e lança exceção se inválido
         Method postConstruct = metadataExtractor.extractPostConstruct(configClass);
-        validatePostConstruct(configClass, postConstruct);
-
         Method preDestroy = metadataExtractor.extractPreDestroy(configClass);
 
         boolean primary = configClass.isAnnotationPresent(Primary.class);
         String qualifier = extractQualifier(configClass);
         Map<String, String> values = metadataExtractor.extractValues(configClass);
 
-        registry.registerDefinition(new BeanDefinition(
+        registry.registerDefinition(BeanDefinition.component(
                 beanName, configClass, scopeType, dependencies, postConstruct, preDestroy,
                 primary, qualifier, values));
 
@@ -138,67 +119,31 @@ public final class BeanAnnotationScanner {
 
     /**
      * Registra um bean criado por factory method (@Configuration + @Bean).
-     *
-     * @param factoryClass classe que contém o factory method
-     * @param factoryMethod método factory
-     * @param registry registro de beans
      */
     private void registerFactoryBean(Class<?> factoryClass, Method factoryMethod, BeanRegistry registry) {
-        Bean bean = factoryMethod.getAnnotation(Bean.class);
+        var bean = factoryMethod.getAnnotation(Bean.class);
         String beanName = (bean != null && bean.name() != null && !bean.name().isBlank())
                 ? bean.name() : factoryMethod.getName();
 
         Class<?> beanType = factoryMethod.getReturnType();
         ScopeType scopeType = determineScope(factoryMethod);
-        List<InjectionPoint> dependencies = metadataExtractor.extractInjectionPoints(beanType);
 
-        // ✅ VALIDA @PostConstruct do beanType
+        // Dependências de @Bean vêm dos PARÂMETROS do método, não da classe de retorno
+        List<InjectionPoint> dependencies = metadataExtractor.extractMethodParameters(factoryMethod);
+
+        // extractPostConstruct já valida e lança exceção se inválido
         Method postConstruct = metadataExtractor.extractPostConstruct(beanType);
-        validatePostConstruct(beanType, postConstruct);
-
         Method preDestroy = metadataExtractor.extractPreDestroy(beanType);
 
         boolean primary = factoryMethod.isAnnotationPresent(Primary.class);
         String qualifier = extractQualifier(factoryMethod);
-        Map<String, String> values = metadataExtractor.extractValues(beanType);
 
-        registry.registerDefinition(new BeanDefinition(
+        // @Value não se aplica a beans criados por fábrica
+        Map<String, String> values = Collections.emptyMap();
+
+        registry.registerDefinition(BeanDefinition.factory(
                 beanName, beanType, scopeType, factoryClass, factoryMethod,
                 dependencies, postConstruct, preDestroy, primary, qualifier, values));
-    }
-
-    /**
-     * Valida se o método @PostConstruct atende aos requisitos.
-     *
-     * <p>Requisitos:</p>
-     * <ul>
-     *   <li>Método deve retornar {@code void}</li>
-     *   <li>Método não deve ter parâmetros</li>
-     * </ul>
-     *
-     * @param type classe que contém o método
-     * @param method método @PostConstruct (pode ser null)
-     * @throws IllegalStateException se o método não atender aos requisitos
-     */
-    private void validatePostConstruct(Class<?> type, Method method) {
-        if (method == null) {
-            return;
-        }
-
-        // ✅ Apenas valida, não executa
-        if (method.getReturnType() != void.class) {
-            throw new IllegalStateException(
-                    "@PostConstruct em " + type.getName() + "." + method.getName() +
-                            " deve retornar void"
-            );
-        }
-
-        if (method.getParameterCount() > 0) {
-            throw new IllegalStateException(
-                    "@PostConstruct em " + type.getName() + "." + method.getName() +
-                            " não pode ter parâmetros"
-            );
-        }
     }
 
     // ============================================================
@@ -219,8 +164,7 @@ public final class BeanAnnotationScanner {
                 }
             }
         }
-        String simple = type.getSimpleName();
-        return Character.toLowerCase(simple.charAt(0)) + simple.substring(1);
+        return getDefaultBeanName(type);
     }
 
     private String getConfigBeanName(Class<?> configClass) {

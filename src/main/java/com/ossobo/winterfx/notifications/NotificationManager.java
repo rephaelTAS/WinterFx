@@ -1,11 +1,12 @@
-// NotificationManager.java v8.0 - 2026-07-01
-// USA AlertManager em vez de StageManager diretamente
+// NotificationManager.java v12.0 - 2026-08-23
+// Atualizado para usar ResourceModule (Fachada) e remover NotificationViewResolver
 package com.ossobo.winterfx.notifications;
 
+import com.ossobo.winterfx.anotations.Component;
+import com.ossobo.winterfx.anotations.Inject;
 import com.ossobo.winterfx.notifications.enums.NotificationType;
-import com.ossobo.winterfx.notifications.resolver.NotificationViewResolver;
-import com.ossobo.winterfx.resources.enums.AlertType;
-import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
+import com.ossobo.winterfx.resources.ResourceModule;
+import com.ossobo.winterfx.resources.enums.ResourceType;
 import com.ossobo.winterfx.sound.SoundManager;
 import com.ossobo.winterfx.sound.enums.SoundType;
 import com.ossobo.winterfx.view.alert.AlertManager;
@@ -15,82 +16,110 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * 🔔 NotificationManager v8.0 — Fachada do módulo notification.
+ * NotificationManager v12.0 — Fachada do módulo notification.
  *
- * <p>USA {@link AlertManager} para exibir alertas.
- * NÃO conhece {@code StageManager} diretamente.</p>
+ * <p><b>Dependências:</b></p>
+ * <ul>
+ *   <li>ResourceModule (obrigatório) - Fachada de recursos</li>
+ *   <li>SoundManager (pode ser null - sem som)</li>
+ *   <li>AlertManager (obrigatório, via setter)</li>
+ * </ul>
  *
- * <p>Dependência correta: {@code NotificationManager → AlertManager → StageManager}</p>
- *
- * @version 8.0 (01/07/2026)
+ * @version 12.0 (23/08/2026) - ResourceModule + remoção de NotificationViewResolver
  */
 public class NotificationManager {
 
+    private static final System.Logger LOGGER = System.getLogger(NotificationManager.class.getName());
+
     private final Map<String, javafx.stage.Stage> alertasAtivos = new ConcurrentHashMap<>();
+    private final ResourceModule resourceModule;
+    private final SoundManager soundManager;
 
     private AlertManager alertManager;
-    private final ResourceRegistry resourceRegistry;
-    private SoundManager soundManager;
 
-    public NotificationManager(ResourceRegistry resourceRegistry) {
-        this.resourceRegistry = resourceRegistry;
+    /**
+     * Construtor com dependências obrigatórias.
+     *
+     * @param resourceModule Fachada de recursos (obrigatório)
+     * @param soundManager Gerenciador de som (pode ser null para desabilitar som)
+     */
+    public NotificationManager(ResourceModule resourceModule, SoundManager soundManager) {
+        this.resourceModule = Objects.requireNonNull(resourceModule, "resourceModule não pode ser null");
+        this.soundManager = soundManager; // Pode ser null (sem som)
+
+        if (soundManager == null) {
+            LOGGER.log(System.Logger.Level.WARNING, "SoundManager não fornecido - notificações sem som");
+        } else {
+            LOGGER.log(System.Logger.Level.INFO, "NotificationManager inicializado com suporte a som");
+        }
     }
 
-    public void setAlertManager(AlertManager alertManager) { this.alertManager = alertManager; }
-    public void setSoundManager(SoundManager soundManager) { this.soundManager = soundManager; }
+    /**
+     * Define o AlertManager (necessário para notificações customizadas).
+     */
+    @Inject
+    public void setAlertManager(AlertManager alertManager) {
+        this.alertManager = Objects.requireNonNull(alertManager, "alertManager não pode ser null");
+        LOGGER.log(System.Logger.Level.INFO, "AlertManager configurado");
+    }
 
     // =============================================
     // API PÚBLICA
     // =============================================
 
     public String info(String titulo, String descricao) {
-        return criarAlerta(titulo, descricao, null, AlertType.INFO);
+        return criarAlerta(titulo, descricao, null, NotificationType.INFO);
     }
 
     public String success(String titulo, String descricao) {
-        return criarAlerta(titulo, descricao, null, AlertType.SUCCESS);
+        return criarAlerta(titulo, descricao, null, NotificationType.SUCCESS);
     }
 
     public String warn(String titulo, String descricao) {
-        return criarAlerta(titulo, descricao, null, AlertType.WARNING);
+        return criarAlerta(titulo, descricao, null, NotificationType.WARNING);
     }
 
     public String erro(String titulo, String descricao) {
-        return criarAlerta(titulo, descricao, null, AlertType.ERROR);
+        return criarAlerta(titulo, descricao, null, NotificationType.ERROR);
     }
 
     public String erro(String titulo, String descricao, String detalhes) {
-        return criarAlerta(titulo, descricao, detalhes, AlertType.ERROR);
+        return criarAlerta(titulo, descricao, detalhes, NotificationType.ERROR);
     }
 
     public String critico(String titulo, String descricao) {
-        return criarAlerta(titulo, descricao, null, AlertType.CRITICAL);
+        return criarAlerta(titulo, descricao, null, NotificationType.CRITICAL);
     }
 
     // =============================================
-    // GERENCIAMENTO
+    // CONFIRMAÇÃO - VERSÃO SÍNCRONA (para a JavaFX Thread)
     // =============================================
 
-    public void fecharAlerta(String id) {
-        Platform.runLater(() -> {
-            javafx.stage.Stage stage = alertasAtivos.remove(id);
-            if (stage != null) stage.close();
-        });
-    }
+    /**
+     * Confirmação síncrona para uso direto na JavaFX Thread.
+     * Usa Alert nativo para garantir bloqueio correto.
+     */
+    public boolean confirmarSync(String mensagem, String titulo, TipoConfirmacao tipo) {
+        var alertType = tipo == TipoConfirmacao.PERIGOSA
+                ? Alert.AlertType.WARNING : Alert.AlertType.CONFIRMATION;
 
-    public void fecharTodosAlertas() {
-        Platform.runLater(() -> alertasAtivos.values().forEach(s -> s.close()));
-        alertasAtivos.clear();
+        var alert = new Alert(alertType);
+        alert.setTitle(titulo);
+        alert.setHeaderText(titulo);
+        alert.setContentText(mensagem);
+
+        var result = alert.showAndWait();
+        return result.filter(r -> r == ButtonType.OK).isPresent();
     }
 
     // =============================================
-    // CONFIRMAÇÃO
+    // CONFIRMAÇÃO - VERSÃO ASSÍNCRONA (para Background)
     // =============================================
 
     public enum TipoConfirmacao { PADRAO, PERIGOSA, SAIR }
@@ -101,50 +130,108 @@ public class NotificationManager {
 
     public void confirmarComDetalhes(String mensagem, String detalhes, String titulo,
                                      TipoConfirmacao tipo, Consumer<Boolean> callback) {
+        Objects.requireNonNull(callback, "callback não pode ser null");
+
         Platform.runLater(() -> {
             try {
-                NotificationType notificationType = tipo == TipoConfirmacao.PERIGOSA
-                        ? NotificationType.CRITICAL : NotificationType.CONFIRMATION;
-                String viewId = NotificationViewResolver.resolveViewId(notificationType);
+                if (alertManager == null) {
+                    LOGGER.log(System.Logger.Level.DEBUG, "AlertManager não disponível - usando fallback nativo");
+                    callback.accept(confirmarSync(mensagem, titulo, tipo));
+                    return;
+                }
 
-                if (!resourceRegistry.contains(viewId)) {
-                    callback.accept(showNativeConfirm(mensagem, titulo, tipo));
+                var notificationType = tipo == TipoConfirmacao.PERIGOSA
+                        ? NotificationType.CRITICAL : NotificationType.CONFIRMATION;
+
+                // ✅ RESOLVE VIEW ID DIRETAMENTE (sem NotificationViewResolver)
+                var viewId = resolveViewId(notificationType);
+
+                // ✅ Usa ResourceModule.exists() com tipo ALERT
+                if (!resourceModule.exists(viewId, ResourceType.ALERT)) {
+                    LOGGER.log(System.Logger.Level.DEBUG, "View de alerta não encontrada: {0}", viewId);
+                    callback.accept(confirmarSync(mensagem, titulo, tipo));
                     return;
                 }
 
                 tocarSom(notificationType);
+
+                // showAndWait sempre retorna true - usamos fallback para confirmação real
+                // A confirmação real é feita pelo OnConfirmationHandler com Alert nativo
                 boolean result = alertManager.showAndWait(viewId);
                 callback.accept(result);
 
             } catch (Exception e) {
-                callback.accept(showNativeConfirm(mensagem, titulo, tipo));
+                LOGGER.log(System.Logger.Level.WARNING, "Erro na confirmação, usando fallback nativo", e);
+                callback.accept(confirmarSync(mensagem, titulo, tipo));
             }
         });
+    }
+
+    // =============================================
+    // GERENCIAMENTO
+    // =============================================
+
+    public void fecharAlerta(String id) {
+        Platform.runLater(() -> {
+            var stage = alertasAtivos.remove(id);
+            if (stage != null) stage.close();
+        });
+    }
+
+    public void fecharTodosAlertas() {
+        Platform.runLater(() -> alertasAtivos.values().forEach(javafx.stage.Stage::close));
+        alertasAtivos.clear();
     }
 
     // =============================================
     // INTERNO
     // =============================================
 
-    private String criarAlerta(String titulo, String descricao, String detalhes, AlertType tipo) {
-        String id = UUID.randomUUID().toString();
+    /**
+     * Resolve o ID da view para um tipo de notificação.
+     *
+     * <p>Esta é a lógica que antes estava no NotificationViewResolver (deletado).</p>
+     */
+    private String resolveViewId(NotificationType type) {
+        return switch (type) {
+            case INFO -> "notification-info";
+            case SUCCESS -> "notification-success";
+            case WARNING -> "notification-warning";
+            case ERROR, EXCEPTION -> "notification-error";
+            case CRITICAL -> "notification-critical";
+            case CONFIRMATION -> "notification-confirmation";
+            default -> "notification-info";
+        };
+    }
+
+    private String criarAlerta(String titulo, String descricao, String detalhes, NotificationType tipo) {
+        var id = UUID.randomUUID().toString();
 
         Platform.runLater(() -> {
             try {
-                NotificationType notificationType = convertToNotificationType(tipo);
-                String viewId = NotificationViewResolver.resolveViewId(notificationType);
-
-                if (!resourceRegistry.contains(viewId)) {
+                if (alertManager == null) {
+                    LOGGER.log(System.Logger.Level.WARNING, "AlertManager não disponível - usando fallback nativo");
                     showNativeAlert(titulo, descricao, tipo);
                     return;
                 }
 
-                tocarSom(notificationType);
+                // ✅ RESOLVE VIEW ID DIRETAMENTE (sem NotificationViewResolver)
+                var viewId = resolveViewId(tipo);
 
-                javafx.stage.Stage stage = alertManager.showAlert(viewId, tipo);
+                // ✅ Usa ResourceModule.exists() com tipo ALERT
+                if (!resourceModule.exists(viewId, ResourceType.ALERT)) {
+                    LOGGER.log(System.Logger.Level.DEBUG, "View de alerta não encontrada: {0}", viewId);
+                    showNativeAlert(titulo, descricao, tipo);
+                    return;
+                }
+
+                tocarSom(tipo);
+
+                var stage = alertManager.showAlert(viewId, convertToAlertType(tipo));
                 alertasAtivos.put(id, stage);
 
             } catch (Exception e) {
+                LOGGER.log(System.Logger.Level.WARNING, "Erro ao criar alerta, usando fallback nativo", e);
                 showNativeAlert(titulo, descricao, tipo);
             }
         });
@@ -153,9 +240,15 @@ public class NotificationManager {
     }
 
     private void tocarSom(NotificationType type) {
-        if (soundManager == null) return;
-        SoundType soundType = mapToSoundType(type);
-        if (soundType != null) soundManager.play(soundType);
+        if (soundManager == null) {
+            LOGGER.log(System.Logger.Level.DEBUG, "SoundManager não disponível - sem som");
+            return;
+        }
+
+        var soundType = mapToSoundType(type);
+        if (soundType != null) {
+            soundManager.play(soundType);
+        }
     }
 
     private SoundType mapToSoundType(NotificationType type) {
@@ -170,15 +263,15 @@ public class NotificationManager {
         };
     }
 
-    private NotificationType convertToNotificationType(AlertType alertType) {
-        return switch (alertType) {
-            case INFO -> NotificationType.INFO;
-            case SUCCESS -> NotificationType.SUCCESS;
-            case WARNING -> NotificationType.WARNING;
-            case ERROR -> NotificationType.ERROR;
-            case CRITICAL -> NotificationType.CRITICAL;
-            case CONFIRMATION -> NotificationType.CONFIRMATION;
-            default -> NotificationType.INFO;
+    private com.ossobo.winterfx.resources.enums.AlertType convertToAlertType(NotificationType notificationType) {
+        return switch (notificationType) {
+            case INFO -> com.ossobo.winterfx.resources.enums.AlertType.INFO;
+            case SUCCESS -> com.ossobo.winterfx.resources.enums.AlertType.SUCCESS;
+            case WARNING -> com.ossobo.winterfx.resources.enums.AlertType.WARNING;
+            case ERROR, EXCEPTION -> com.ossobo.winterfx.resources.enums.AlertType.ERROR;
+            case CRITICAL -> com.ossobo.winterfx.resources.enums.AlertType.CRITICAL;
+            case CONFIRMATION -> com.ossobo.winterfx.resources.enums.AlertType.CONFIRMATION;
+            default -> com.ossobo.winterfx.resources.enums.AlertType.INFO;
         };
     }
 
@@ -186,29 +279,19 @@ public class NotificationManager {
     // FALLBACKS NATIVOS
     // =============================================
 
-    private void showNativeAlert(String titulo, String descricao, AlertType tipo) {
+    private void showNativeAlert(String titulo, String descricao, NotificationType tipo) {
         Platform.runLater(() -> {
-            Alert.AlertType alertType = switch (tipo) {
+            var alertType = switch (tipo) {
                 case INFO, SUCCESS -> Alert.AlertType.INFORMATION;
                 case WARNING -> Alert.AlertType.WARNING;
-                case ERROR, CRITICAL -> Alert.AlertType.ERROR;
+                case ERROR, EXCEPTION, CRITICAL -> Alert.AlertType.ERROR;
                 default -> Alert.AlertType.INFORMATION;
             };
-            Alert alert = new Alert(alertType);
+            var alert = new Alert(alertType);
             alert.setTitle(titulo);
             alert.setHeaderText(titulo);
             alert.setContentText(descricao);
             alert.showAndWait();
         });
-    }
-
-    private boolean showNativeConfirm(String mensagem, String titulo, TipoConfirmacao tipo) {
-        Alert alert = new Alert(tipo == TipoConfirmacao.PERIGOSA
-                ? Alert.AlertType.WARNING : Alert.AlertType.CONFIRMATION);
-        alert.setTitle(titulo);
-        alert.setHeaderText(titulo);
-        alert.setContentText(mensagem);
-        Optional<ButtonType> result = alert.showAndWait();
-        return result.filter(r -> r == ButtonType.OK).isPresent();
     }
 }

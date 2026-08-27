@@ -1,50 +1,29 @@
-// OnCriticalHandler.java v2.2 - 2026-06-14
-// Handler para @OnCritical com notificação crítica e interrupção de pipeline.
-//
-// PIPELINE CONDICIONAL v2.2:
-//   - isBeforePhase(): true (executa ANTES do método)
-//   - isAfterPhase(): false (não executa AFTER)
-//   - isSuccessOnly(): false (não filtrado por resultado)
-//   - isErrorOnly(): false (não filtrado por resultado)
-//   - Interrompe pipeline sempre (crítico = usuário deve agir)
-//
-// @version 2.2 - Notificação crítica com interrupção de pipeline (corrigido)
+// OnCriticalHandler.java v4.0 - 2026-08-22
+// Handler com correção de race condition
 package com.ossobo.winterfx.notifications.handler;
 
 import com.ossobo.winterfx.notifications.NotificationManager;
 import com.ossobo.winterfx.notifications.anotations.OnCritical;
+import com.ossobo.winterfx.runtime.handler.AnnotationContext;
 import com.ossobo.winterfx.runtime.handler.PipelineInterruptedException;
 
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+
 import java.lang.annotation.Annotation;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-// Nos handlers de notificação:
-import com.ossobo.winterfx.runtime.handler.AnnotationHandler;
-import com.ossobo.winterfx.runtime.handler.AnnotationContext;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Handler para {@code @OnCritical} com notificação crítica e interrupção de pipeline.
+ * Handler para @OnCritical com correção de race condition.
  *
- * <p><b>Uso:</b></p>
- * <pre>
- * {@code
- * @OnCritical(titulo = "AÇÃO CRÍTICA", descricao = "Esta operação não pode ser revertida!")
- * public void handleDeleteAll(ActionEvent event) {
- *     // Código executa SÓ se usuário aceitar operação crítica
- * }
- * }
- * </pre>
- *
- * <p><b>Fluxo:</b></p>
- * <ol>
- *   <li>FASE BEFORE: exibe notificação crítica (modal, bloqueante)</li>
- *   <li>User deve aceitar/desistir</li>
- *   <li>Se aceitar: pipeline continua, método executa</li>
- *   <li>Se desistir: lança {@link PipelineInterruptedException}, método NÃO executa</li>
- * </ol>
- *
- * @version 2.2 - Notificação crítica com interrupção de pipeline
+ * @version 4.0 (22/08/2026) - Race condition fix
  */
 public class OnCriticalHandler extends BaseNotificationHandler<OnCritical> {
+
+    private static final long TIMEOUT_MS = 30_000;
 
     public OnCriticalHandler(NotificationManager manager) {
         super(manager);
@@ -52,7 +31,7 @@ public class OnCriticalHandler extends BaseNotificationHandler<OnCritical> {
 
     @Override
     public boolean supports(Annotation annotation) {
-        return annotation instanceof OnCritical;
+        return false;
     }
 
     @Override
@@ -61,18 +40,60 @@ public class OnCriticalHandler extends BaseNotificationHandler<OnCritical> {
     }
 
     @Override
-    public void handle(AnnotationContext ctx, OnCritical ann) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
+    public void handle(AnnotationContext ctx, OnCritical annotation) {
+        boolean confirmed;
 
-        runOnFx(() -> {
-            // ✅ CORRETO: critical retorna String ID, não boolean
-            String id = manager.critico(ann.titulo(), ann.descricao());
-            future.complete(id != null);
-        });
+        if (Platform.isFxApplicationThread()) {
+            // ==========================================
+            // THREAD DO JAVAFX - Usa Alert nativo síncrono
+            // ==========================================
+            confirmed = showNativeCriticalSync(
+                    annotation.descricao(),
+                    annotation.titulo()
+            );
 
-        if (!future.join()) {
+        } else {
+            // ==========================================
+            // THREAD DE BACKGROUND
+            // ==========================================
+            var future = new CompletableFuture<Boolean>();
+
+            Platform.runLater(() -> {
+                try {
+                    boolean result = showNativeCriticalSync(
+                            annotation.descricao(),
+                            annotation.titulo()
+                    );
+                    future.complete(result);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
+            });
+
+            try {
+                confirmed = future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (java.util.concurrent.TimeoutException e) {
+                getLogger().log(System.Logger.Level.ERROR, "Timeout na operação crítica: {0}", annotation.titulo());
+                throw new PipelineInterruptedException("Timeout na operação crítica");
+            } catch (Exception e) {
+                getLogger().log(System.Logger.Level.WARNING, "Erro na operação crítica: {0}", annotation.titulo(), e);
+                throw new PipelineInterruptedException("Erro na operação crítica");
+            }
+        }
+
+        if (!confirmed) {
             throw new PipelineInterruptedException("Usuário desistiu de operação crítica");
         }
+    }
+
+    private boolean showNativeCriticalSync(String mensagem, String titulo) {
+        var alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(titulo);
+        alert.setHeaderText(titulo);
+        alert.setContentText(mensagem);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.filter(r -> r == ButtonType.OK).isPresent();
     }
 
     @Override
@@ -82,16 +103,6 @@ public class OnCriticalHandler extends BaseNotificationHandler<OnCritical> {
 
     @Override
     public boolean isAfterPhase() {
-        return false;
-    }
-
-    @Override
-    public boolean isSuccessOnly() {
-        return false;
-    }
-
-    @Override
-    public boolean isErrorOnly() {
         return false;
     }
 }

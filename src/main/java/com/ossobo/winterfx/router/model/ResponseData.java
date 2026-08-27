@@ -92,6 +92,23 @@ public class ResponseData {
     }
 
     /**
+     * Define a mensagem global da resposta (sucesso ou erro).
+     *
+     * <pre>{@code
+     * return ResponseData.success()
+     *         .withMessage("Funcionário salvo com sucesso!")
+     *         .withData("id", salvo.id());
+     * }</pre>
+     *
+     * @param message A mensagem descritiva.
+     * @return A própria instância, permitindo encadeamento.
+     */
+    public ResponseData withMessage(String message) {
+        this.message = message;
+        return this;
+    }
+
+    /**
      * Verifica se a operação representada por esta resposta foi executada com sucesso.
      *
      * @return {@code true} se sucesso, {@code false} caso contrário.

@@ -65,7 +65,7 @@ public final class ConstructorInstantiationStrategy implements InstantiationStra
      */
     @Override
     public Object instantiate(BeanDefinition definition) throws Exception {
-        Class<?> type = definition.getType();
+        Class<?> type = definition.type();
         Constructor<?> constructor = findConstructor(type);
         Object[] args = resolveArguments(constructor);
         return reflectionProcessor.instantiate(constructor, args);

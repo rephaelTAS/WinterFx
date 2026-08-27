@@ -2,43 +2,41 @@ package com.ossobo.winterfx.view.loader;
 
 import com.ossobo.winterfx.di.DiContainer;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.runtime.WinterFXProxyFactory;
-import com.ossobo.winterfx.view.controller.WinterFXController;
 import com.ossobo.winterfx.view.exceptios.ViewEngineException;
 import com.ossobo.winterfx.view.injection.ReactiveViewInjector;
 import com.ossobo.winterfx.view.injection.ViewState;
 
-import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.ButtonBase;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.Tab;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URL;
+import java.util.Map;
+import java.lang.System.Logger;
 
 /**
- * FXMLService v7.0 - MOTOR MVVM INVISÍVEL
+ * FXMLService v12.0 - Responsável APENAS por carregar FXML e extrair namespace.
  *
- * <p><b>Responsabilidade:</b></p>
+ * <p><b>Responsabilidades:</b></p>
  * <ul>
- *   <li>Carregar FXML com controller do DI Container</li>
- *   <li>Aplicar o estado reativo oculto (MVVM) nos campos injetados</li>
- *   <li>Fazer binding dos botões (fx:id → método)</li>
+ *   <li>Carregar o FXML usando FXMLLoader</li>
+ *   <li>Obter controller do DI</li>
+ *   <li>Extrair namespace (fx:id → Node) do FXMLLoader</li>
+ *   <li>Aplicar MVVM (ReactiveViewInjector)</li>
+ *   <li>Retornar LoadResult (root, namespace, controller, viewState)</li>
  * </ul>
  *
- * @version 7.0 (MVVM Integration)
+ * <p><b>NÃO FAZ:</b></p>
+ * <ul>
+ *   <li>❌ Aplicar CSS (StyleManager faz)</li>
+ *   <li>❌ Vincular botões (RebindButtonsService faz)</li>
+ *   <li>❌ Gerenciar cache (StageManager faz)</li>
+ * </ul>
+ *
+ * @version 12.0 (25/08/2026)
  */
 public final class FXMLService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FXMLService.class);
+    private static final Logger LOGGER = System.getLogger(FXMLService.class.getName());
 
     private final DiContainer diContainer;
 
@@ -46,135 +44,48 @@ public final class FXMLService {
         this.diContainer = diContainer;
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> LoadedView<T> load(ViewDescriptor descriptor, Class<T> controllerType) {
+    /**
+     * Carrega o FXML e retorna todos os componentes necessários.
+     *
+     * @param descriptor Descritor da view
+     * @param controllerType Tipo do controller (para fallback)
+     * @return LoadResult contendo root, namespace, controller e viewState
+     */
+    public LoadResult load(ViewDescriptor descriptor, Class<?> controllerType) {
         try {
-            URL fxmlUrl = descriptor.getFxmlUrl();
-            Class<?> controllerClass = resolveControllerClass(descriptor, controllerType);
+            var fxmlUrl = descriptor.fxmlUrl();
+            var controllerClass = resolveControllerClass(descriptor, controllerType);
 
-            // ============================================================
-            // FASE 1: OBTÉM CONTROLLER DO DI (JÁ INICIALIZADO!)
-            // ============================================================
-            T controller = (T) diContainer.getBean(controllerClass);
-            LOGGER.debug("📦 Controller obtido do DI: {}", controllerClass.getSimpleName());
+            // FASE 1: Obtém controller do DI
+            var controller = diContainer.getBean(controllerClass);
+            LOGGER.log(Logger.Level.DEBUG, "📦 Controller obtido do DI: {0}",
+                    controllerClass.getSimpleName());
 
-            // ============================================================
-            // FASE 2: CARREGA O FXML (JavaFX injeta os @FXML aqui)
-            // ============================================================
-            FXMLLoader loader = new FXMLLoader(fxmlUrl);
+            // FASE 2: Carrega o FXML
+            var loader = new FXMLLoader(fxmlUrl);
             loader.setController(controller);
             Parent root = loader.load();
 
-            // ============================================================
-            // 🌟 FASE 3: NOVO MOTOR MVVM INVISÍVEL 🌟
-            // ============================================================
-            // Criamos o ViewModel oculto para esta tela
-            ViewState viewState = new ViewState();
+            // FASE 3: Extrai o namespace (fx:id → Node)
+            Map<String, Object> namespace = loader.getNamespace();
+            LOGGER.log(Logger.Level.DEBUG, "📋 Namespace capturado com {0} elementos",
+                    namespace.size());
 
-            // O injetor reativo lê o que o JavaFX acabou de injetar e cria os binds
-            ReactiveViewInjector reactiveInjector = new ReactiveViewInjector(viewState);
+            // FASE 4: Motor MVVM invisível
+            var viewState = new ViewState();
+            var reactiveInjector = new ReactiveViewInjector(viewState);
             reactiveInjector.injectReactiveState(controller, root);
 
-            // ============================================================
-            // FASE 4: BINDING DOS BOTÕES (Lógica original mantida perfeitamente)
-            // ============================================================
-            rebindButtons(root, controller);
+            LOGGER.log(Logger.Level.DEBUG, "✅ FXML carregado: {0} com controller {1}",
+                    descriptor.id(), controllerClass.getSimpleName());
 
-            LOGGER.debug("✅ FXML carregado (MVVM): {} com controller {}",
-                    descriptor.getId(), controllerClass.getSimpleName());
-
-            // ⚠️ IMPORTANTE: Retornamos a view E o nosso estado oculto amarrado a ela
-            return new LoadedView<>(root, controller, descriptor.getId(), false, viewState);
+            // Retorna TUDO: root, namespace, controller, viewState
+            return new LoadResult(root, namespace, controller, viewState);
 
         } catch (IOException e) {
-            throw new ViewEngineException("Erro ao carregar FXML: " + descriptor.getId(), e);
+            LOGGER.log(Logger.Level.ERROR, "Erro ao carregar FXML: " + descriptor.id(), e);
+            throw new ViewEngineException("Erro ao carregar FXML: " + descriptor.id(), e);
         }
-    }
-
-    // ============================================================
-    // BINDING DE BOTÕES (MANTIDO EXATAMENTE COM ESTÁ - NÃO MEXER)
-    // ============================================================
-
-    private void rebindButtons(Parent root, Object controller) {
-        int count = 0;
-        boolean isWinterController = controller instanceof WinterFXController;
-
-        for (Method method : controller.getClass().getMethods()) {
-            String fxId = method.getName();
-
-            if (isObjectMethod(fxId)) continue;
-            if (!hasActionEventParam(method)) continue;
-
-            Node node = findButtonById(root, fxId);
-
-            if (node instanceof ButtonBase button) {
-                button.setOnAction(event -> {
-                    try {
-                        if (isWinterController) {
-                            WinterFXController winterController = (WinterFXController) controller;
-                            winterController.execute(method.getName(), event);
-                        } else {
-                            method.invoke(controller, event);
-                        }
-                    } catch (Exception e) {
-                        // Tratamento de erro original
-                    }
-                });
-                count++;
-            }
-        }
-    }
-
-    private Node findButtonById(Parent root, String fxId) {
-        Node node = root.lookup("#" + fxId);
-        if (node != null) return node;
-        return findAllButtonsRecursively(root, fxId);
-    }
-
-    private Node findAllButtonsRecursively(Parent parent, String fxId) {
-        for (Node child : parent.getChildrenUnmodifiable()) {
-            if (child.getId() != null && child.getId().equals(fxId)) return child;
-
-            if (child instanceof Parent childParent) {
-                Node found = findAllButtonsRecursively(childParent, fxId);
-                if (found != null) return found;
-            }
-
-            if (child instanceof SplitPane splitPane) {
-                for (Node splitChild : splitPane.getItems()) {
-                    if (splitChild.getId() != null && splitChild.getId().equals(fxId)) return splitChild;
-                    if (splitChild instanceof Parent splitParent) {
-                        Node found = findAllButtonsRecursively(splitParent, fxId);
-                        if (found != null) return found;
-                    }
-                }
-            }
-
-            if (child instanceof ScrollPane scrollPane) {
-                Node content = scrollPane.getContent();
-                if (content != null) {
-                    if (content.getId() != null && content.getId().equals(fxId)) return content;
-                    if (content instanceof Parent contentParent) {
-                        Node found = findAllButtonsRecursively(contentParent, fxId);
-                        if (found != null) return found;
-                    }
-                }
-            }
-
-            if (child instanceof TabPane tabPane) {
-                for (Tab tab : tabPane.getTabs()) {
-                    Node tabContent = tab.getContent();
-                    if (tabContent != null) {
-                        if (tabContent.getId() != null && tabContent.getId().equals(fxId)) return tabContent;
-                        if (tabContent instanceof Parent tabParent) {
-                            Node found = findAllButtonsRecursively(tabParent, fxId);
-                            if (found != null) return found;
-                        }
-                    }
-                }
-            }
-        }
-        return null;
     }
 
     // ============================================================
@@ -182,21 +93,34 @@ public final class FXMLService {
     // ============================================================
 
     private Class<?> resolveControllerClass(ViewDescriptor descriptor, Class<?> fallback) {
-        Class<?> controllerClass = descriptor.getControllerClass();
+        var controllerClass = descriptor.controllerClass();
         return (controllerClass == null || controllerClass == void.class) ? fallback : controllerClass;
     }
 
-    private boolean isObjectMethod(String name) {
-        return name.equals("toString") || name.equals("hashCode") ||
-                name.equals("equals") || name.equals("getClass") ||
-                name.equals("notify") || name.equals("wait") ||
-                name.equals("notifyAll");
-    }
-
-    private boolean hasActionEventParam(Method method) {
-        for (Class<?> paramType : method.getParameterTypes()) {
-            if (paramType == ActionEvent.class) return true;
+    /**
+     * Resultado do load: root, namespace, controller e viewState.
+     */
+    public record LoadResult(
+            Parent root,
+            Map<String, Object> namespace,
+            Object controller,
+            ViewState viewState
+    ) {
+        public LoadResult {
+            if (root == null) throw new IllegalArgumentException("root não pode ser nulo");
+            if (namespace == null) throw new IllegalArgumentException("namespace não pode ser nulo");
         }
-        return false;
+
+        public boolean hasController() {
+            return controller != null;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T getControllerAs(Class<T> type) {
+            if (hasController() && type.isInstance(controller)) {
+                return (T) controller;
+            }
+            throw new ClassCastException("Controller não é do tipo " + type.getSimpleName());
+        }
     }
 }

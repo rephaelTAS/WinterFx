@@ -8,6 +8,7 @@ import java.util.Objects;
 
 /**
  * Representa a definição de um Bean no container de injeção de dependências.
+ * Transformado em Record para garantir imutabilidade real e eliminação de boilerplate.
  *
  * <p>Armazena todas as informações necessárias para que o {@code DiContainer}
  * possa instanciar, injetar dependências e gerenciar o ciclo de vida do bean.</p>
@@ -18,109 +19,67 @@ import java.util.Objects;
  *   <li><b>Factory Method:</b> beans definidos via {@code @Configuration} + {@code @Bean}</li>
  * </ul>
  *
- * <p>Contém metadados para:</p>
- * <ul>
- *   <li>Injeção de dependências ({@code @Inject})</li>
- *   <li>Ciclo de vida ({@code @PostConstruct}, {@code @PreDestroy})</li>
- *   <li>Escopo ({@code @Scope})</li>
- *   <li>Seleção de beans ({@code @Primary}, {@code @Qualifier})</li>
- *   <li>Injeção de propriedades ({@code @Value})</li>
- * </ul>
- *
  * @see ScopeType
  * @see InjectionPoint
  */
-public class BeanDefinition {
-
-    private final String name;
-    private final Class<?> type;
-    private final ScopeType scopeType;
-    private final Class<?> factoryClass;
-    private final Method factoryMethod;
-    private final List<InjectionPoint> dependencies;
-    private final Method postConstructMethod;
-    private final Method preDestroyMethod;
-    private final boolean primary;
-    private final String qualifier;
-    private final Map<String, String> values;
-
+public record BeanDefinition(
+        String name,
+        Class<?> type,
+        ScopeType scopeType,
+        Class<?> factoryClass,
+        Method factoryMethod,
+        List<InjectionPoint> dependencies,
+        Method postConstructMethod,
+        Method preDestroyMethod,
+        boolean primary,
+        String qualifier,
+        Map<String, String> values
+) {
     /**
-     * Construtor para beans definidos por Component Scanning.
-     *
-     * @param name nome do bean
-     * @param type tipo do bean (classe)
-     * @param scopeType escopo do bean (singleton, prototype, etc.)
-     * @param dependencies lista de pontos de injeção
-     * @param postConstructMethod método de inicialização (null se não houver)
-     * @param preDestroyMethod método de destruição (null se não houver)
-     * @param primary true se o bean é marcado com @Primary
-     * @param qualifier valor do @Qualifier no TYPE, ou null
-     * @param values mapa de fieldName → expressão (@Value)
+     * Construtor compacto para validação centralizada e imutabilidade profunda.
      */
-    public BeanDefinition(String name, Class<?> type, ScopeType scopeType,
-                          List<InjectionPoint> dependencies,
-                          Method postConstructMethod, Method preDestroyMethod,
-                          boolean primary, String qualifier, Map<String, String> values) {
-        this.name = Objects.requireNonNull(name, "name não pode ser nulo");
-        this.type = Objects.requireNonNull(type, "type não pode ser nulo");
-        this.scopeType = Objects.requireNonNull(scopeType, "scopeType não pode ser nulo");
-        this.dependencies = Objects.requireNonNull(dependencies, "dependencies não pode ser nulo");
-        this.factoryClass = null;
-        this.factoryMethod = null;
-        this.postConstructMethod = postConstructMethod;
-        this.preDestroyMethod = preDestroyMethod;
-        this.primary = primary;
-        this.qualifier = qualifier;
-        this.values = values != null ? Collections.unmodifiableMap(values) : Collections.emptyMap();
+    public BeanDefinition {
+        Objects.requireNonNull(name, "name não pode ser nulo");
+        Objects.requireNonNull(type, "type não pode ser nulo");
+        Objects.requireNonNull(scopeType, "scopeType não pode ser nulo");
+        Objects.requireNonNull(dependencies, "dependencies não pode ser nulo");
+
+        // ✅ Torna a lista de dependências profundamente imutável
+        dependencies = List.copyOf(dependencies);
+
+        // Garante imutabilidade profunda no mapa de valores
+        values = values != null ? Collections.unmodifiableMap(values) : Collections.emptyMap();
     }
 
     /**
-     * Construtor para beans definidos por Factory Method (@Configuration + @Bean).
-     *
-     * @param name nome do bean
-     * @param type tipo do bean (retornado pelo factory method)
-     * @param scopeType escopo do bean (singleton, prototype, etc.)
-     * @param factoryClass classe contendo o factory method
-     * @param factoryMethod método factory que cria o bean
-     * @param dependencies lista de pontos de injeção
-     * @param postConstructMethod método de inicialização (null se não houver)
-     * @param preDestroyMethod método de destruição (null se não houver)
-     * @param primary true se o bean é marcado com @Primary
-     * @param qualifier valor do @Qualifier no TYPE, ou null
-     * @param values mapa de fieldName → expressão (@Value)
+     * Fábrica estática para beans definidos por Component Scanning.
      */
-    public BeanDefinition(String name, Class<?> type, ScopeType scopeType,
-                          Class<?> factoryClass, Method factoryMethod,
-                          List<InjectionPoint> dependencies,
-                          Method postConstructMethod, Method preDestroyMethod,
-                          boolean primary, String qualifier, Map<String, String> values) {
-        this.name = Objects.requireNonNull(name, "name não pode ser nulo");
-        this.type = Objects.requireNonNull(type, "type não pode ser nulo");
-        this.scopeType = Objects.requireNonNull(scopeType, "scopeType não pode ser nulo");
-        this.dependencies = Objects.requireNonNull(dependencies, "dependencies não pode ser nulo");
-        this.factoryClass = Objects.requireNonNull(factoryClass, "factoryClass não pode ser nulo");
-        this.factoryMethod = Objects.requireNonNull(factoryMethod, "factoryMethod não pode ser nulo");
-        this.postConstructMethod = postConstructMethod;
-        this.preDestroyMethod = preDestroyMethod;
-        this.primary = primary;
-        this.qualifier = qualifier;
-        this.values = values != null ? Collections.unmodifiableMap(values) : Collections.emptyMap();
+    public static BeanDefinition component(String name, Class<?> type, ScopeType scopeType,
+                                           List<InjectionPoint> dependencies,
+                                           Method postConstructMethod, Method preDestroyMethod,
+                                           boolean primary, String qualifier, Map<String, String> values) {
+        return new BeanDefinition(name, type, scopeType, null, null, dependencies,
+                postConstructMethod, preDestroyMethod, primary, qualifier, values);
     }
 
-    // ===== GETTERS =====
+    /**
+     * Fábrica estática para beans definidos por Factory Method.
+     */
+    public static BeanDefinition factory(String name, Class<?> type, ScopeType scopeType,
+                                         Class<?> factoryClass, Method factoryMethod,
+                                         List<InjectionPoint> dependencies,
+                                         Method postConstructMethod, Method preDestroyMethod,
+                                         boolean primary, String qualifier, Map<String, String> values) {
+        return new BeanDefinition(name, type, scopeType, factoryClass, factoryMethod, dependencies,
+                postConstructMethod, preDestroyMethod, primary, qualifier, values);
+    }
 
-    public String getName() { return name; }
-    public Class<?> getType() { return type; }
-    public ScopeType getScopeType() { return scopeType; }
-    public Class<?> getFactoryClass() { return factoryClass; }
-    public Method getFactoryMethod() { return factoryMethod; }
-    public boolean isFactoryMethod() { return factoryMethod != null; }
-    public List<InjectionPoint> getDependencies() { return dependencies; }
-    public Method getPostConstructMethod() { return postConstructMethod; }
-    public Method getPreDestroyMethod() { return preDestroyMethod; }
-    public boolean isPrimary() { return primary; }
-    public String getQualifier() { return qualifier; }
-    public Map<String, String> getValues() { return values; }
+    /**
+     * @return true se o bean usa factory method
+     */
+    public boolean isFactoryMethod() {
+        return factoryMethod != null;
+    }
 
     /**
      * @return true se o bean usa @Scope personalizado
@@ -133,7 +92,7 @@ public class BeanDefinition {
      * @return lista de nomes de campos com @Value
      */
     public List<String> getValueFieldNames() {
-        return Collections.unmodifiableList(new ArrayList<>(values.keySet()));
+        return List.copyOf(values.keySet());
     }
 
     /**
@@ -172,19 +131,5 @@ public class BeanDefinition {
                 .append("]");
 
         return sb.toString();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        BeanDefinition that = (BeanDefinition) o;
-        return Objects.equals(name, that.name);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(name);
     }
 }

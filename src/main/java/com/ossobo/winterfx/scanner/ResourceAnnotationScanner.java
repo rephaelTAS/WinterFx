@@ -22,11 +22,14 @@ import java.util.List;
 /**
  * Scanner de anotações de recursos (Views, Imagens, Notificações).
  *
- * <p><b>Versão 2.0 - Extração completa de campos</b></p>
+ * <p><b>Versão 2.1 - JPMS-Safe com resolução Eager (Fail-Fast)</b></p>
+ * <p>Os recursos são resolvidos no bootstrap, garantindo Fail-Fast.</p>
  *
- * @version 2.0
+ * @version 2.1
  */
 public final class ResourceAnnotationScanner {
+
+    private static final System.Logger LOGGER = System.getLogger(ResourceAnnotationScanner.class.getName());
 
     private final ScanResult scanResult;
     private final ClassLoader classLoader;
@@ -49,6 +52,10 @@ public final class ResourceAnnotationScanner {
         scanImages(registry);
         scanNotifications(registry);
 
+        LOGGER.log(System.Logger.Level.INFO,
+                "Scanner concluído: {0} views, {1} imagens, {2} notificações",
+                viewsFound, imagesFound, notificationsFound);
+
         return viewsFound + imagesFound + notificationsFound;
     }
 
@@ -69,18 +76,19 @@ public final class ResourceAnnotationScanner {
     }
 
     private void registerView(Class<?> clazz, ResourceRegistry registry) {
-        // ✅ Guardar ID para usar no catch
         String viewId = "unknown";
 
         try {
             RegisterView ann = clazz.getAnnotation(RegisterView.class);
             if (ann == null) return;
 
-            viewId = ann.id();  // ← Guardar ID
+            viewId = ann.id();
 
-            // ========== RESOLVER FXML ==========
+            // ========== RESOLVER FXML (OBRIGATÓRIO) ==========
             URL fxmlUrl = resolveResource(clazz, ann.fxml());
             if (fxmlUrl == null) {
+                LOGGER.log(System.Logger.Level.ERROR,
+                        "FXML não encontrado para view '{0}': {1}", viewId, ann.fxml());
                 return;
             }
 
@@ -210,7 +218,12 @@ public final class ResourceAnnotationScanner {
             registry.register(descriptor);
             viewsFound++;
 
+            LOGGER.log(System.Logger.Level.DEBUG,
+                    "View registrada: {0} (fxml: {1})", viewId, fxmlUrl);
+
         } catch (Exception e) {
+            LOGGER.log(System.Logger.Level.ERROR,
+                    "Erro ao registrar view '{0}': {1}", viewId, e.getMessage());
         }
     }
 
@@ -239,6 +252,8 @@ public final class ResourceAnnotationScanner {
         try {
             URL imageUrl = resolveResource(sourceClass, ann.src());
             if (imageUrl == null) {
+                LOGGER.log(System.Logger.Level.ERROR,
+                        "Imagem não encontrada para '{0}': {1}", imageId, ann.src());
                 return;
             }
 
@@ -259,7 +274,12 @@ public final class ResourceAnnotationScanner {
             registry.register(descriptor);
             imagesFound++;
 
+            LOGGER.log(System.Logger.Level.DEBUG,
+                    "Imagem registrada: {0} -> {1}", imageId, imageUrl);
+
         } catch (Exception e) {
+            LOGGER.log(System.Logger.Level.ERROR,
+                    "Erro ao registrar imagem '{0}': {1}", imageId, e.getMessage());
         }
     }
 
@@ -297,6 +317,8 @@ public final class ResourceAnnotationScanner {
             }
 
             if (fxmlUrl == null) {
+                LOGGER.log(System.Logger.Level.ERROR,
+                        "FXML não encontrado para notificação '{0}'", notificationId);
                 return;
             }
 
@@ -385,14 +407,19 @@ public final class ResourceAnnotationScanner {
             registry.register(descriptor);
             notificationsFound++;
 
+            LOGGER.log(System.Logger.Level.DEBUG,
+                    "Notificação registrada: {0} -> {1}", notificationId, fxmlUrl);
+
         } catch (Exception e) {
+            LOGGER.log(System.Logger.Level.ERROR,
+                    "Erro ao registrar notificação '{0}': {1}", notificationId, e.getMessage());
         }
     }
 
     /**
      * Converte NotificationType para AlertType.
      */
-    private AlertType convertToAlertType(NotificationType type) {
+    private AlertType convertToAlertType(com.ossobo.winterfx.notifications.enums.NotificationType type) {
         if (type == null) return AlertType.INFO;
         return switch (type) {
             case INFO -> AlertType.INFO;
@@ -433,62 +460,89 @@ public final class ResourceAnnotationScanner {
     }
 
     /**
-     * Resolve o FXML padrão para notificações.
+     * Resolve o FXML padrão para notificações (JPMS-Safe).
+     * Usa getClass().getResource() que respeita os limites de módulos.
      */
     private URL resolveDefaultNotificationFxml(String id) {
+        // Caminho absoluto no classpath do módulo do framework
         String defaultPath = "/com/ossobo/winterfx/notifications/fxmls/" + id + ".fxml";
-        URL url = classLoader.getResource(defaultPath.startsWith("/") ? defaultPath.substring(1) : defaultPath);
+        URL url = getClass().getResource(defaultPath);
 
         if (url == null) {
             defaultPath = "/com/ossobo/winterfx/notifications/fxmls/default_notification.fxml";
-            url = classLoader.getResource(defaultPath.startsWith("/") ? defaultPath.substring(1) : defaultPath);
+            url = getClass().getResource(defaultPath);
+        }
+
+        if (url != null) {
+            LOGGER.log(System.Logger.Level.DEBUG,
+                    "Notificação padrão resolvida: {0}", url);
         }
 
         return url;
     }
 
     // ============================================================
-    // RESOLVER RECURSOS
+    // RESOLVER RECURSOS (JPMS-SAFE para o Bootstrap)
     // ============================================================
 
+    /**
+     * Resolve um recurso para URL usando estratégia JPMS-Safe.
+     *
+     * <p><b>Ordem de resolução:</b></p>
+     * <ol>
+     *   <li><b>JPMS-Safe:</b> {@link Class#getResource(String)} - respeita limites de módulos</li>
+     *   <li><b>Fallback:</b> {@link ClassLoader#getResource(String)} - para aplicações não-modulares</li>
+     *   <li><b>Fallback 2:</b> ClassLoader do próprio framework</li>
+     * </ol>
+     */
     private URL resolveResource(Class<?> sourceClass, String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
 
+        // 1. URLs externas (http, https, file, jar)
         if (path.startsWith("http:") || path.startsWith("https:")
                 || path.startsWith("file:") || path.startsWith("jar:")) {
             try {
                 return URI.create(path).toURL();
             } catch (Exception e) {
+                LOGGER.log(System.Logger.Level.WARNING,
+                        "Erro ao criar URL externa: {0}", path);
                 return null;
             }
         }
 
-        String clean = path.startsWith("/") ? path.substring(1) : path;
-
+        // 2. ESTRATÉGIA JPMS-SAFE (Prioridade Máxima)
+        // Class.getResource() entende limites de módulos.
+        // Se o path começa com "/", é absoluto; senão, é relativo ao pacote da sourceClass.
         if (sourceClass != null) {
-            ClassLoader sourceLoader = sourceClass.getClassLoader();
-            if (sourceLoader != null) {
-                URL url = sourceLoader.getResource(clean);
-                if (url != null) {
-                    return url;
-                }
-            }
-        }
-
-        URL url = classLoader.getResource(clean);
-        if (url != null) {
-            return url;
-        }
-
-        ClassLoader frameworkClassLoader = getClass().getClassLoader();
-        if (frameworkClassLoader != null && frameworkClassLoader != classLoader) {
-            url = frameworkClassLoader.getResource(clean);
+            URL url = sourceClass.getResource(path);
             if (url != null) {
                 return url;
             }
         }
+
+        // 3. FALLBACK: ClassLoader padrão (para apps não-modulares ou classpath flat)
+        String cleanPath = path.startsWith("/") ? path.substring(1) : path;
+
+        URL url = classLoader.getResource(cleanPath);
+        if (url != null) {
+            return url;
+        }
+
+        // 4. FALLBACK: ClassLoader do próprio framework
+        // (busca em /resources do WinterFX para recursos internos)
+        ClassLoader frameworkClassLoader = getClass().getClassLoader();
+        if (frameworkClassLoader != null && frameworkClassLoader != classLoader) {
+            url = frameworkClassLoader.getResource(cleanPath);
+            if (url != null) {
+                return url;
+            }
+        }
+
+        LOGGER.log(System.Logger.Level.DEBUG,
+                "Recurso não encontrado: {0} (sourceClass: {1})",
+                path, sourceClass != null ? sourceClass.getName() : "null");
 
         return null;
     }
@@ -497,6 +551,8 @@ public final class ResourceAnnotationScanner {
         try {
             return Class.forName(className, false, classLoader);
         } catch (Throwable e) {
+            LOGGER.log(System.Logger.Level.WARNING,
+                    "Classe não carregada: {0}", className);
             return null;
         }
     }

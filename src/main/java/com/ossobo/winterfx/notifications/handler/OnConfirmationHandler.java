@@ -1,17 +1,32 @@
-// OnConfirmationHandler.java v3.0 - Deadlock Fix
+// OnConfirmationHandler.java v5.0 - 2026-08-22
+// Handler com correção de race condition
 package com.ossobo.winterfx.notifications.handler;
 
 import com.ossobo.winterfx.notifications.NotificationManager;
 import com.ossobo.winterfx.notifications.anotations.OnConfirmation;
 import com.ossobo.winterfx.runtime.handler.AnnotationContext;
-import com.ossobo.winterfx.runtime.handler.AnnotationHandler;
 import com.ossobo.winterfx.runtime.handler.PipelineInterruptedException;
 
 import javafx.application.Platform;
-import java.lang.annotation.Annotation;
-import java.util.concurrent.CompletableFuture;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 
+import java.lang.annotation.Annotation;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Handler para @OnConfirmation com race condition fix.
+ *
+ * <p><b>Correção:</b> Quando na JavaFX Thread, usa Alert nativo síncrono
+ * em vez de Platform.runLater para evitar race condition.</p>
+ *
+ * @version 5.0 (22/08/2026) - Race condition fix, sem Platform.runLater na JavaFX Thread
+ */
 public class OnConfirmationHandler extends BaseNotificationHandler<OnConfirmation> {
+
+    private static final long TIMEOUT_MS = 30_000;
 
     public OnConfirmationHandler(NotificationManager manager) {
         super(manager);
@@ -19,7 +34,7 @@ public class OnConfirmationHandler extends BaseNotificationHandler<OnConfirmatio
 
     @Override
     public boolean supports(Annotation annotation) {
-        return annotation instanceof OnConfirmation;
+        return false;
     }
 
     @Override
@@ -28,44 +43,76 @@ public class OnConfirmationHandler extends BaseNotificationHandler<OnConfirmatio
     }
 
     @Override
-    public void handle(AnnotationContext ctx, OnConfirmation ann) {
+    public void handle(AnnotationContext ctx, OnConfirmation annotation) {
         boolean confirmed;
 
         if (Platform.isFxApplicationThread()) {
             // ==========================================
             // ESTAMOS NA THREAD DO JAVAFX
-            // Não podemos usar runLater + join (Causaria Deadlock)
-            // Chamamos o dialogo de forma SÍNCRONA diretamente.
+            // NÃO use manager.confirmar() com Platform.runLater
+            // Usa Alert nativo síncrono
             // ==========================================
-            final boolean[] syncResult = {false}; // Array para simular mutabilidade dentro do lambda
-
-            // Chamada direta ao manager (sem runOnFx)
-            manager.confirmar(ann.descricao(), ann.titulo(), c -> syncResult[0] = c);
-
-            confirmed = syncResult[0];
+            confirmed = showNativeConfirmationSync(
+                    annotation.descricao(),
+                    annotation.titulo()
+            );
 
         } else {
             // ==========================================
-            // ESTAMOS EM UMA THREAD DE BACKGROUND
-            // Aqui sim precisamos ir para a Thread do JavaFX e esperar o resultado.
+            // THREAD DE BACKGROUND
+            // Pode usar CompletableFuture + runLater
             // ==========================================
-            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            var future = new CompletableFuture<Boolean>();
 
-            runOnFx(() -> {
-                manager.confirmar(ann.descricao(), ann.titulo(), future::complete);
+            Platform.runLater(() -> {
+                try {
+                    boolean result = showNativeConfirmationSync(
+                            annotation.descricao(),
+                            annotation.titulo()
+                    );
+                    future.complete(result);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
             });
 
-            confirmed = future.join();
+            try {
+                confirmed = future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (java.util.concurrent.TimeoutException e) {
+                getLogger().log(System.Logger.Level.ERROR, "Timeout na confirmação para: {0}", annotation.titulo());
+                throw new PipelineInterruptedException("Timeout na confirmação");
+            } catch (Exception e) {
+                getLogger().log(System.Logger.Level.WARNING, "Erro na confirmação: {0}", annotation.titulo(), e);
+                throw new PipelineInterruptedException("Erro na confirmação");
+            }
         }
 
-        // Se o usuário não confirmou, interrompemos o Pipeline!
         if (!confirmed) {
             throw new PipelineInterruptedException("Usuário cancelou a operação");
         }
     }
 
-    @Override public boolean isBeforePhase() { return true; }
-    @Override public boolean isAfterPhase() { return false; }
-    @Override public boolean isSuccessOnly() { return false; }
-    @Override public boolean isErrorOnly() { return false; }
+    /**
+     * Mostra confirmação nativa de forma SÍNCRONA.
+     * Este método é chamado diretamente na JavaFX Thread.
+     */
+    private boolean showNativeConfirmationSync(String mensagem, String titulo) {
+        var alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(titulo);
+        alert.setContentText(mensagem);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.filter(r -> r == ButtonType.OK).isPresent();
+    }
+
+    @Override
+    public boolean isBeforePhase() {
+        return true;
+    }
+
+    @Override
+    public boolean isAfterPhase() {
+        return false;
+    }
 }

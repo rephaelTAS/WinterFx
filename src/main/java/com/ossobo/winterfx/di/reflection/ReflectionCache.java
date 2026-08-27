@@ -233,15 +233,17 @@ public final class ReflectionCache {
      * @param loader  Fornecedor do dado caso não exista no cache.
      * @return O dado recuperado do cache ou recém-carregado.
      */
-    private <T> T cache(Map<Class<?>, T> map, Class<?> key,
-                        java.util.function.Supplier<T> loader) {
+    private <T> T cache(Map<Class<?>, T> map, Class<?> key, java.util.function.Supplier<T> loader) {
+        // Checagem rápida para contar o Hit sem travar a computação
         if (map.containsKey(key)) {
             hits.incrementAndGet();
             return map.get(key);
         }
-        misses.incrementAndGet();
-        T value = loader.get();
-        map.put(key, value);
-        return value;
+
+        // ✅ CORREÇÃO: computeIfAbsent garante que o loader roda UMA VEZ SÓ no mundo inteiro
+        return map.computeIfAbsent(key, k -> {
+            misses.incrementAndGet();
+            return loader.get();
+        });
     }
 }

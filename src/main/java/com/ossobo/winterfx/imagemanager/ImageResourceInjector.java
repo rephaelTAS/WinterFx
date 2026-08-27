@@ -1,3 +1,5 @@
+// ImageResourceInjector.java v4.0 - 2026-08-22
+// Injetor de imagens com System.Logger (Java 9+)
 package com.ossobo.winterfx.imagemanager;
 
 import com.ossobo.winterfx.di.injection.DependencyInjector;
@@ -9,101 +11,109 @@ import javafx.scene.image.ImageView;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * ImageResourceInjector v2.0 — DESACOPLADO
+ * ImageResourceInjector v4.0 — DESACOPLADO + JPMS-SAFE + System.Logger
  *
- * <p>Injetor de imagens via {@code @InjectImage}.
- * Implementa {@link DependencyInjector} para ser registrado
- * como injector externo no {@code InjectionManager}.</p>
+ * <p>Injetor de imagens via {@code @InjectImage}.</p>
  *
- * <p>NÃO depende de {@code ReflectionCache} do DI.
- * Usa {@link ReflectionScanner} do módulo {@code scanner}
- * para descobrir campos anotados.</p>
- *
- * <p>Comportamento:</p>
+ * <p><b>Características:</b></p>
  * <ul>
- *   <li>Se o campo já tem um {@code ImageView} (criado pelo JavaFX) → atualiza a imagem</li>
- *   <li>Se o campo está vazio → cria novo {@code ImageView} e injeta</li>
+ *   <li>✅ JPMS-Safe: canAccess() antes de setAccessible()</li>
+ *   <li>✅ System.Logger (Java 9+) - Padrão WinterFX</li>
+ *   <li>✅ Fail-Fast: obrigatórias lançam exceção</li>
  * </ul>
  *
- * @version 2.0 (01/07/2026)
+ * @version 4.0 (22/08/2026) - System.Logger + JPMS-Safe
  */
 public class ImageResourceInjector implements DependencyInjector {
+
+    private static final System.Logger LOGGER = System.getLogger(ImageResourceInjector.class.getName());
 
     private final ReflectionScanner reflectionScanner;
     private final ImageManager imageManager;
 
-    /**
-     * @param reflectionScanner Scanner de reflexão do módulo scanner
-     * @param imageManager      Gerenciador de imagens
-     */
     public ImageResourceInjector(ReflectionScanner reflectionScanner,
                                  ImageManager imageManager) {
-        this.reflectionScanner = reflectionScanner;
-        this.imageManager = imageManager;
+        this.reflectionScanner = Objects.requireNonNull(reflectionScanner,
+                "reflectionScanner não pode ser null");
+        this.imageManager = Objects.requireNonNull(imageManager,
+                "imageManager não pode ser null");
     }
 
     @Override
     public void inject(Object instance, Class<?> type) {
-        List<Field> imageFields = reflectionScanner.getFieldsWithAnnotation(type, InjectImage.class);
+        Objects.requireNonNull(instance, "instance não pode ser null");
+        Objects.requireNonNull(type, "type não pode ser null");
 
-        for (Field field : imageFields) {
-            InjectImage annotation = field.getAnnotation(InjectImage.class);
-            String imageId = annotation.value();
+        var imageFields = reflectionScanner.getFieldsWithAnnotation(type, InjectImage.class);
+
+        for (var field : imageFields) {
+            var annotation = field.getAnnotation(InjectImage.class);
+            var imageId = annotation.value();
 
             try {
-                Image image = imageManager.loadImage(imageId);
+                var image = imageManager.loadImage(imageId);
 
                 if (image == null) {
                     if (annotation.required()) {
                         throw new IllegalArgumentException(
-                                "Imagem não registrada: '" + imageId + "'");
+                                String.format("Imagem não registrada: '%s'", imageId)
+                        );
                     }
+                    LOGGER.log(System.Logger.Level.DEBUG, "Imagem opcional não encontrada: {0}", imageId);
                     continue;
                 }
 
-                field.setAccessible(true);
-                Object currentValue = field.get(instance);
+                // JPMS-SAFE: Verifica antes de setAccessible
+                if (!field.canAccess(instance)) {
+                    field.setAccessible(true);
+                }
+
+                var currentValue = field.get(instance);
 
                 if (currentValue instanceof ImageView existingView) {
-                    // ImageView já existe (JavaFX) → só atualiza
+                    // ImageView já existe → atualiza
                     existingView.setImage(image);
-
-                    if (annotation.width() > 0)
-                        existingView.setFitWidth(annotation.width());
-                    if (annotation.height() > 0)
-                        existingView.setFitHeight(annotation.height());
-                    existingView.setPreserveRatio(annotation.preserveRatio());
-                    existingView.setSmooth(annotation.smooth());
+                    applyViewConfig(existingView, annotation);
 
                 } else {
                     // Campo vazio → cria novo ImageView
-                    ImageView imageView = createImageView(image, annotation);
+                    var imageView = createImageView(image, annotation);
                     field.set(instance, imageView);
                 }
+
+                LOGGER.log(System.Logger.Level.DEBUG, "Imagem injetada com sucesso: {0}", imageId);
 
             } catch (Exception e) {
                 if (annotation.required()) {
                     throw new RuntimeException(
-                            "Falha ao injetar imagem: " + imageId, e);
+                            String.format("Falha crítica ao injetar imagem obrigatória: %s", imageId),
+                            e
+                    );
                 }
+                // System.Logger com nível WARNING para opcionais
+                LOGGER.log(System.Logger.Level.WARNING,
+                        "Falha ao injetar imagem opcional: " + imageId, e);
             }
         }
     }
 
     private ImageView createImageView(Image image, InjectImage annotation) {
-        ImageView imageView = new ImageView(image);
+        var imageView = new ImageView(image);
+        applyViewConfig(imageView, annotation);
+        return imageView;
+    }
 
-        double width = annotation.width();
-        double height = annotation.height();
+    private void applyViewConfig(ImageView imageView, InjectImage annotation) {
+        var width = annotation.width();
+        var height = annotation.height();
 
         if (width > 0) imageView.setFitWidth(width);
         if (height > 0) imageView.setFitHeight(height);
 
         imageView.setPreserveRatio(annotation.preserveRatio());
         imageView.setSmooth(annotation.smooth());
-
-        return imageView;
     }
 }

@@ -1,3 +1,5 @@
+// WinterApplication.java v20.1 - 2026-08-26
+// Correção: Ordem de inicialização corrigida (ApiDispatcher no final)
 package com.ossobo.winterfx.bootstrap;
 
 import com.ossobo.winterfx.di.DiContainer;
@@ -7,6 +9,7 @@ import com.ossobo.winterfx.imagemanager.ImageResourceInjector;
 import com.ossobo.winterfx.imagemanager.handler.SwapImageHandler;
 import com.ossobo.winterfx.notifications.NotificationManager;
 import com.ossobo.winterfx.notifications.handler.*;
+import com.ossobo.winterfx.resources.ResourceModule;
 import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
 import com.ossobo.winterfx.runtime.AnnotationBeanPostProcessor;
 import com.ossobo.winterfx.runtime.HandlerRegistry;
@@ -41,18 +44,18 @@ import java.util.function.Consumer;
 /**
  * Ponto de entrada unificado e orquestrador principal do framework WinterFX.
  *
- * <p>Esta classe é responsável por coordenar a inicialização de todos os subsistemas
- * do framework, incluindo injeção de dependências, escaneamento de recursos,
- * gerenciamento de views, notificações e o sistema de interceptação (AOP).</p>
+ * <p><b>Formas de uso:</b></p>
+ * <ul>
+ *   <li><b>Forma 1 (Simples):</b> {@link #run(Class)} - Inicialização automática</li>
+ *   <li><b>Forma 2 (SplashScreen):</b> {@link #runWithSplash(Class, Consumer)} - Com progresso</li>
+ * </ul>
  *
- * <p>Implementa o padrão Singleton e fornece uma API Fluent (Builder) para
- * configuração antes da inicialização.</p>
- *
- * @version 17.0
+ * @version 20.1 (26/08/2026) - Correção de registros duplicados e ordem de inicialização
  */
 public final class WinterApplication {
 
-    private static final String VERSION = "17.0";
+    private static final System.Logger LOGGER = System.getLogger(WinterApplication.class.getName());
+    private static final String VERSION = "20.1";
     private static volatile WinterApplication INSTANCE;
 
     // ==================== SUBSISTEMAS ====================
@@ -60,6 +63,7 @@ public final class WinterApplication {
     private DiContainer diContainer;
     private BeanRegistry beanRegistry;
     private ResourceRegistry resourceRegistry;
+    private ResourceModule resourceModule;
     private StageManager stageManager;
     private ApiDispatcher apiDispatcher;
     private ImageManager imageManager;
@@ -68,7 +72,9 @@ public final class WinterApplication {
     private AlertManager alertManager;
     private ViewCompositionInjector viewCompositionInjector;
     private ViewStateDestroyer viewStateDestroyer;
-    private ViewState  viewState;
+    private ViewState viewState;
+    private SoundManager soundManager;
+    private StyleManager styleManager;
 
     // ==================== SISTEMA DE INTERCEPTAÇÃO ====================
 
@@ -86,19 +92,17 @@ public final class WinterApplication {
     private String mainViewId = "main";
     private boolean enableDiagnostics = false;
 
+    // ==================== SPLASH SCREEN ====================
+
+    private boolean useSplash = false;
+    private Consumer<Double> splashProgressCallback;
+
     // ==================== SINGLETON ====================
 
     private WinterApplication() {}
 
-    /**
-     * Retorna a instância singleton do WinterApplication.
-     *
-     * <p>Utiliza Double-Checked Locking para garantir thread-safety na criação da instância.</p>
-     *
-     * @return A instância única de {@code WinterApplication}.
-     */
     public static WinterApplication getInstance() {
-        WinterApplication local = INSTANCE;
+        var local = INSTANCE;
         if (local == null) {
             synchronized (WinterApplication.class) {
                 local = INSTANCE;
@@ -111,75 +115,66 @@ public final class WinterApplication {
         return local;
     }
 
-    // ==================== ENTRADA PRINCIPAL ====================
+    // ==================== ENTRADA PRINCIPAL - FORMA 1 (SIMPLES) ====================
 
-    /**
-     * Método de conveniência estático para inicializar e lançar a aplicação JavaFX.
-     *
-     * <p>Extrai automaticamente o pacote base da classe da aplicação fornecida,
-     * configura o framework e invoca {@link Application#launch(Class)}.</p>
-     *
-     * @param appClass A classe principal que estende {@link Application}.
-     */
     public static void run(Class<? extends Application> appClass) {
-        String packageName = appClass.getPackageName();
-        WinterApplication instance = getInstance()
+        var packageName = appClass.getPackageName();
+        getInstance()
+                .withScanPackages(packageName)
+                .withMainView("main");
+        Application.launch(appClass);
+    }
+
+    // ==================== ENTRADA PRINCIPAL - FORMA 2 (SPLASH SCREEN) ====================
+
+    public static void runWithSplash(Class<? extends Application> appClass,
+                                     Consumer<Double> splashUpdater) {
+        var packageName = appClass.getPackageName();
+        getInstance()
                 .withScanPackages(packageName)
                 .withMainView("main")
-                .withDiagnostics(true);
-        instance.initializeWithoutStage();
+                .withSplashScreen(splashUpdater);
         Application.launch(appClass);
     }
 
     // ==================== BUILDER ====================
 
-    /**
-     * Configura o flag de diagnóstico do framework.
-     *
-     * @param enable {@code true} para habilitar diagnósticos internos, {@code false} para desabilitar.
-     * @return A própria instância de {@code WinterApplication} para encadeamento de chamadas.
-     */
-    public WinterApplication withDiagnostics(boolean enable) { this.enableDiagnostics = enable; return this; }
+    public WinterApplication withDiagnostics(boolean enable) {
+        this.enableDiagnostics = enable;
+        return this;
+    }
 
-    /**
-     * Define os pacotes base que serão escaneados em busca de componentes, views e recursos.
-     *
-     * @param packages Array de nomes de pacotes no formato "com.exemplo.pacote".
-     * @return A própria instância de {@code WinterApplication} para encadeamento de chamadas.
-     */
     public WinterApplication withScanPackages(String... packages) {
         this.scanPackages = (packages != null && packages.length > 0 && !packages[0].trim().isEmpty())
                 ? packages : new String[]{"com.ossobo"};
         return this;
     }
 
-    /**
-     * Define o identificador (ID) da view que será carregada ao chamar {@link #autoStart(Stage)}.
-     *
-     * @param viewId O ID da view registrado via anotações de escaneamento.
-     * @return A própria instância de {@code WinterApplication} para encadeamento de chamadas.
-     * @throws NullPointerException se o viewId fornecido for nulo.
-     */
     public WinterApplication withMainView(String viewId) {
         this.mainViewId = Objects.requireNonNull(viewId, "viewId não pode ser nulo");
         return this;
     }
 
-    // ==================== INICIALIZAÇÃO ====================
+    public WinterApplication withSplashScreen(Consumer<Double> progressCallback) {
+        this.useSplash = true;
+        this.splashProgressCallback = Objects.requireNonNull(progressCallback,
+                "progressCallback não pode ser nulo");
+        return this;
+    }
 
-    /**
-     * Inicializa todos os subsistemas do WinterFX de forma progressiva.
-     *
-     * <p>Este método orquestra a criação dos registries, escaneamento de classes,
-     * configuração do DI Container e a inicialização de todos os gerenciadores
-     * (Imagens, Som, Notificações, Stages, etc.).</p>
-     *
-     * <p>Se já estiver inicializado, retorna imediatamente aceitando o progresso como 1.0.</p>
-     *
-     * @param progressCallback Consumer que recebe valores de 0.0 a 1.0 representando o progresso,
-     *                          ou -1.0 em caso de falha. Pode ser nulo.
-     * @throws RuntimeException se ocorrer qualquer erro durante as fases de inicialização.
-     */
+    public boolean isSplashActive() {
+        return useSplash;
+    }
+
+    // ==================== INICIALIZAÇÃO COM SPLASH ====================
+
+    public void initializeWithSplash(Stage primaryStage) {
+        this.primaryStage = Objects.requireNonNull(primaryStage, "primaryStage não pode ser nulo");
+        initializeWithProgress(splashProgressCallback);
+    }
+
+    // ==================== INICIALIZAÇÃO PRINCIPAL ====================
+
     public void initializeWithProgress(Consumer<Double> progressCallback) {
         if (initialized) {
             if (progressCallback != null) progressCallback.accept(1.0);
@@ -193,48 +188,47 @@ public final class WinterApplication {
             if (progressCallback != null) progressCallback.accept(0.10);
             initializeScannerEngine();
 
+            if (progressCallback != null) progressCallback.accept(0.20);
+            initializeResourceModule();
+
             if (progressCallback != null) progressCallback.accept(0.25);
             initializeDiContainer();
 
             if (progressCallback != null) progressCallback.accept(0.30);
-            initializeApiDispatcher();
+            initializeImageManager();
 
             if (progressCallback != null) progressCallback.accept(0.40);
-            initializeImageManager();
+            initializeSoundManager();
 
             if (progressCallback != null) progressCallback.accept(0.50);
             initializeNotificationManager();
 
-            if (progressCallback != null) progressCallback.accept(0.55);
-            initializeSoundManager();
-
-            if (progressCallback != null) progressCallback.accept(0.65);
+            if (progressCallback != null) progressCallback.accept(0.60);
             initializeStageManager();
 
-            if (progressCallback != null) progressCallback.accept(0.75);
+            if (progressCallback != null) progressCallback.accept(0.70);
             initializeAlertManager();
 
-            if (progressCallback != null) progressCallback.accept(0.85);
+            if (progressCallback != null) progressCallback.accept(0.80);
             initializeFloatingWindowManager();
 
-            if (progressCallback != null) progressCallback.accept(0.90);
+            if (progressCallback != null) progressCallback.accept(0.85);
             initializeInterceptionSystem();
+
+            // ✅ CORREÇÃO: ApiDispatcher movido para o final, quando todos os beans já existem
+            if (progressCallback != null) progressCallback.accept(0.90);
+            initializeApiDispatcher();
 
             if (progressCallback != null) progressCallback.accept(1.0);
             initialized = true;
 
+            LOGGER.log(System.Logger.Level.INFO, "WinterFX v{0} inicializado com sucesso", VERSION);
+
         } catch (Exception e) {
             if (progressCallback != null) progressCallback.accept(-1.0);
+            LOGGER.log(System.Logger.Level.ERROR, "Falha ao inicializar WinterFX", e);
             throw new RuntimeException("Falha ao inicializar WinterFX: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * Inicializa o framework silenciosamente, sem callback de progresso.
-     */
-    private void initializeWithoutStage() {
-        if (initialized) return;
-        initializeWithProgress(progress -> {});
     }
 
     // ==================== FASES DE INICIALIZAÇÃO ====================
@@ -247,13 +241,23 @@ public final class WinterApplication {
     }
 
     private void initializeScannerEngine() {
-        ScannerEngine engine = new ScannerEngine(scanPackages);
+        var engine = new ScannerEngine(scanPackages);
         engine.scanAndRegister(beanRegistry, resourceRegistry);
+        LOGGER.log(System.Logger.Level.DEBUG, "Scanner concluído: {0} beans, {1} recursos",
+                beanRegistry.getBeanCount(), resourceRegistry.count());
+    }
+
+    private void initializeResourceModule() {
+        this.resourceModule = new ResourceModule(resourceRegistry);
+        LOGGER.log(System.Logger.Level.DEBUG, "ResourceModule inicializado com {0} recursos",
+                resourceModule.getResourceCount());
     }
 
     private void initializeDiContainer() {
         DiContainer.initialize(beanRegistry, resourceRegistry);
         diContainer = DiContainer.getInstance();
+
+        diContainer.register(ResourceModule.class, resourceModule);
     }
 
     private void initializeApiDispatcher() {
@@ -261,16 +265,28 @@ public final class WinterApplication {
     }
 
     private void initializeImageManager() {
-        imageManager = new ImageManager(resourceRegistry);
+        imageManager = new ImageManager(resourceModule);
 
-        DependencyInjector imageInjector = new ImageResourceInjector(reflectionScanner, imageManager);
+        var imageInjector = new ImageResourceInjector(reflectionScanner, imageManager);
         diContainer.getInjectionManager().registerExternalInjector(imageInjector);
 
         handlerRegistry.register(new SwapImageHandler(imageManager));
+
+        registerIfAbsent(ImageManager.class, imageManager);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "ImageManager inicializado");
+    }
+
+    private void initializeSoundManager() {
+        soundManager = new SoundManager();
+
+        registerIfAbsent(SoundManager.class, soundManager);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "SoundManager inicializado");
     }
 
     private void initializeNotificationManager() {
-        notificationManager = new NotificationManager(resourceRegistry);
+        notificationManager = new NotificationManager(resourceModule, soundManager);
 
         handlerRegistry.register(new OnSuccessHandler(notificationManager));
         handlerRegistry.register(new OnErrorHandler(notificationManager));
@@ -279,51 +295,61 @@ public final class WinterApplication {
         handlerRegistry.register(new OnCriticalHandler(notificationManager));
         handlerRegistry.register(new OnConfirmationHandler(notificationManager));
         handlerRegistry.register(new OnExceptionHandler(notificationManager));
-    }
 
-    private void initializeSoundManager() {
-        SoundManager soundManager = SoundManager.getInstance();
-        soundManager.initialize(resourceRegistry);
-        if (notificationManager != null) {
-            notificationManager.setSoundManager(soundManager);
-        }
+        registerIfAbsent(NotificationManager.class, notificationManager);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "NotificationManager inicializado");
     }
 
     private void initializeStageManager() {
-        StyleManager styleManager = StyleManager.getInstance();
+        styleManager = new StyleManager();
         viewStateDestroyer = new ViewStateDestroyer();
         viewState = new ViewState();
-        stageManager = new StageManager(resourceRegistry, diContainer, styleManager,viewStateDestroyer);
 
-        FXMLService fxmlService = new FXMLService(diContainer);
-        stageManager.setFxmlService(fxmlService);
-        stageManager.setPrimaryStage(primaryStage);
+        stageManager = new StageManager(resourceModule, diContainer, styleManager, viewStateDestroyer);
 
-        DependencyInjector viewInjector = new ViewCompositionInjector(reflectionScanner, resourceRegistry, stageManager,viewState);
+        if (primaryStage != null) {
+            stageManager.setPrimaryStage(primaryStage);
+        }
+
+        var viewInjector = new ViewCompositionInjector(reflectionScanner, resourceModule, stageManager, viewState);
         diContainer.getInjectionManager().registerExternalInjector(viewInjector);
 
         handlerRegistry.register(new SwapFxmlHandler(stageManager));
+
+        registerIfAbsent(StageManager.class, stageManager);
+        registerIfAbsent(StyleManager.class, styleManager);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "StageManager inicializado");
     }
 
     private void initializeAlertManager() {
         alertManager = new AlertManager(stageManager);
 
-        handlerRegistry.register(new NewSceneHandler(stageManager, resourceRegistry));
-        handlerRegistry.register(new SwapFxmlHandler(stageManager));
+        handlerRegistry.register(new NewSceneHandler(stageManager, resourceModule));
 
         if (notificationManager != null) {
             notificationManager.setAlertManager(alertManager);
         }
 
-        diContainer.getInjectionManager().registerExternalInjector(new ViewCompositionInjector(reflectionScanner,resourceRegistry,stageManager,viewState));
-        diContainer.getInjectionManager().registerExternalInjector(new GetControllerInjector(reflectionScanner,stageManager,resourceRegistry));
+        diContainer.getInjectionManager().registerExternalInjector(
+                new GetControllerInjector(reflectionScanner, stageManager, resourceModule)
+        );
+
+        registerIfAbsent(AlertManager.class, alertManager);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "AlertManager inicializado");
     }
 
     private void initializeFloatingWindowManager() {
-        floatingWindowManager = new FloatingWindowManager(resourceRegistry, stageManager);
+        floatingWindowManager = new FloatingWindowManager(resourceModule, stageManager);
 
-        DependencyInjector floatingInjector = new FloatingWindowResourceInjector(floatingWindowManager);
+        var floatingInjector = new FloatingWindowResourceInjector(floatingWindowManager);
         diContainer.getInjectionManager().registerExternalInjector(floatingInjector);
+
+        registerIfAbsent(FloatingWindowManager.class, floatingWindowManager);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "FloatingWindowManager inicializado");
     }
 
     private void initializeInterceptionSystem() {
@@ -332,205 +358,157 @@ public final class WinterApplication {
 
         annotationPostProcessor = new AnnotationBeanPostProcessor(proxyFactory);
         diContainer.registerBeanPostProcessor(annotationPostProcessor);
+
+        LOGGER.log(System.Logger.Level.DEBUG, "Sistema de interceptação inicializado");
+    }
+
+    // ============================================================
+    // MÉTODO AUXILIAR PARA REGISTRO SEGURO
+    // ============================================================
+
+    /**
+     * Registra um bean no DiContainer apenas se ele ainda não existir.
+     * Evita o erro "Bean 'xxx' já está registrado".
+     */
+    private <T> void registerIfAbsent(Class<T> type, T instance) {
+        try {
+            // Verifica se já está no cache de instâncias singleton
+            if (diContainer.isBeanCached(type)) {
+                LOGGER.log(System.Logger.Level.DEBUG,
+                        "Bean '{0}' já registrado. Ignorando registro duplicado.",
+                        type.getSimpleName());
+                return;
+            }
+        } catch (Exception e) {
+            // Falha ao verificar, tenta registrar
+        }
+
+        // Registra o bean
+        diContainer.register(type, instance);
+        LOGGER.log(System.Logger.Level.DEBUG,
+                "Bean de infraestrutura '{0}' registrado com sucesso.",
+                type.getSimpleName());
     }
 
     // ==================== STAGE ====================
 
-    /**
-     * Inicializa o framework (se necessário) e exibe a view principal configurada.
-     *
-     * @param primaryStage O palco principal fornecido pelo ciclo de vida do JavaFX.
-     */
     public void autoStart(Stage primaryStage) {
         autoStart(primaryStage, mainViewId);
     }
 
-    /**
-     * Inicializa o framework (se necessário) e exibe uma view específica.
-     *
-     * @param primaryStage O palco principal fornecido pelo ciclo de vida do JavaFX.
-     * @param initialViewId O ID da view a ser carregada inicialmente.
-     * @throws NullPointerException se o primaryStage for nulo.
-     * @throws RuntimeException se a view não for encontrada no registry.
-     */
     public void autoStart(Stage primaryStage, String initialViewId) {
         this.primaryStage = Objects.requireNonNull(primaryStage, "primaryStage não pode ser nulo");
-        if (!initialized) initializeWithProgress(progress -> {});
+
+        if (!initialized) {
+            initializeWithProgress(progress -> {});
+        }
+
         showInitialView(initialViewId);
     }
 
     private void showInitialView(String viewId) {
-        if (!resourceRegistry.contains(viewId)) {
+        if (!resourceModule.exists(viewId)) {
             throw new RuntimeException("View não registrada: '" + viewId + "'");
         }
 
-        ViewDescriptor descriptor = resourceRegistry.findById(viewId)
-                .filter(d -> d instanceof ViewDescriptor)
-                .map(d -> (ViewDescriptor) d)
-                .orElseThrow(() -> new RuntimeException("View não encontrada: " + viewId));
+        var descriptor = resourceModule.requireView(viewId);
 
         var loadedView = stageManager.loadView(viewId);
 
-        Scene scene = new Scene(loadedView.getRoot(),
-                descriptor.getWidth() > 0 ? descriptor.getWidth() : 900,
-                descriptor.getHeight() > 0 ? descriptor.getHeight() : 600);
+        var width = descriptor.width() > 0 ? descriptor.width() : 900;
+        var height = descriptor.height() > 0 ? descriptor.height() : 600;
+        var scene = new Scene(loadedView.root(), width, height);
 
-        primaryStage.setTitle(descriptor.getTitle() != null ? descriptor.getTitle() : "WinterFX App");
+        primaryStage.setTitle(descriptor.title() != null ? descriptor.title() : "WinterFX App");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        LOGGER.log(System.Logger.Level.INFO, "View principal exibida: {0}", viewId);
     }
 
-    // ==================== GETTERS ====================
+    // ==================== PROCESSAMENTO DE BEANS ====================
 
-    /**
-     * Retorna o gerenciador de palcos e navegação de views.
-     * @return O {@link StageManager}.
-     */
-    public StageManager getStageManager() { return stageManager; }
-
-    /**
-     * Retorna o registro de recursos (Views, Imagens, Estilos) escaneados.
-     * @return O {@link ResourceRegistry}.
-     */
-    public ResourceRegistry getResourceRegistry() { return resourceRegistry; }
-
-    /**
-     * Retorna o contêiner de injeção de dependências principal.
-     * @return O {@link DiContainer}.
-     */
-    public DiContainer getDiContainer() { return diContainer; }
-
-    public ApiDispatcher getApiDispatcher() {
-        return apiDispatcher;
-    }
-
-    /**
-     * Retorna o registro de beans (componentes gerenciáveis) escaneados.
-     * @return O {@link BeanRegistry}.
-     */
-    public BeanRegistry getBeanRegistry() { return beanRegistry; }
-
-    /**
-     * Retorna o gerenciador de carregamento e cache de imagens.
-     * @return O {@link ImageManager}.
-     */
-    public ImageManager getImageManager() { return imageManager; }
-
-    /**
-     * Retorna o gerenciador de notificações visuais e sonoras.
-     * @return O {@link NotificationManager}.
-     */
-    public NotificationManager getNotificationManager() { return notificationManager; }
-
-    /**
-     * Retorna o gerenciador de janelas flutuantes (Floating Windows).
-     * @return O {@link FloatingWindowManager}.
-     */
-    public FloatingWindowManager getFloatingWindowManager() { return floatingWindowManager; }
-
-    /**
-     * Retorna o gerenciador de diálogos de alerta nativos.
-     * @return O {@link AlertManager}.
-     */
-    public AlertManager getAlertManager() { return alertManager; }
-
-    /**
-     * Retorna o registro de handlers do pipeline de interceptação.
-     * @return O {@link HandlerRegistry}.
-     */
-    public HandlerRegistry getHandlerRegistry() { return handlerRegistry; }
-
-    /**
-     * Retorna a fábrica de proxies dinâmicos (ByteBuddy) usada para AOP.
-     * @return O {@link WinterFXProxyFactory}.
-     */
-    public WinterFXProxyFactory getProxyFactory() { return proxyFactory; }
-
-    /**
-     * Retorna o executor do pipeline de interceptação de métodos.
-     * @return O {@link PipelineExecutor}.
-     */
-    public PipelineExecutor getPipelineExecutor() { return pipelineExecutor; }
-
-    /**
-     * Retorna o palco primário da aplicação JavaFX.
-     * @return O {@link Stage} principal.
-     */
-    public Stage getPrimaryStage() { return primaryStage; }
-
-    /**
-     * Retorna a versão atual do framework WinterFX.
-     * @return String contendo o número da versão.
-     */
-    public String getVersion() { return VERSION; }
-
-    /**
-     * Verifica se o framework foi completamente inicializado.
-     * @return {@code true} se a inicialização foi concluída, {@code false} caso contrário.
-     */
-    public boolean isInitialized() { return initialized; }
-
-    /**
-     * Verifica se o modo de diagnóstico está habilitado.
-     * @return {@code true} se habilitado, {@code false} caso contrário.
-     */
-    public boolean isDiagnosticsEnabled() { return enableDiagnostics; }
-
-    /**
-     * Define o palco primário da aplicação. Se o StageManager já estiver inicializado,
-     * propaga a referência para ele.
-     *
-     * @param stage O palco principal do JavaFX.
-     */
-    public void setPrimaryStage(Stage stage) {
-        this.primaryStage = stage;
-        if (stageManager != null) stageManager.setPrimaryStage(stage);
-    }
-
-    // ==================== PROCESSAMENTO ====================
-
-    /**
-     * Processa as anotações de um bean, injetando suas dependências e aplicando
-     * proxies de interceptação, se aplicável.
-     *
-     * @param bean A instância do bean a ser processada.
-     */
     public void processBeanAnnotations(Object bean) {
         if (bean == null || !initialized) return;
-        if (diContainer != null) diContainer.injectDependencies(bean);
-        if (proxyFactory != null && !isProxy(bean)) proxyFactory.wrap(bean);
+
+        if (diContainer != null) {
+            diContainer.injectDependencies(bean);
+        }
+
+        if (proxyFactory != null && !isProxy(bean)) {
+            var wrappedBean = proxyFactory.wrap(bean);
+
+            if (wrappedBean != bean) {
+                LOGGER.log(System.Logger.Level.WARNING,
+                        "O bean {0} foi envolvido por um proxy, mas a referência original foi retornada. " +
+                                "Para que a interceptação funcione, obtenha o bean via DiContainer.getBean() " +
+                                "em vez de instanciar com 'new'.",
+                        bean.getClass().getSimpleName());
+            }
+        }
     }
 
     private boolean isProxy(Object bean) {
         return bean.getClass().getName().contains("ByteBuddy");
     }
 
+    // ==================== GETTERS ====================
+
+    public StageManager getStageManager() { return stageManager; }
+    public ResourceRegistry getResourceRegistry() { return resourceRegistry; }
+    public ResourceModule getResourceModule() { return resourceModule; }
+    public DiContainer getDiContainer() { return diContainer; }
+    public ApiDispatcher getApiDispatcher() { return apiDispatcher; }
+    public BeanRegistry getBeanRegistry() { return beanRegistry; }
+    public ImageManager getImageManager() { return imageManager; }
+    public NotificationManager getNotificationManager() { return notificationManager; }
+    public FloatingWindowManager getFloatingWindowManager() { return floatingWindowManager; }
+    public AlertManager getAlertManager() { return alertManager; }
+    public HandlerRegistry getHandlerRegistry() { return handlerRegistry; }
+    public WinterFXProxyFactory getProxyFactory() { return proxyFactory; }
+    public PipelineExecutor getPipelineExecutor() { return pipelineExecutor; }
+    public Stage getPrimaryStage() { return primaryStage; }
+    public SoundManager getSoundManager() { return soundManager; }
+    public StyleManager getStyleManager() { return styleManager; }
+    public String getVersion() { return VERSION; }
+    public boolean isInitialized() { return initialized; }
+    public boolean isDiagnosticsEnabled() { return enableDiagnostics; }
+
+    public void setPrimaryStage(Stage stage) {
+        this.primaryStage = stage;
+        if (stageManager != null) stageManager.setPrimaryStage(stage);
+    }
+
     // ==================== SHUTDOWN ====================
 
-    /**
-     * Executa o shutdown graceful do framework.
-     *
-     * <p>Fecha todas as janelas flutuantes, limpa caches de views e imagens,
-     * encerra o contêiner de DI e reseta o estado do singleton.</p>
-     */
     public void shutdown() {
         if (!initialized) return;
+
         if (floatingWindowManager != null) floatingWindowManager.fecharTodas();
         if (stageManager != null) stageManager.closeAllStages();
         if (imageManager != null) imageManager.clearCache();
         if (handlerRegistry != null) handlerRegistry.clearCache();
         if (diContainer != null) diContainer.close();
+        if (soundManager != null) soundManager.stopAll();
+
         initialized = false;
         INSTANCE = null;
+
+        LOGGER.log(System.Logger.Level.INFO, "WinterFX v{0} finalizado", VERSION);
     }
 
     // ==================== DIAGNÓSTICO ====================
 
-    /**
-     * Mantido para compatibilidade de API.
-     * O framework opera em modo silencioso, não emitindo saídas para o console.
-     */
     public void printDiagnostics() {
-        // Silencioso por padrão
+        LOGGER.log(System.Logger.Level.INFO, "=== WinterFX Diagnostics ===");
+        LOGGER.log(System.Logger.Level.INFO, "Version: {0}", VERSION);
+        LOGGER.log(System.Logger.Level.INFO, "Initialized: {0}", initialized);
+        LOGGER.log(System.Logger.Level.INFO, "Scan Packages: {0}", String.join(", ", scanPackages));
+        LOGGER.log(System.Logger.Level.INFO, "Main View: {0}", mainViewId);
+        LOGGER.log(System.Logger.Level.INFO, "Beans: {0}", beanRegistry != null ? beanRegistry.getBeanCount() : 0);
+        LOGGER.log(System.Logger.Level.INFO, "Resources: {0}", resourceRegistry != null ? resourceRegistry.count() : 0);
+        LOGGER.log(System.Logger.Level.INFO, "ResourceModule: {0}", resourceModule != null ? resourceModule.getResourceCount() : 0);
+        LOGGER.log(System.Logger.Level.INFO, "Handlers: {0}", handlerRegistry != null ? handlerRegistry.size() : 0);
+        LOGGER.log(System.Logger.Level.INFO, "=============================");
     }
 }

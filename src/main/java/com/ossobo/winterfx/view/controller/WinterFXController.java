@@ -43,7 +43,7 @@ public interface WinterFXController {
             }
 
             HandlerRegistry registry = WinterApplication.getInstance().getHandlerRegistry();
-            AnnotationContext ctx = new AnnotationContext(this, method, new Object[]{event});
+            AnnotationContext ctx = AnnotationContext.before(this, method, new Object[]{event});
 
             // ========== FASE BEFORE (CORRIGIDA!) ==========
             try {

@@ -1,7 +1,8 @@
+// WinterFXProxyFactory.java v7.0 - 2026-08-22
+// Fábrica de proxies com Fail-Fast, DRY e delegação ao PipelineExecutor
 package com.ossobo.winterfx.runtime;
 
 import com.ossobo.winterfx.anotations.Intercepted;
-import com.ossobo.winterfx.runtime.handler.AnnotationContext;
 import com.ossobo.winterfx.runtime.handler.AnnotationHandler;
 import com.ossobo.winterfx.runtime.pipeline.PipelineExecutor;
 
@@ -10,19 +11,22 @@ import net.bytebuddy.implementation.InvocationHandlerAdapter;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
- * WinterFXProxyFactory v6.0 — DESACOPLADO
+ * WinterFXProxyFactory v7.0 — FAIL-FAST + DRY + DELEGAÇÃO
  *
  * <p>Cria proxies ByteBuddy que interceptam métodos anotados com {@code @Intercepted}
- * e delegam ao {@link PipelineExecutor}.</p>
+ * e delegam AO {@link PipelineExecutor} para orquestração.</p>
  *
- * <p>NÃO conhece anotações específicas de notificação, view ou imagem.
- * Apenas verifica {@code @Intercepted} e delega ao pipeline.</p>
+ * <p><b>Mudanças:</b></p>
+ * <ul>
+ *   <li>✅ FAIL-FAST: exceções não são engolidas (anti-pattern Bean Zumbi eliminado)</li>
+ *   <li>✅ DRY: delega ao PipelineExecutor (código morto removido)</li>
+ *   <li>✅ PipelineExecutor agora é usado no lugar da lógica reescrita</li>
+ * </ul>
  *
- * @version 6.0 (01/07/2026)
+ * @version 7.0 (22/08/2026)
  */
 public final class WinterFXProxyFactory {
 
@@ -50,6 +54,7 @@ public final class WinterFXProxyFactory {
      * @param original Instância original
      * @param <T>      Tipo do bean
      * @return Proxy ou instância original
+     * @throws IllegalStateException Se falhar ao criar proxy (FAIL-FAST)
      */
     @SuppressWarnings("unchecked")
     public <T> T wrap(T original) {
@@ -75,8 +80,8 @@ public final class WinterFXProxyFactory {
                             return method.invoke(original, args);
                         }
 
-                        // Delega ao pipeline (genérico — não conhece anotações)
-                        return executeWithPipeline(original, targetMethod, method, args);
+                        // DELEGA AO PIPELINE EXECUTOR (DRY)
+                        return pipelineExecutor.execute(original, targetMethod, args);
 
                     }))
                     .make()
@@ -86,46 +91,13 @@ public final class WinterFXProxyFactory {
                     .newInstance();
 
         } catch (Exception e) {
-            return original;
+            // FAIL-FAST: NUNCA engolir exceção (anti-pattern Bean Zumbi)
+            throw new IllegalStateException(
+                    "Falha crítica ao criar proxy WinterFX para " + targetClass.getName() +
+                            ". Verifique dependências e permissões de módulo.",
+                    e
+            );
         }
-    }
-
-    /**
-     * Executa o método através do pipeline de interceptação.
-     */
-    private Object executeWithPipeline(Object original, Method targetMethod,
-                                       Method proxyMethod, Object[] args) throws Throwable {
-        AnnotationContext ctx = new AnnotationContext(original, targetMethod, args);
-
-        // FASE BEFORE — delega ao HandlerRegistry
-        try {
-            registry.executeBeforePhase(targetMethod, ctx);
-        } catch (Exception e) {
-            // Handler BEFORE interrompeu (ex: OnConfirmation cancelado)
-            return null;
-        }
-
-        // EXECUÇÃO DO MÉTODO
-        Object result;
-        try {
-            result = proxyMethod.invoke(original, args);
-        } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-
-            // FASE AFTER — ERRO
-            registry.executeErrorPhase(targetMethod, ctx.withError(cause));
-
-            // Se o erro foi tratado por um handler, não relança
-            if (registry.hasErrorHandlers(targetMethod)) {
-                return null;
-            }
-            throw cause;
-        }
-
-        // FASE AFTER — SUCESSO
-        registry.executeSuccessPhase(targetMethod, ctx.withResult(result));
-
-        return result;
     }
 
     /**

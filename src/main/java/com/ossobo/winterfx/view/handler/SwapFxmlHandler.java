@@ -45,7 +45,7 @@ public class SwapFxmlHandler implements AnnotationHandler<SwapFxml> {
     public void handle(AnnotationContext ctx, SwapFxml ann) {
         Platform.runLater(() -> {
             try {
-                Object target = ctx.getTarget();
+                Object target = ctx.target();
 
                 ViewDescriptor descriptor = stageManager.swapFxml(ann.viewId());
                 if (descriptor == null) return;

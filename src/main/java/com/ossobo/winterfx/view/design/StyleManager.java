@@ -17,7 +17,7 @@ public final class StyleManager {
 
     private static final StyleManager INSTANCE = new StyleManager();
 
-    private StyleManager() {
+    public StyleManager() {
     }
 
     public static StyleManager getInstance() {
@@ -43,7 +43,7 @@ public final class StyleManager {
         int appliedCount = 0;
 
         // ✅ CSS primário
-        URL primaryCss = descriptor.getPrimaryCss();
+        URL primaryCss = descriptor.primaryCss();
         if (primaryCss != null) {
             String cssUrl = primaryCss.toExternalForm();
             root.getStylesheets().add(cssUrl);
@@ -51,7 +51,7 @@ public final class StyleManager {
         }
 
         // CSS adicionais
-        List<URL> additionalCss = descriptor.getAdditionalCss();
+        List<URL> additionalCss = descriptor.additionalCss();
         if (additionalCss != null && !additionalCss.isEmpty()) {
             for (URL additional : additionalCss) {
                 if (additional != null) {

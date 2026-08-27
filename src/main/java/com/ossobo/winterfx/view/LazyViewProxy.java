@@ -21,7 +21,7 @@ public class LazyViewProxy<T> implements InvocationHandler {
         // 🔥 CARREGA SOB DEMANDA (APENAS QUANDO FOR USADO)
         if (!loaded) {
             LoadedView<?> loadedView = stageManager.loadView(viewId);
-            target = (T) loadedView.getController();
+            target = (T) loadedView.controller();
             loaded = true;
         }
         return method.invoke(target, args);

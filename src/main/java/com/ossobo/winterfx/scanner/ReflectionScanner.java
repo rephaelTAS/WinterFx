@@ -1,7 +1,6 @@
 package com.ossobo.winterfx.scanner;
 
 import java.lang.annotation.Annotation;
-import java.lang.ref.SoftReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -9,22 +8,22 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Scanner genérico de reflexão com cache.
+ * Scanner genérico de reflexão com cache forte.
  *
  * <p>Responsabilidade: inspecionar classes e retornar metadados brutos
  * (campos, métodos, construtores, interfaces, anotações).</p>
  *
- * <p>Utiliza {@link SoftReference} para permitir que o GC libere memória
- * sob pressão.</p>
+ * <p>Utiliza cache forte (Hard Reference) pois metadados de classe são
+ * imutáveis e estáticos - o GC nunca precisa limpá-los.</p>
  *
- * <p>Thread-safe: usa {@link ConcurrentHashMap} para cache.</p>
+ * <p>Thread-safe: usa {@link ConcurrentHashMap} com computeIfAbsent.</p>
  */
 public final class ReflectionScanner {
 
-    private final Map<Class<?>, SoftReference<List<Field>>> fieldCache = new ConcurrentHashMap<>();
-    private final Map<Class<?>, SoftReference<List<Method>>> methodCache = new ConcurrentHashMap<>();
-    private final Map<Class<?>, SoftReference<List<Constructor<?>>>> constructorCache = new ConcurrentHashMap<>();
-    private final Map<Class<?>, SoftReference<List<Class<?>>>> interfaceCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Field>> fieldCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Constructor<?>>> constructorCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Class<?>>> interfaceCache = new ConcurrentHashMap<>();
 
     /**
      * Obtém todos os campos declarados da classe.
@@ -105,23 +104,9 @@ public final class ReflectionScanner {
     }
 
     /**
-     * Carrega ou recupera do cache um valor calculado.
+     * Carrega ou recupera do cache usando computeIfAbsent (Thread-safe e sem race conditions).
      */
-    private <K, V> V getOrLoad(
-            Map<K, SoftReference<V>> cache,
-            K key,
-            java.util.function.Function<K, V> loader
-    ) {
-        SoftReference<V> ref = cache.get(key);
-        if (ref != null) {
-            V value = ref.get();
-            if (value != null) {
-                return value;
-            }
-        }
-
-        V loaded = loader.apply(key);
-        cache.put(key, new SoftReference<>(loaded));
-        return loaded;
+    private <K, V> V getOrLoad(Map<K, V> cache, K key, java.util.function.Function<K, V> loader) {
+        return cache.computeIfAbsent(key, loader);
     }
 }

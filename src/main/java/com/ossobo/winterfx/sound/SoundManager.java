@@ -1,8 +1,8 @@
-// SoundManager.java v2.0
+// SoundManager.java v4.0 - 2026-08-23
+// Totalmente desacoplado - Não busca nada, apenas reproduz o que recebe
 package com.ossobo.winterfx.sound;
 
-import com.ossobo.winterfx.resources.descriptor.ViewDescriptor;
-import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
+import com.ossobo.winterfx.anotations.Component;
 import com.ossobo.winterfx.sound.enums.SoundType;
 
 import javafx.application.Platform;
@@ -15,96 +15,137 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🎵 SoundManager v2.0 — Fachada do módulo sound.
+ * SoundManager v4.0 — Fachada do módulo sound.
  *
- * <p>Gerencia sons e efeitos sonoros. Os sons são obtidos
- * dos {@link ViewDescriptor} registrados no {@link ResourceRegistry}.</p>
+ * <p><b>Princípio:</b> O SoundManager NÃO busca recursos. Ele apenas reproduz.
+ * Quem tem o recurso (URL) deve passá-lo diretamente.</p>
  *
- * <p>NÃO conhece módulos externos além de {@code resources} e {@code scanner}.</p>
+ * <p><b>Responsabilidades:</b></p>
+ * <ul>
+ *   <li>Reproduzir URLs de áudio (MP3, WAV, etc.)</li>
+ *   <li>Gerenciar volume global</li>
+ *   <li>Gerenciar players ativos</li>
+ *   <li>Cache de sons internos do framework (apenas para sons padrão)</li>
+ * </ul>
  *
- * @version 2.0 (01/07/2026)
+ * <p><b>NÃO FAZ:</b></p>
+ * <ul>
+ *   <li>❌ Buscar recursos no ResourceRegistry</li>
+ *   <li>❌ Resolver IDs de som</li>
+ *   <li>❌ Conhecer ViewDescriptor ou qualquer outro descritor</li>
+ * </ul>
+ *
+ * @version 4.0 (23/08/2026) - Totalmente desacoplado
  */
 public final class SoundManager {
 
-    private static final SoundManager INSTANCE = new SoundManager();
-
-    public static SoundManager getInstance() {
-        return INSTANCE;
-    }
-
-    private SoundManager() {}
-
-    // ============================================================
-    // DEPENDÊNCIAS
-    // ============================================================
-
-    private ResourceRegistry resourceRegistry;
-    private double volumeGlobal = 0.7;
-    private boolean enabled = true;
-
-    // ============================================================
-    // CACHE
-    // ============================================================
+    private static final System.Logger LOGGER = System.getLogger(SoundManager.class.getName());
 
     private final Map<String, URL> soundCache = new ConcurrentHashMap<>();
     private final Map<String, MediaPlayer> activePlayers = new ConcurrentHashMap<>();
 
-    // ============================================================
-    // INICIALIZAÇÃO
-    // ============================================================
+    private double volumeGlobal = 0.7;
+    private boolean enabled = true;
 
-    public void initialize(ResourceRegistry registry) {
-        this.resourceRegistry = registry;
+    /**
+     * Construtor padrão - Sem dependências externas.
+     * Apenas pré-carrega os sons padrão do framework.
+     */
+    public SoundManager() {
+        // Pré-carrega os sons padrão do framework
         for (SoundType type : SoundType.values()) {
             preloadSound(type);
         }
+
+        LOGGER.log(System.Logger.Level.INFO, "SoundManager inicializado com {0} sons padrão",
+                SoundType.values().length);
     }
 
+    // ============================================================
+    // PRÉ-CARREGAMENTO DE SONS PADRÃO (INTERNOS DO FRAMEWORK)
+    // ============================================================
+
+    /**
+     * Pré-carrega um som padrão do framework.
+     * Os sons devem estar em: /com/ossobo/winterfx/sounds/{id}.mp3
+     */
     private void preloadSound(SoundType type) {
-        URL url = resolveSoundUrl(type.getSoundId());
+        String path = "/com/ossobo/winterfx/sounds/" + type.getSoundId() + ".mp3";
+        URL url = getClass().getResource(path);
+
         if (url != null) {
             soundCache.put(type.getSoundId(), url);
+            LOGGER.log(System.Logger.Level.DEBUG, "Som pré-carregado: {0}", type.getSoundId());
+        } else {
+            LOGGER.log(System.Logger.Level.DEBUG, "Som padrão não encontrado: {0} (pode ser opcional)", type.getSoundId());
         }
-    }
-
-    // ============================================================
-    // RESOLUÇÃO DE URL
-    // ============================================================
-
-    private URL resolveSoundUrl(String soundId) {
-        if (resourceRegistry == null) return null;
-
-        return resourceRegistry.findById(soundId)
-                .filter(d -> d instanceof ViewDescriptor)
-                .map(d -> ((ViewDescriptor) d).getSoundUrl())
-                .orElse(null);
     }
 
     // ============================================================
     // API PÚBLICA — REPRODUÇÃO
     // ============================================================
 
+    /**
+     * Reproduz um som padrão do framework por tipo.
+     *
+     * @param type Tipo de som (INFO, SUCCESS, WARNING, etc.)
+     */
     public void play(SoundType type) {
-        if (!enabled || type == null) return;
+        if (!enabled || type == null) {
+            if (type == null) {
+                LOGGER.log(System.Logger.Level.WARNING, "SoundType é null");
+            }
+            return;
+        }
         play(type.getSoundId());
     }
 
+    /**
+     * Reproduz um som padrão do framework por ID.
+     * Busca no cache de sons internos do framework.
+     *
+     * @param soundId ID do som (ex: "notification-success", "notification-error")
+     */
     public void play(String soundId) {
-        if (!enabled || soundId == null || soundId.isEmpty()) return;
+        if (!enabled || soundId == null || soundId.isEmpty()) {
+            if (soundId == null) {
+                LOGGER.log(System.Logger.Level.WARNING, "soundId é null");
+            }
+            return;
+        }
+
+        // Busca no cache de sons internos do framework
+        URL url = soundCache.get(soundId);
+
+        if (url == null) {
+            LOGGER.log(System.Logger.Level.DEBUG, "Som não encontrado no cache: {0}", soundId);
+            return;
+        }
+
+        play(url);
+    }
+
+    /**
+     * Reproduz um som a partir de uma URL (recurso externo ou passado por quem tem o descritor).
+     * Este é o método principal para sons customizados.
+     *
+     * @param soundUrl URL do arquivo de áudio (pode vir de ViewDescriptor.soundUrl())
+     */
+    public void play(URL soundUrl) {
+        if (!enabled || soundUrl == null) {
+            if (soundUrl == null) {
+                LOGGER.log(System.Logger.Level.WARNING, "soundUrl é null");
+            }
+            return;
+        }
 
         Platform.runLater(() -> {
             try {
-                URL url = soundCache.computeIfAbsent(soundId, this::resolveSoundUrl);
-                if (url != null) {
-                    playSound(url);
-                }
-            } catch (Exception ignored) {}
+                playSound(soundUrl);
+            } catch (Exception e) {
+                LOGGER.log(System.Logger.Level.WARNING, "Falha ao reproduzir som: {0}", soundUrl, e);
+            }
         });
-    }
-
-    public void play(URL soundUrl) {
-        if (!enabled || soundUrl == null) return;
-        Platform.runLater(() -> playSound(soundUrl));
     }
 
     // ============================================================
@@ -112,14 +153,17 @@ public final class SoundManager {
     // ============================================================
 
     private void playSound(URL url) {
-        if (url == null) return;
+        if (url == null) {
+            LOGGER.log(System.Logger.Level.WARNING, "URL é null");
+            return;
+        }
 
-        String urlString = url.toExternalForm();
+        var urlString = url.toExternalForm();
 
         try {
             if (urlString.toLowerCase().endsWith(".mp3")) {
-                Media media = new Media(urlString);
-                MediaPlayer player = new MediaPlayer(media);
+                var media = new Media(urlString);
+                var player = new MediaPlayer(media);
                 player.setVolume(volumeGlobal);
                 player.setCycleCount(1);
 
@@ -130,43 +174,66 @@ public final class SoundManager {
                 });
 
                 player.setOnError(() -> {
+                    LOGGER.log(System.Logger.Level.WARNING, "Erro no MediaPlayer para: {0}", urlString);
                     player.dispose();
                     activePlayers.remove(urlString);
                 });
 
                 activePlayers.put(urlString, player);
                 player.play();
+                LOGGER.log(System.Logger.Level.DEBUG, "Reproduzindo MP3: {0}", urlString);
+
             } else {
-                AudioClip clip = new AudioClip(urlString);
+                var clip = new AudioClip(urlString);
                 clip.setVolume(volumeGlobal);
                 clip.setCycleCount(1);
                 clip.play();
+                LOGGER.log(System.Logger.Level.DEBUG, "Reproduzindo AudioClip: {0}", urlString);
             }
-        } catch (Exception ignored) {}
+
+        } catch (Exception e) {
+            LOGGER.log(System.Logger.Level.WARNING, "Falha ao instanciar mídia: {0}", urlString, e);
+        }
     }
 
     // ============================================================
     // CONTROLE
     // ============================================================
 
+    /**
+     * Define o volume global (0.0 a 1.0).
+     */
     public void setVolume(double volume) {
         this.volumeGlobal = Math.max(0.0, Math.min(1.0, volume));
+        LOGGER.log(System.Logger.Level.DEBUG, "Volume alterado para: {0}", volumeGlobal);
     }
 
     public double getVolume() {
         return volumeGlobal;
     }
 
+    /**
+     * Para todos os sons em reprodução.
+     */
     public void stopAll() {
         activePlayers.values().forEach(player -> {
-            try { player.stop(); player.dispose(); } catch (Exception ignored) {}
+            try {
+                player.stop();
+                player.dispose();
+            } catch (Exception e) {
+                LOGGER.log(System.Logger.Level.WARNING, "Erro ao parar player", e);
+            }
         });
         activePlayers.clear();
+        LOGGER.log(System.Logger.Level.DEBUG, "Todos os sons parados");
     }
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-        if (!enabled) stopAll();
+        if (!enabled) {
+            stopAll();
+        }
+        LOGGER.log(System.Logger.Level.DEBUG, "SoundManager {0}", enabled ? "ativado" : "desativado");
     }
 
     public boolean isEnabled() {
@@ -179,14 +246,19 @@ public final class SoundManager {
 
     public void clearCache() {
         soundCache.clear();
+        LOGGER.log(System.Logger.Level.DEBUG, "Cache de sons limpo");
     }
 
+    /**
+     * Recarrega os sons padrão do framework.
+     */
     public void reload() {
         stopAll();
         clearCache();
         for (SoundType type : SoundType.values()) {
             preloadSound(type);
         }
+        LOGGER.log(System.Logger.Level.INFO, "Sons recarregados");
     }
 
     public boolean isSoundAvailable(String soundId) {
@@ -195,5 +267,9 @@ public final class SoundManager {
 
     public boolean isSoundAvailable(SoundType type) {
         return type != null && isSoundAvailable(type.getSoundId());
+    }
+
+    public int getCacheSize() {
+        return soundCache.size();
     }
 }
