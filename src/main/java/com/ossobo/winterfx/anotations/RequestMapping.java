@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  * <strong>"livros/listar"</strong>.</p>
  *
  * @see com.ossobo.winterfx.anotations.GetMapping
- * @see com.ossobo.winterfx.anotations.PostMapping
+ * @see com.ossobo.winterfx.anotations.PutMapping
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

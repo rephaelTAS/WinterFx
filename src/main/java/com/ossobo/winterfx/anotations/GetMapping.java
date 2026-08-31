@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
  * {@link com.ossobo.winterfx.router.model.ResponseData}.</p>
  *
  * @see com.ossobo.winterfx.anotations.RequestMapping
- * @see com.ossobo.winterfx.anotations.PostMapping
+ * @see com.ossobo.winterfx.anotations.PutMapping
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

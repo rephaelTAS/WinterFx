@@ -29,8 +29,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * ApiDispatcher v6.1 — Despachante central com 5 namespaces e
- * COMPARTILHAMENTO CONTROLADO de rotas.
+ * ApiDispatcher v7.0 — Despachante central com 5 namespaces,
+ * COMPARTILHAMENTO CONTROLADO de rotas e CONTRATO FORTE do envelope.
+ *
+ * <h2>Contrato de retorno</h2>
+ * Todo despacho ({@code dispatchGet/put/delete/exec/ui}) devolve {@link ResponseData}.
+ * A garantia vem do boot: {@link #validateHandlerMethod} rejeita handlers com outro
+ * retorno, e o {@link #invoke} (único ponto de reflexão) rejeita {@code return null}.
+ * Cast na view: NENHUM.
  *
  * <h2>Estrutura interna</h2>
  * <pre>
@@ -44,21 +50,14 @@ import java.util.function.Supplier;
  * <h2>Regras de segurança</h2>
  * <ul>
  *   <li>O lookup NUNCA cruza verbos: {@code Rotas.get()} consulta somente o canal GET.</li>
- *   <li>{GET, PUT, DELETE} são mutuamente exclusivos NA MESMA ROTA — tentativa
- *       de mistura falha no boot com {@link IllegalStateException}.</li>
- *   <li>{EXEC, UI} são livres para combinar com qualquer verbo, pois possuem
- *       canais próprios e semântica distinta (comando / transporte visual).</li>
- *   <li>Rota do canal UI exige JavaFX Application Thread (fail-fast fora dela).
- *       Rotas de outros canais que INJETEM parâmetros {@code @UI} também exigem.</li>
+ *   <li>{GET, PUT, DELETE} são mutuamente exclusivos NA MESMA ROTA — mistura falha no boot.</li>
+ *   <li>{EXEC, UI} combinam livremente com qualquer verbo (semântica própria).</li>
+ *   <li>Rotas UI (e rotas que injetam {@code @UI}) exigem a JavaFX Application Thread —
+ *       verificação pré-computada NO REGISTRO (não re-escaneada a cada despacho).</li>
+ *   <li>{@code setAccessible(true)} resolvido uma única vez no registro.</li>
+ *   <li>Binding de parâmetros lança {@link RouteBindingException} — nunca um
+ *       {@code IllegalArgumentException} que disfarce erro do controller como erro de rota.</li>
  * </ul>
- *
- * <h2>Divisão de papéis das anotações</h2>
- * <table>
- *   <tr><th>Anotação</th><th>Alvo</th><th>Consumida por</th></tr>
- *   <tr><td>{@code @GetMapping/@PutMapping/@DeleteMapping/@ExecMapping/@UiMapping}</td>
- *       <td>METHOD</td><td>Registro (este Dispatcher)</td></tr>
- *   <tr><td>{@code @UI}</td><td>PARAMETER</td><td>Binding ({@code UIResolver})</td></tr>
- * </table>
  */
 public class ApiDispatcher {
 
@@ -79,10 +78,17 @@ public class ApiDispatcher {
 
     /**
      * Tabela de rotas: para cada caminho canônico, um submapa por verbo.
-     * É isso que permite "/x/y" existir simultaneamente em GET + EXEC + UI,
-     * mantendo cada canal fisicamente isolado.
+     * Permite "/x/y" existir simultaneamente em GET + EXEC + UI, com cada
+     * canal fisicamente isolado.
      */
     private final Map<String, EnumMap<RouteType, RouteHandler>> routes = new ConcurrentHashMap<>();
+
+    /**
+     * Handlers que exigem a JavaFX Application Thread, computados NO REGISTRO:
+     * canal UI, ou qualquer parâmetro anotado com {@code @UI}.
+     * Consulta em O(1) no despacho — sem re-escanear anotações.
+     */
+    private final Set<RouteHandler> fxThreadHandlers = ConcurrentHashMap.newKeySet();
 
     private final DiContainer container;
     private final List<ParameterResolver> resolvers;
@@ -94,13 +100,14 @@ public class ApiDispatcher {
         this.resolvers = List.of(
                 new RouteVarResolver(),
                 new PayloadResolver(),
-                new UIResolver()
+                new UIResolver(),
+                new AllParamsResolver()
         );
         scanControllers();
     }
 
     // =====================================================================
-    // REGISTRO
+    // REGISTRO (fail-fast + pré-computação)
     // =====================================================================
 
     private void scanControllers() {
@@ -128,6 +135,14 @@ public class ApiDispatcher {
 
             var handler = new RouteHandler(bean, method);
 
+            // Acessibilidade resolvida UMA VEZ (não a cada despacho)
+            handler.method().setAccessible(true);
+
+            // FX Thread exigida se o canal for UI OU se qualquer parâmetro injeta @UI.
+            // Computado UMA vez por método (não por despacho).
+            var hasUiParam = Arrays.stream(method.getParameters())
+                    .anyMatch(p -> p.isAnnotationPresent(UI.class));
+
             // ★ CADA anotação presente gera SEU PRÓPRIO registro —
             //   permitindo o compartilhamento: @GetMapping + @ExecMapping no mesmo método.
             for (var mapping : MAPPINGS) {
@@ -135,8 +150,12 @@ public class ApiDispatcher {
 
                 var rawPath = readValue(method.getAnnotation(mapping.getKey()));
                 var path = canonicalize(joinPath(prefix, rawPath));
+                var type = mapping.getValue();
 
-                addRoute(path, mapping.getValue(), handler, clazz);
+                if (type == RouteType.UI || hasUiParam) {
+                    fxThreadHandlers.add(handler);
+                }
+                addRoute(path, type, handler, clazz);
             }
         }
     }
@@ -224,46 +243,46 @@ public class ApiDispatcher {
     }
 
     // =====================================================================
-    // DESPACHO — UM MÉTODO PÚBLICO POR CANAL
+    // DESPACHO — UM MÉTODO PÚBLICO POR CANAL (contrato: sempre ResponseData)
     // =====================================================================
 
-    public Object dispatchGet(String rota, Map<String, Object> params)    { return executeStrict(RouteType.GET, rota, params); }
-    public Object dispatchPut(String rota, Map<String, Object> params)    { return executeStrict(RouteType.PUT, rota, params); }
-    public Object dispatchDelete(String rota, Map<String, Object> params) { return executeStrict(RouteType.DELETE, rota, params); }
-    public Object dispatchExec(String rota, Map<String, Object> params)   { return executeStrict(RouteType.EXECUTE, rota, params); }
+    public ResponseData dispatchGet(String rota, Map<String, Object> params)    { return executeStrict(RouteType.GET, rota, params); }
+    public ResponseData dispatchPut(String rota, Map<String, Object> params)    { return executeStrict(RouteType.PUT, rota, params); }
+    public ResponseData dispatchDelete(String rota, Map<String, Object> params) { return executeStrict(RouteType.DELETE, rota, params); }
+    public ResponseData dispatchExec(String rota, Map<String, Object> params)   { return executeStrict(RouteType.EXECUTE, rota, params); }
 
     /**
      * Canal UI: transporte de componentes visuais entre pontos distintos
      * da aplicação. Exige obrigatoriamente a JavaFX Application Thread.
      */
-    public Object dispatchUi(String rota, Map<String, Object> params) {
+    public ResponseData dispatchUi(String rota, Map<String, Object> params) {
         if (!Platform.isFxApplicationThread()) {
             throw new IllegalStateException(String.format(
                     "Rota UI '%s' exige a JavaFX Application Thread. " +
-                            "Use Platform.runLater(() -> Rotas.ui(...)) ou Rotas.onFxThread(() -> ...).",
+                            "Use Platform.runLater(() -> Rotas.ui(...)) ou ApiDispatcher.onFxThread(() -> ...).",
                     rota));
         }
         return executeStrict(RouteType.UI, rota, params);
     }
 
     /** Atalhos sem parâmetros. */
-    public Object dispatchGet(String rota)    { return dispatchGet(rota, Map.of()); }
-    public Object dispatchPut(String rota)    { return dispatchPut(rota, Map.of()); }
-    public Object dispatchDelete(String rota) { return dispatchDelete(rota, Map.of()); }
-    public Object dispatchExec(String rota)   { return dispatchExec(rota, Map.of()); }
-    public Object dispatchUi(String rota)     { return dispatchUi(rota, Map.of()); }
+    public ResponseData dispatchGet(String rota)    { return dispatchGet(rota, Map.of()); }
+    public ResponseData dispatchPut(String rota)    { return dispatchPut(rota, Map.of()); }
+    public ResponseData dispatchDelete(String rota) { return dispatchDelete(rota, Map.of()); }
+    public ResponseData dispatchExec(String rota)   { return dispatchExec(rota, Map.of()); }
+    public ResponseData dispatchUi(String rota)     { return dispatchUi(rota, Map.of()); }
 
     // =====================================================================
-    // DESPACHO POSICIONAL (legado)
+    // DESPACHO POSICIONAL (legado — prefira Params)
     // =====================================================================
 
-    public Object dispatchGet(String rota, Object... positionalArgs)     { return positional(RouteType.GET, rota, positionalArgs); }
-    public Object dispatchPut(String rota, Object... positionalArgs)     { return positional(RouteType.PUT, rota, positionalArgs); }
-    public Object dispatchDelete(String rota, Object... positionalArgs)  { return positional(RouteType.DELETE, rota, positionalArgs); }
-    public Object dispatchExec(String rota, Object... positionalArgs)    { return positional(RouteType.EXECUTE, rota, positionalArgs); }
-    public Object dispatchUi(String rota, Object... positionalArgs)      { return positional(RouteType.UI, rota, positionalArgs); }
+    public ResponseData dispatchGet(String rota, Object... positionalArgs)     { return positional(RouteType.GET, rota, positionalArgs); }
+    public ResponseData dispatchPut(String rota, Object... positionalArgs)     { return positional(RouteType.PUT, rota, positionalArgs); }
+    public ResponseData dispatchDelete(String rota, Object... positionalArgs)  { return positional(RouteType.DELETE, rota, positionalArgs); }
+    public ResponseData dispatchExec(String rota, Object... positionalArgs)    { return positional(RouteType.EXECUTE, rota, positionalArgs); }
+    public ResponseData dispatchUi(String rota, Object... positionalArgs)      { return positional(RouteType.UI, rota, positionalArgs); }
 
-    private Object positional(RouteType type, String rota, Object[] args) {
+    private ResponseData positional(RouteType type, String rota, Object[] args) {
         var handler = lookup(type, rota);
         if (handler == null) return missing(type, rota);
         ensureUiThreadRule(handler, type, rota);
@@ -274,7 +293,7 @@ public class ApiDispatcher {
     // NÚCLEO
     // =====================================================================
 
-    private Object executeStrict(RouteType type, String rota, Map<String, Object> params) {
+    private ResponseData executeStrict(RouteType type, String rota, Map<String, Object> params) {
         Objects.requireNonNull(rota, "rota não pode ser nula");
 
         var handler = lookup(type, rota);
@@ -282,15 +301,9 @@ public class ApiDispatcher {
 
         ensureUiThreadRule(handler, type, rota);
 
-        try {
-            makeAccessible(handler);
-            var request = new RouteRequest(canonicalize(rota), tolerantCopy(params));
-            var resolvedArgs = resolveArgs(handler.method(), request);
-            return invoke(handler, resolvedArgs, type, rota);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException(
-                    "Falha no binding da rota [" + type + "] '" + rota + "': " + e.getMessage(), e);
-        }
+        var request = new RouteRequest(canonicalize(rota), tolerantCopy(params));
+        var resolvedArgs = resolveArgs(handler, request);
+        return invoke(handler, resolvedArgs, type, rota);
     }
 
     /**
@@ -303,34 +316,45 @@ public class ApiDispatcher {
     }
 
     /**
-     * Regra da FX Thread aplicada em dois casos:
-     * 1. A rota pertence ao canal UI (registrada via {@code @UiMapping}); OU
-     * 2. Qualquer parâmetro do handler injeta um componente visual
-     *    via {@code @UI} — o que exige a FX Thread independente do canal.
-     *
-     * <p>Note que aqui usamos {@code @UI} (PARAMETER), nunca {@code @UiMapping}
-     * (METHOD): esta última jamais pode aparecer em parâmetros.</p>
+     * Regra da FX Thread — decisão JÁ COMPUTADA no registro ({@link #fxThreadHandlers}).
+     * Cobre: rota do canal UI, e qualquer handler que injete parâmetro {@code @UI}.
      */
     private void ensureUiThreadRule(RouteHandler handler, RouteType type, String rota) {
-        boolean needsFxThread = (type == RouteType.UI)
-                || Arrays.stream(handler.method().getParameters())
-                .anyMatch(p -> p.isAnnotationPresent(UI.class));   // ★ UI, não UiMapping!
+        if (!fxThreadHandlers.contains(handler)) return;
 
-        if (needsFxThread && !Platform.isFxApplicationThread()) {
+        if (!Platform.isFxApplicationThread()) {
             throw new IllegalStateException(String.format(
                     "A rota [%s] '%s' manipula componentes visuais e DEVE rodar na " +
-                            "JavaFX Application Thread.",
+                            "JavaFX Application Thread. Use Platform.runLater(...) " +
+                            "ou ApiDispatcher.onFxThread(...).",
                     type, rota));
         }
     }
 
+    /**
+     * Rota inexistente. Retorna erro no envelope (comportamento mantido por
+     * compatibilidade). Nota: alternativamente pode lançar exceção — rota
+     * inexistente é typo, e typo é bug de programação, não erro de negócio.
+     */
     private ResponseData missing(RouteType type, String rota) {
         return ResponseData.error("Rota inexistente [" + type + "]: " + canonicalize(rota));
     }
 
-    private Object invoke(RouteHandler handler, Object[] args, RouteType type, String rota) {
+    /**
+     * ÚNICO ponto de reflexão da cadeia. O cast para ResponseData vive aqui —
+     * e nunca mais na view. Um handler que faz {@code return null} falha aqui
+     * com a assinatura do método na mensagem, em vez de entregar null à view.
+     */
+    private ResponseData invoke(RouteHandler handler, Object[] args, RouteType type, String rota) {
         try {
-            return handler.method().invoke(handler.bean(), args);
+            var result = (ResponseData) handler.method().invoke(handler.bean(), args);
+            if (result == null) {
+                throw new IllegalStateException(String.format(
+                        "%s.%s retornou null — todo handler deve devolver " +
+                                "ResponseData.success() ou ResponseData.error(...).",
+                        handler.bean().getClass().getSimpleName(), handler.method().getName()));
+            }
+            return result;
         } catch (InvocationTargetException e) {
             var cause = e.getCause();
             if (cause instanceof RuntimeException re) throw re;
@@ -341,13 +365,13 @@ public class ApiDispatcher {
         }
     }
 
-    private void makeAccessible(RouteHandler handler) {
-        if (!handler.method().canAccess(handler.bean())) {
-            handler.method().setAccessible(true);
-        }
-    }
-
-    private Object[] resolveArgs(Method method, RouteRequest request) {
+    /**
+     * Binding via resolvers. Erro de parâmetro lança {@link RouteBindingException}
+     * (não-checked, com contexto completo) — propagando sem catch intermediário
+     * que pudesse re-rotular uma exceção do controller como erro de binding.
+     */
+    private Object[] resolveArgs(RouteHandler handler, RouteRequest request) {
+        var method = handler.method();
         var parameters = method.getParameters();
         var args = new Object[parameters.length];
 
@@ -363,22 +387,39 @@ public class ApiDispatcher {
                 }
             }
             if (!resolved) {
-                throw new IllegalArgumentException(
-                        "Parâmetro '" + param.getName() + "' em '" + method.getName()
-                                + "' sem anotação suportada (@Payload, @UI ou @RouteVar).");
+                throw new RouteBindingException(String.format(
+                        "%s.%s: parâmetro '%s' (%s) sem anotação suportada — " +
+                                "use @Payload, @RouteVar ou @UI.",
+                        handler.bean().getClass().getSimpleName(), method.getName(),
+                        param.getName(), param.getType().getSimpleName()));
             }
         }
         return args;
     }
 
     // =====================================================================
-    // AÇÃO AD-HOC
+    // AÇÃO AD-HOC (endurecida)
     // =====================================================================
 
-    public Object dispatchAction(String rota, String actionName) {
+    /**
+     * Invoca um método SEM anotação de rota, localizado pelo bean de qualquer
+     * canal. Restrições aplicadas para não furar o modelo de segurança:
+     * <ul>
+     *   <li>respeita a regra da FX Thread (se o bean alvo exige);</li>
+     *   <li>o método alvo DEVE retornar ResponseData (mesmo contrato dos handlers);</li>
+     *   <li>{@code return null} também é rejeitado.</li>
+     * </ul>
+     */
+    public ResponseData dispatchAction(String rota, String actionName) {
         Objects.requireNonNull(actionName);
-        var handler = locateAnyChannel(rota);
-        if (handler == null) return ResponseData.error("Rota inexistente: " + canonicalize(rota));
+
+        var located = locateAnyChannel(rota);
+        if (located == null) return ResponseData.error("Rota inexistente: " + canonicalize(rota));
+
+        var channel = located.getKey();
+        var handler = located.getValue();
+
+        ensureUiThreadRule(handler, channel, rota);
 
         Method target = null;
         for (Class<?> c = handler.bean().getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
@@ -388,9 +429,20 @@ public class ApiDispatcher {
         if (target == null) {
             return ResponseData.error("Método '" + actionName + "' não encontrado em: " + rota);
         }
+        if (!ResponseData.class.isAssignableFrom(target.getReturnType())) {
+            throw new IllegalStateException(String.format(
+                    "%s.%s (ação ad-hoc) deve retornar ResponseData — retorno atual: %s.",
+                    handler.bean().getClass().getSimpleName(), actionName,
+                    target.getReturnType().getSimpleName()));
+        }
         try {
             if (!target.canAccess(handler.bean())) target.setAccessible(true);
-            return target.invoke(handler.bean());
+            var result = (ResponseData) target.invoke(handler.bean());
+            if (result == null) {
+                throw new IllegalStateException(
+                        "Ação '" + actionName + "' retornou null — devolva ResponseData.");
+            }
+            return result;
         } catch (InvocationTargetException e) {
             var cause = e.getCause();
             if (cause instanceof RuntimeException re) throw re;
@@ -401,16 +453,22 @@ public class ApiDispatcher {
         }
     }
 
-    private RouteHandler locateAnyChannel(String rota) {
+    /** Localiza o primeiro registro (qualquer canal) do caminho. */
+    private Map.Entry<RouteType, RouteHandler> locateAnyChannel(String rota) {
         var verbMap = routes.get(canonicalize(rota));
         return (verbMap == null || verbMap.isEmpty())
-                ? null : verbMap.values().iterator().next();
+                ? null : verbMap.entrySet().iterator().next();
     }
 
     // =====================================================================
     // UTILITÁRIOS
     // =====================================================================
 
+    /**
+     * Executa na FX Thread (bloqueante). <b>Atenção:</b> chamar a partir de uma
+     * thread que segure um lock de que a FX Thread dependa causará deadlock —
+     * prefira chamar de threads de fundo "livres" (Task, Service).
+     */
     public static <T> T onFxThread(Supplier<T> action) {
         Objects.requireNonNull(action);
         if (Platform.isFxApplicationThread()) return action.get();
@@ -422,6 +480,7 @@ public class ApiDispatcher {
         return future.join();
     }
 
+    /** Uso interno/testes — limpa a tabela de rotas. */
     public void clear() { routes.clear(); }
 
     public int getRouteCount() { return entryCount(); }
@@ -454,7 +513,6 @@ public class ApiDispatcher {
                             e.getKey(), String.format("%-22s", verbs),
                             anyHandler.bean().getClass().getSimpleName(),
                             anyHandler.method().getName()));
-                    // lista todos os pares verbo->método quando divergem
                     e.getValue().forEach((t, h) -> {
                         if (h.method() != anyHandler.method()) {
                             sb.append(String.format("%-73s ^ [%s] aponta para %s#%s%n",
@@ -497,6 +555,7 @@ public class ApiDispatcher {
         return r;
     }
 
+    /** Cópia tolerante: aceita null/vazio e não exige imutabilidade da origem. */
     private static Map<String, Object> tolerantCopy(Map<String, Object> source) {
         return (source == null || source.isEmpty()) ? Map.of() : new LinkedHashMap<>(source);
     }

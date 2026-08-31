@@ -2,45 +2,42 @@ package com.ossobo.winterfx.router;
 
 import com.ossobo.winterfx.bootstrap.WinterApplication;
 import com.ossobo.winterfx.router.model.Params;
-import com.ossobo.winterfx.router.model.RouteBindingException;
+import com.ossobo.winterfx.router.model.ResponseData;
 import com.ossobo.winterfx.router.processor.ApiDispatcher;
 
+/**
+ * Fachada estática do roteador WinterFX. Todo despacho devolve o envelope
+ * {@link ResponseData} — não há cast do lado do chamador, nunca.
+ */
 public final class Rotas {
 
     private Rotas() {}
 
     // ---------- GET: leitura ----------
-    public static Object get(String rota)                { return d().dispatchGet(rota); }
-    public static Object get(String rota, Params params) { return d().dispatchGet(rota, params.build()); }
+    public static ResponseData get(String rota)                   { return d().dispatchGet(rota); }
+    public static ResponseData get(String rota, Params params)    { return d().dispatchGet(rota, params.build()); }
 
     // ---------- PUT: escrita/atualização ----------
-    public static Object put(String rota, Params params) { return d().dispatchPut(rota, params.build()); }
-    public static Object put(String rota, Object... args){ return d().dispatchPut(rota, args); }
+    public static ResponseData put(String rota, Params params)    { return d().dispatchPut(rota, params.build()); }
 
     // ---------- DELETE: remoção ----------
-    public static Object delete(String rota, Params params) { return d().dispatchDelete(rota, params.build()); }
+    public static ResponseData delete(String rota)                { return d().dispatchDelete(rota); }
+    public static ResponseData delete(String rota, Params params) { return d().dispatchDelete(rota, params.build()); }
 
     // ---------- EXEC: comandos/processos ----------
-    public static Object exec(String rota)               { return d().dispatchExec(rota); }
-    public static Object exec(String rota, Params params){ return d().dispatchExec(rota, params.build()); }
+    public static ResponseData exec(String rota)                  { return d().dispatchExec(rota); }
+    public static ResponseData exec(String rota, Params params)   { return d().dispatchExec(rota, params.build()); }
 
-    // ---------- UI: TRANSPORTE de componentes visuais ----------
-    public static Object ui(String rota, Params params)  { return d().dispatchUi(rota, params.build()); }
-    public static Object ui(String rota)                 { return d().dispatchUi(rota); }
+    // ---------- UI: transporte de componentes visuais (FX Thread!) ----------
+    public static ResponseData ui(String rota)                    { return d().dispatchUi(rota); }
+    public static ResponseData ui(String rota, Params params)     { return d().dispatchUi(rota, params.build()); }
 
-    // ---------- auxiliares ----------
-    public static Object executeAction(String rota, String action) { return d().dispatchAction(rota, action); }
-
-    @SuppressWarnings("unchecked")
-    public static <T> T receiveAs(String rota, Class<T> tipo) {
-        Object result = get(rota);
-        if (result == null) return null;
-        if (!tipo.isInstance(result)) {
-            throw new RouteBindingException(
-                    "Rota '" + rota + "' retornou " + result.getClass().getSimpleName()
-                            + ", esperava " + tipo.getSimpleName());
-        }
-        return (T) result;
+    /**
+     * One-liner para quando só precisa de UM valor do envelope.
+     * {@code List<Livro> livros = Rotas.receiveData("livros/listar", "livros", List.class);}
+     */
+    public static <T> T receiveData(String rota, String key, Class<T> type) {
+        return get(rota).getData(key, type);
     }
 
     private static ApiDispatcher d() {

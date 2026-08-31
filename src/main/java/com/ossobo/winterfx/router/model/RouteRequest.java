@@ -1,5 +1,7 @@
 package com.ossobo.winterfx.router.model;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -19,7 +21,7 @@ public final class RouteRequest {
     public RouteRequest(String route, Map<String, Object> params) {
         this.route    = Objects.requireNonNull(route);
         // Map.copyOf exige um Map não nulo e cria uma cópia imutável
-        this.params   = Map.copyOf(params);
+        this.params = Collections.unmodifiableMap(new LinkedHashMap<>(params));
         this.timestamp = System.nanoTime();
     }
 
