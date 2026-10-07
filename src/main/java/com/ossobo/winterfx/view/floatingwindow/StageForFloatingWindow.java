@@ -93,72 +93,85 @@ public class StageForFloatingWindow {
             return stage;
         }
 
-        // ✅ CARREGA A VIEW AGORA (LAZY)
+        // Carrega a view
         LoadedView<?> loadedView = stageManager.loadFloatingView(viewId, singleton);
 
-        // ✅ CRIA O STAGE
+        // Busca o descriptor para herdar tamanho/estilo quando a anotação não define
+        var descriptor = stageManager.getDescriptor(viewId);
+
         stage = new Stage();
 
-        // Configura estilo
+        // Estilo: anotação > descriptor > fallback
         stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 
-        // Configura título
-        String stageTitle = (title != null && !title.isEmpty()) ? title : viewId;
+        String stageTitle = (title != null && !title.isEmpty())
+                ? title
+                : (descriptor.title() != null && !descriptor.title().isEmpty())
+                ? descriptor.title()
+                : viewId;
         stage.setTitle(stageTitle);
 
-        // Configura modalidade
         javafx.stage.Modality javaFxModality = manager.convertModality(modality);
         stage.initModality(javaFxModality);
 
-        // Configura owner
         Window owner = manager.resolveOwner(ownerId);
         if (owner != null && owner != stage) {
             stage.initOwner(owner);
         }
 
-        // Configura cena
-        double w = width > 0 ? width : 800;
-        double h = height > 0 ? height : 600;
-        Scene scene = new Scene(loadedView.root(), w, h);
-        stage.setScene(scene);
-        stage.setResizable(resizable);
-        stage.setAlwaysOnTop(alwaysOnTop);
+        // ✅ TAMANHO: anotação (>0) > descriptor (>0) > FXML (sizeToScene)
+        double w = width > 0  ? width  : descriptor.width();
+        double h = height > 0 ? height : descriptor.height();
 
-        if (centered) {
+        Scene scene;
+        if (w > 0 && h > 0) {
+            scene = new Scene(loadedView.root(), w, h);
+        } else {
+            scene = new Scene(loadedView.root());
+        }
+        stage.setScene(scene);
+
+        // ✅ Resizable/alwaysOnTop/centered: anotação vence, descriptor como fallback
+        stage.setResizable(resizable);
+        stage.setAlwaysOnTop(alwaysOnTop || descriptor.alwaysOnTop());
+
+        // ✅ Aplica min/max do descriptor (se existirem)
+        if (descriptor.minWidth()  > 0) stage.setMinWidth(descriptor.minWidth());
+        if (descriptor.minHeight() > 0) stage.setMinHeight(descriptor.minHeight());
+        if (descriptor.maxWidth()  > 0) stage.setMaxWidth(descriptor.maxWidth());
+        if (descriptor.maxHeight() > 0) stage.setMaxHeight(descriptor.maxHeight());
+
+        // ✅ Se ninguém definiu tamanho, deixa o FXML mandar
+        if (w <= 0 || h <= 0) {
+            stage.sizeToScene();
+        }
+
+        if (centered || descriptor.centered()) {
             stage.centerOnScreen();
         }
 
-        // Auto-close ao perder foco
+        // autoClose, modal stack, registerWindow, autoOpen — igual antes
         if (autoClose) {
             stage.focusedProperty().addListener((obs, oldVal, newVal) -> {
-                if (!newVal && stage.isShowing()) {
-                    stage.close();
-                }
+                if (!newVal && stage.isShowing()) stage.close();
             });
         }
 
-        // Gerenciamento da pilha modal
         if (javaFxModality != javafx.stage.Modality.NONE) {
             stage.setOnShown(e -> manager.pushModalStack(stage));
         }
 
         stage.setOnHidden(e -> {
             manager.popModalStack(stage);
-            if (singleton) {
-                manager.unregisterWindow(viewId);
-            }
+            if (singleton) manager.unregisterWindow(viewId);
         });
 
-        // Registra a janela
         String key = singleton ? viewId : manager.generateKey(viewId);
         manager.registerWindow(key, stage);
 
         loaded = true;
 
-        // Auto-open
-        if (autoOpen) {
-            stage.show();
-        }
+        if (autoOpen) stage.show();
 
         return stage;
     }

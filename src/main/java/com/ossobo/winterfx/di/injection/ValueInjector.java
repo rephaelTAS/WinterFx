@@ -7,24 +7,23 @@ import com.ossobo.winterfx.di.reflection.ReflectionProcessor;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Injetor de valores de configuração baseado na anotação {@code @Value}.
  *
- * <p>Esta classe é responsável por resolver expressões de configuração e injetá-las
- * nos campos anotados de um bean, com suporte a conversão automática de tipos.</p>
- *
  * <p><b>Formatos de expressão suportados:</b></p>
  * <ul>
- *   <li>{@code ${chave}} - Busca o valor associado à chave no gerenciador de configuração.</li>
- *   <li>{@code ${chave:valorPadrao}} - Utiliza o valor padrão caso a chave não exista.</li>
- *   <li>{@code "literal"} - Injeta a string literal, sem resolução.</li>
+ *   <li>{@code ${chave}} - Resolve a chave no ConfigurationManager.</li>
+ *   <li>{@code ${chave:valorPadrao}} - Usa o default se a chave não existir.</li>
  * </ul>
  *
- * <p><b>Conversão automática de tipos suportada:</b> {@code String}, {@code int}/{@code Integer},
- * {@code long}/{@code Long}, {@code boolean}/{@code Boolean} e {@code double}/{@code Double}.</p>
+ * <p><b>CONTRATO FAIL-FAST:</b> placeholder não resolvido sem default, valor
+ * vazio ou conversão impossível = {@link IllegalStateException} com contexto
+ * completo (classe.campo). Configuração errada quebra o BOOT — nunca produz
+ * 0/false/"" silenciosamente.</p>
  *
- * @version 2.0
+ * @version 3.0
  */
 public class ValueInjector implements DependencyInjector {
 
@@ -32,13 +31,6 @@ public class ValueInjector implements DependencyInjector {
     private final ReflectionProcessor reflectionProcessor;
     private final ConfigurationManager configurationManager;
 
-    /**
-     * Constrói um novo injetor de valores.
-     *
-     * @param reflectionCache       Cache de metadados de reflexão para busca de campos.
-     * @param reflectionProcessor    Utilitário para realizar a injeção segura via reflexão.
-     * @param configurationManager  Gerenciador de configurações utilizado para resolver os placeholders.
-     */
     public ValueInjector(ReflectionCache reflectionCache,
                          ReflectionProcessor reflectionProcessor,
                          ConfigurationManager configurationManager) {
@@ -48,85 +40,71 @@ public class ValueInjector implements DependencyInjector {
     }
 
     /**
-     * Identifica campos anotados com {@code @Value}, resolve suas expressões
-     * correspondentes e injeta os valores convertidos na instância alvo.
+     * Injeta valores em todos os campos anotados com @Value.
      *
-     * <p>Caso o {@link ConfigurationManager} não tenha sido inicializado,
-     * a execução deste método é abortada silenciosamente.</p>
-     *
-     * @param instance A instância do bean a ser processada.
-     * @param type     O tipo (Classe) do bean sendo processado.
+     * <p>Falha imediatamente se o ConfigurationManager não foi fornecido —
+     * seguir silenciosamente deixaria todos os @Value como null.</p>
      */
     @Override
     public void inject(Object instance, Class<?> type) {
-        if (configurationManager == null) {
-            return;
-        }
+        Objects.requireNonNull(configurationManager,
+                "ConfigurationManager não configurado no ValueInjector — " +
+                        "verifique se setConfigurationManager() roda ANTES de initCoreInjectors()");
 
         List<Field> fields = reflectionCache.getInjectableFields(type);
 
         for (Field field : fields) {
             if (field.isAnnotationPresent(Value.class)) {
                 Value valueAnnotation = field.getAnnotation(Value.class);
-                String expression = valueAnnotation.value();
-                Object resolvedValue = resolveValue(expression, field.getType());
+                // Field passado adiante: permite mensagens de erro com
+                // contexto Classe.campo — essencial para diagnóstico
+                Object resolvedValue = resolveValue(valueAnnotation.value(), field);
                 reflectionProcessor.injectField(instance, field, resolvedValue);
             }
         }
     }
 
     /**
-     * Resolve uma expressão oriunda da anotação {@code @Value} e a converte
-     * para o tipo de destino exigido pelo campo.
-     *
-     * <p>A resolução suporta placeholders aninhados de forma recursiva.
-     * Se a resolução falhar, a expressão literal original é retornada.
-     * Se a conversão de tipo falhar, são retornados valores padrão seguros
-     * (como {@code 0}, {@code 0L}, {@code 0.0} ou {@code false}).</p>
-     *
-     * @param expression  A expressão definida na anotação (ex: {@code "${app.port:8080}"}).
-     * @param targetType  O tipo de dado do campo que receberá o valor.
-     * @return O valor resolvido e convertido para o tipo de destino.
+     * Resolve a expressão do @Value para o campo, com validação estrita.
      */
-    private Object resolveValue(String expression, Class<?> targetType) {
-        if (expression == null) {
-            return null;
+    private Object resolveValue(String expression, Field field) {
+        if (expression == null || expression.isBlank()) {
+            throw new IllegalStateException("@Value sem expressão no campo " + field);
         }
 
         String resolved = configurationManager.resolveRecursive(expression);
+        String contexto = field.getDeclaringClass().getSimpleName() + "." + field.getName();
 
-        if (resolved == null) {
-            resolved = expression;
-        }
-
-        if (targetType == String.class) {
-            return resolved;
-        }
-        if (targetType == int.class || targetType == Integer.class) {
-            try {
-                return Integer.parseInt(resolved);
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        if (targetType == long.class || targetType == Long.class) {
-            try {
-                return Long.parseLong(resolved);
-            } catch (NumberFormatException e) {
-                return 0L;
-            }
-        }
-        if (targetType == boolean.class || targetType == Boolean.class) {
-            return Boolean.parseBoolean(resolved);
-        }
-        if (targetType == double.class || targetType == Double.class) {
-            try {
-                return Double.parseDouble(resolved);
-            } catch (NumberFormatException e) {
-                return 0.0;
-            }
+        // resolveRecursive retorna "" para ${chave} inexistente sem default.
+        // Aceitar isso seria injetar vazio silenciosamente.
+        if (resolved == null || resolved.isBlank()) {
+            throw new IllegalStateException(
+                    "Placeholder não resolvido: '" + expression + "' (campo " + contexto +
+                            "). Verifique o application.properties, o @PropertySource, " +
+                            "ou declare um default: ${chave:valor}");
         }
 
-        return resolved;
+        return convertValue(resolved, field.getType(), expression, contexto);
+    }
+
+    /** Conversão de tipos única. Falha reportada com chave, valor, tipo e campo. */
+    private Object convertValue(String resolved, Class<?> targetType,
+                                String expression, String contexto) {
+        try {
+            if (targetType == String.class)   return resolved;
+            if (targetType == int.class     || targetType == Integer.class) return Integer.parseInt(resolved.trim());
+            if (targetType == long.class    || targetType == Long.class)    return Long.parseLong(resolved.trim());
+            if (targetType == boolean.class || targetType == Boolean.class) return Boolean.parseBoolean(resolved.trim());
+            if (targetType == double.class  || targetType == Double.class)  return Double.parseDouble(resolved.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException(
+                    "Valor '" + resolved + "' da expressão '" + expression +
+                            "' não é conversível para " + targetType.getSimpleName() +
+                            " (campo " + contexto + ")", e);
+        }
+
+        throw new IllegalStateException(
+                "Tipo não suportado por @Value: " + targetType.getName() +
+                        " (campo " + contexto + "). Suportados: String, int, long, boolean, double + wrappers");
     }
 }

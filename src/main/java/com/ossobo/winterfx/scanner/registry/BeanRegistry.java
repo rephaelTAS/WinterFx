@@ -127,9 +127,34 @@ public class BeanRegistry {
         return Collections.unmodifiableSet(definitionsByName.keySet());
     }
 
+    /**
+     * Retorna todas as classes registradas como beans.
+     * Útil para processar anotações como @PropertySource.
+     */
+    public Set<Class<?>> getAllClasses() {
+        Set<Class<?>> allClasses = new HashSet<>();
+        for (BeanDefinition def : definitionsByName.values()) {
+            allClasses.add(def.type());
+        }
+        return Collections.unmodifiableSet(allClasses);
+    }
+
     // ============================================================
     // VERIFICAÇÃO
     // ============================================================
+
+    /**
+     * Verifica registro por TIPO EXATO (sem fallback de isAssignableFrom).
+     *
+     * CONTRATO: usado na idempotência do scanPropertySources. O isRegistered()
+     * normal faz match por atribuição — uma SUBCLASSE já registrada faria
+     * isRegistered(supertype) retornar true e suprimiria o registro real,
+     * ignorando silenciosamente o @PropertySource do supertype.
+     */
+    public boolean isRegisteredExact(Class<?> type) {
+        List<String> names = beanNamesByType.get(type);
+        return names != null && !names.isEmpty();
+    }
 
     public boolean isRegistered(Class<?> type) {
         List<String> names = beanNamesByType.get(type);

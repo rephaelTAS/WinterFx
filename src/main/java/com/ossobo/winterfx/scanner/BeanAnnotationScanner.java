@@ -1,7 +1,7 @@
 package com.ossobo.winterfx.scanner;
 
 import com.ossobo.winterfx.anotations.*;
-import com.ossobo.winterfx.di.annotations.Configuration;
+import com.ossobo.winterfx.anotations.Configuration;
 import com.ossobo.winterfx.scanner.enums.ScopeType;
 import com.ossobo.winterfx.scanner.models.BeanDefinition;
 import com.ossobo.winterfx.scanner.models.InjectionPoint;
@@ -15,6 +15,12 @@ import java.util.*;
 
 /**
  * Scanner de beans do WinterFX.
+ *
+ * NOTA DE DESIGN: classes com @PropertySource SEM estereótipo são registradas
+ * como beans (via registerComponent) apenas para chegarem ao
+ * PropertySourceProcessor — o mesmo comportamento do Spring com @Configuration.
+ * Consequência: o container INSTANCIA essas classes; garanta construtor sem args
+ * ou dependências resolúveis.
  */
 public final class BeanAnnotationScanner {
 
@@ -32,6 +38,7 @@ public final class BeanAnnotationScanner {
         int count = 0;
         count += scanComponents(registry);
         count += scanConfigurations(registry);
+        count += scanPropertySources(registry);
         return count;
     }
 
@@ -146,6 +153,31 @@ public final class BeanAnnotationScanner {
                 dependencies, postConstruct, preDestroy, primary, qualifier, values));
     }
 
+    /**
+     * Registra classes que declaram @PropertySource mesmo SEM @Configuration.
+     *
+     * CONTRATO: o PropertySourceProcessor só enxerga classes presentes no
+     * BeanRegistry. Sem este passo, @PropertySource "solto" (sem estereótipo)
+     * era silenciosamente ignorado — o pior tipo de falha de configuração.
+     * A varredura usa o MESMO ScanResult (classgraph) dos demais: zero custo extra.
+     */
+    private int scanPropertySources(BeanRegistry registry) {
+        int count = 0;
+        for (String className : scanResult.getClassesWithAnnotation(PropertySource.class).getNames()) {
+            Class<?> type = loadClass(className);
+            if (type == null || type.isInterface() || type.isAnnotation() || type.isEnum()) {
+                continue;
+            }
+            // Idempotência por TIPO EXATO: classe com @Configuration + @PropertySource
+            // já foi registrada acima e não duplica. isRegisteredExact evita o falso
+            // positivo de subclasses (isRegistered retornaria true e suprimiria o registro).
+            if (!registry.isRegisteredExact(type)) {
+                registerComponent(type, registry);
+                count++;
+            }
+        }
+        return count;
+    }
     // ============================================================
     // MÉTODOS AUXILIARES
     // ============================================================

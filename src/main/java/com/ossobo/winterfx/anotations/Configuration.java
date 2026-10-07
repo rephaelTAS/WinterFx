@@ -1,4 +1,4 @@
-package com.ossobo.winterfx.di.annotations;
+package com.ossobo.winterfx.anotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

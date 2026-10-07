@@ -5,16 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1bf19146-2294-41a8-b430-6bedb89510cb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/AllParams.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/AllParamsResolver.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/PropertySource.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/configuration/PropertySourceProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/GetMapping.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/GetMapping.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/RequestMapping.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/RequestMapping.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap/WinterApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/bootstrap/WinterApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/BootSequence.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/BootSequence.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/DiContainer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/DiContainer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/annotations/Configuration.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/Configuration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/annotations/Transactional.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/anotations/Transactional.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/configuration/ConfigurationManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/configuration/ConfigurationManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/InjectionManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/InjectionManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/ValueInjector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/di/injection/ValueInjector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/descriptor/ViewDescriptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/resources/descriptor/ViewDescriptor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/Rotas.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/Rotas.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/Params.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/Params.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/ResponseData.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/ResponseData.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/RouteRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/RouteRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/processor/ApiDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/processor/ApiDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/UIResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/router/model/UIResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanAnnotationScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/BeanAnnotationScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/BeanRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/scanner/registry/BeanRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/RegisterView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/anotations/RegisterView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/StageForFloatingWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/ossobo/winterfx/view/floatingwindow/StageForFloatingWindow.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/module-info.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/module-info.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,7 +31,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="294" />
+    <option name="cachedIndexableFilesCount" value="298" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -41,61 +50,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="3.1578035516821815E-15" />
-      <entry key="MS500" value="0.0012585689750830228" />
-      <entry key="S2" value="0.18835157470025177" />
-      <entry key="S5" value="0.5128468616123684" />
-      <entry key="S10" value="0.716133270845845" />
-      <entry key="S30" value="0.8946735889681129" />
-      <entry key="S60" value="0.945871867098347" />
-      <entry key="M2" value="0.9725594414962709" />
-      <entry key="M5" value="0.9890928917531874" />
-      <entry key="M10" value="1.0273704553226304" />
-      <entry key="M15" value="1.225185186424134" />
-      <entry key="M30" value="3.0294488613233703" />
-      <entry key="H1" value="8.692751435416579" />
-      <entry key="H2" value="19.930426683076526" />
-      <entry key="H4" value="38.75897997091083" />
-      <entry key="D1" value="166.32641921254304" />
-      <entry key="W1" value="531.0375226270484" />
+      <entry key="MS100" value="1.4838227915276063" />
+      <entry key="MS500" value="3.4001749533974794" />
+      <entry key="S2" value="4.870264663492817" />
+      <entry key="S5" value="5.464285468646538" />
+      <entry key="S10" value="5.714704067839747" />
+      <entry key="S30" value="5.900628803756604" />
+      <entry key="S60" value="5.950000622241905" />
+      <entry key="M2" value="6.005860980248336" />
+      <entry key="M5" value="6.561780369413786" />
+      <entry key="M10" value="7.518628712271253" />
+      <entry key="M15" value="8.2036512444197" />
+      <entry key="M30" value="10.337924669319099" />
+      <entry key="H1" value="15.895647320760212" />
+      <entry key="H2" value="27.082371566998653" />
+      <entry key="H4" value="46.035317769078134" />
+      <entry key="D1" value="174.13742954584762" />
+      <entry key="W1" value="539.4998349728672" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.0" />
-      <entry key="S10" value="1.0" />
-      <entry key="S30" value="1.0" />
-      <entry key="S60" value="1.0" />
-      <entry key="M2" value="1.0000000000755882" />
-      <entry key="M5" value="1.0001776050362556" />
-      <entry key="M10" value="1.0362225048424831" />
-      <entry key="M15" value="1.227066060596724" />
-      <entry key="M30" value="2.536359459629314" />
-      <entry key="H1" value="5.841439107667717" />
-      <entry key="H2" value="12.702708676580507" />
-      <entry key="H4" value="23.416861047668885" />
-      <entry key="D1" value="72.46399764806264" />
-      <entry key="W1" value="212.44406790707612" />
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="8.666363599923187E-124" />
+      <entry key="S5" value="8.490786628482374E-50" />
+      <entry key="S10" value="4.715087823652968E-25" />
+      <entry key="S30" value="1.736973507150177E-8" />
+      <entry key="S60" value="2.564677582855883E-4" />
+      <entry key="M2" value="0.0317685548987504" />
+      <entry key="M5" value="0.5769314825820342" />
+      <entry key="M10" value="1.5316440085624825" />
+      <entry key="M15" value="2.2123653386620012" />
+      <entry key="M30" value="3.9911804038839" />
+      <entry key="H1" value="7.491008454095189" />
+      <entry key="H2" value="14.442645543380737" />
+      <entry key="H4" value="25.329669422617968" />
+      <entry key="D1" value="74.93486852913136" />
+      <entry key="W1" value="215.22726900745565" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.859694113349135E-13" />
-      <entry key="MS500" value="0.002950885569042347" />
-      <entry key="S2" value="0.33266849466221915" />
-      <entry key="S5" value="0.95727042165283" />
-      <entry key="S10" value="1.3790652734552027" />
-      <entry key="S30" value="1.7655957499214905" />
-      <entry key="S60" value="1.8789711879406978" />
-      <entry key="M2" value="1.9384960836446627" />
-      <entry key="M5" value="1.9754944672476726" />
-      <entry key="M10" value="2.0566143921197533" />
-      <entry key="M15" value="2.4473429071981045" />
-      <entry key="M30" value="5.562296513985922" />
-      <entry key="H1" value="14.530492307063392" />
-      <entry key="H2" value="32.6287447780939" />
-      <entry key="H4" value="62.171599004340955" />
-      <entry key="D1" value="238.78841069878308" />
-      <entry key="W1" value="743.4808891468285" />
+      <entry key="MS100" value="1.4112736205766079" />
+      <entry key="MS500" value="3.3538453026430433" />
+      <entry key="S2" value="4.708089939233771" />
+      <entry key="S5" value="5.333262050869142" />
+      <entry key="S10" value="5.631465417425309" />
+      <entry key="S30" value="5.868041504873567" />
+      <entry key="S60" value="5.933269387742939" />
+      <entry key="M2" value="6.027303169760636" />
+      <entry key="M5" value="7.121988324567989" />
+      <entry key="M10" value="9.030602795239103" />
+      <entry key="M15" value="10.398073960711978" />
+      <entry key="M30" value="14.316079508012539" />
+      <entry key="H1" value="23.377378935044643" />
+      <entry key="H2" value="41.51765298656086" />
+      <entry key="H4" value="71.35918884057823" />
+      <entry key="D1" value="249.07000763678633" />
+      <entry key="W1" value="754.7263604319608" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -125,7 +134,7 @@
     "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/rtas/02_IdeaProjects/Java/Gestao_Dep_It_V4",
+    "last_opened_file_path": "/home/rtas/02_IdeaProjects/01_Projetos/Java/WinterFx",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.jshint": "true",
     "node.js.detected.package.tslint": "true",
@@ -160,8 +169,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-34e2839f716b-intellij.indexing.shared.core-IU-262.9437.185" />
-        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.9437.185" />
+        <option value="bundled-jdk-30f59d01ecdd-a203e0a19954-intellij.indexing.shared.core-IU-262.10968.63" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.10968.63" />
       </set>
     </attachedChunks>
   </component>

@@ -18,7 +18,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Orquestrador central do processo de injeção de dependências.
- * Versão 6.1 - Corrigido Memory Leak com WeakHashMap para controllers JavaFX.
+ *
+ * <p>Versão 6.2 — Contratos verificados em initCoreInjectors(): o erro mais
+ * traiçoeiro desta arquitetura era chamar initCoreInjectors() antes de
+ * setConfigurationManager(), deixando TODO @Value silenciosamente inativo.
+ * Agora isso é erro de boot imediato.</p>
+ *
+ * <p>ORDEM DE INJEÇÃO por bean (contrato do inject()):</p>
+ * <ol>
+ *   <li>ValueInjector (@Value — precisa vir antes, pois @PostConstruct usa os valores)</li>
+ *   <li>FieldInjector (@Inject)</li>
+ *   <li>MethodInjector</li>
+ *   <li>ExternalInjectors (view, imagem, etc.)</li>
+ *   <li>@PostConstruct (por último, com tudo pronto)</li>
+ * </ol>
  */
 public final class InjectionManager {
 
@@ -34,7 +47,7 @@ public final class InjectionManager {
 
     private final List<DependencyInjector> externalInjectors = new CopyOnWriteArrayList<>();
 
-    // ✅ CORREÇÃO: WeakHashMap permite que Controllers (Prototypes) sejam garbage colletados quando a View fecha
+    // WeakHashMap: Controllers (Prototypes) podem ser garbage coletados quando a View fecha
     private final Map<Object, Boolean> initialized = Collections.synchronizedMap(new WeakHashMap<>());
 
     public InjectionManager() {}
@@ -55,7 +68,19 @@ public final class InjectionManager {
     public void setConfigurationManager(ConfigurationManager configurationManager) { this.configurationManager = configurationManager; }
     public void setEventPublisher(LifecycleEventPublisher eventPublisher) { this.eventPublisher = eventPublisher; }
 
+    /**
+     * Cria os injetores core. PRÉ-CONDIÇÕES verifiables: todos os setters
+     * devem ter sido chamados antes. Violar a ordem agora gera erro imediato
+     * e autoexplicativo, em vez de @Value inativo silenciosamente.
+     */
     public void initCoreInjectors() {
+        Objects.requireNonNull(configurationManager,
+                "initCoreInjectors() chamado ANTES de setConfigurationManager() — " +
+                        "os @Value não funcionariam. Corrija a ordem no BootSequence/DiContainer.");
+        Objects.requireNonNull(reflectionCache, "reflectionCache é obrigatório antes de initCoreInjectors()");
+        Objects.requireNonNull(reflectionProcessor, "reflectionProcessor é obrigatório antes de initCoreInjectors()");
+        Objects.requireNonNull(dependencyResolver, "dependencyResolver é obrigatório antes de initCoreInjectors()");
+
         this.valueInjector = new ValueInjector(reflectionCache, reflectionProcessor, configurationManager);
         this.fieldInjector = new FieldInjector(reflectionCache, reflectionProcessor, dependencyResolver);
         this.methodInjector = new MethodInjector(reflectionCache, reflectionProcessor, dependencyResolver);

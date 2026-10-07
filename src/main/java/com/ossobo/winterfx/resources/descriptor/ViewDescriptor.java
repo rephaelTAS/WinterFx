@@ -80,8 +80,6 @@ public record ViewDescriptor(
         stageStyle = Objects.requireNonNullElse(stageStyle, StageStyle.DECORATED);
 
         title = title != null ? title : "";
-        width = width > 0 ? width : 800;
-        height = height > 0 ? height : 600;
         opacity = opacity > 0 ? opacity : 1.0;
         initMethod = initMethod != null ? initMethod : "initialize";
         encoding = encoding != null ? encoding : "UTF-8";
@@ -132,8 +130,8 @@ public record ViewDescriptor(
         private List<URL> additionalCss;
         private ModeUse modeUse = ModeUse.VIEW;
         private String title;
-        private int width = 800;
-        private int height = 600;
+        private int width = -1;
+        private int height = -1;
         private boolean resizable = true;
         private boolean centered = true;
         private boolean alwaysOnTop;

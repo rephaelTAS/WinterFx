@@ -16,9 +16,17 @@ import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 
 /**
  * Orquestrador da inicialização do DI Container.
- * Versão 6.0 - Limpeza do Detector de Ciclo (agora gerenciado pelo SingletonScope).
+ *
+ * <p>Versão 6.2 — O ConfigurationManager é RECEBIDO pronto (populado pelo
+ * PropertySourceProcessor no boot). Esta classe NUNCA carrega arquivos de
+ * propriedades — apenas conecta os componentes e inicializa os injetores.</p>
+ *
+ * <p>CONTRATO: o construtor principal deve ser usado; o legado existe apenas
+ * para compatibilidade e não enxerga @PropertySource da aplicação.</p>
  */
 public final class BootSequence {
+
+    private static final System.Logger LOGGER = System.getLogger(BootSequence.class.getName());
 
     private final ScopeManager scopeManager;
     private final ReflectionCache reflectionCache;
@@ -34,16 +42,19 @@ public final class BootSequence {
     private DependencyResolver dependencyResolver;
     private CollectionResolver collectionResolver;
 
-    public BootSequence(BeanRegistry beanRegistry) {
+    /**
+     * Construtor principal: recebe o ConfigurationManager JÁ POPULADO
+     * pelo PropertySourceProcessor (via WinterApplication).
+     */
+    public BootSequence(BeanRegistry beanRegistry, ConfigurationManager configurationManager) {
         this.beanRegistry = beanRegistry;
+        this.configurationManager = configurationManager;
 
         this.scopeManager = new ScopeManager();
         var scanner = new ReflectionScanner();
         this.reflectionCache = new ReflectionCache(scanner);
         this.reflectionProcessor = new ReflectionProcessor();
         this.eventPublisher = new LifecycleEventPublisher();
-        this.configurationManager = new ConfigurationManager();
-        this.configurationManager.loadConfiguration();
         this.lifecycleManager = new LifecycleManager(
                 reflectionCache, reflectionProcessor, scopeManager, eventPublisher);
 
@@ -52,6 +63,22 @@ public final class BootSequence {
         this.instanceCreator = new InstanceCreator();
         this.dependencyResolver = new DependencyResolver();
         this.collectionResolver = new CollectionResolver(dependencyResolver);
+
+        LOGGER.log(System.Logger.Level.DEBUG,
+                "BootSequence criado com ConfigurationManager externo ({0} chaves)",
+                configurationManager.getPropertyCount());
+    }
+
+    /**
+     * @deprecated Cria um ConfigurationManager vazio (sem @PropertySource).
+     *             Use {@link #BootSequence(BeanRegistry, ConfigurationManager)}.
+     */
+    @Deprecated
+    public BootSequence(BeanRegistry beanRegistry) {
+        this(beanRegistry, new ConfigurationManager());
+        this.configurationManager.loadConfiguration();
+        LOGGER.log(System.Logger.Level.WARNING,
+                "BootSequence usando ConfigurationManager padrão (sem propriedades externas)");
     }
 
     private void inject() {
@@ -78,7 +105,12 @@ public final class BootSequence {
 
         strategyManager.setDependencyResolver(dependencyResolver);
 
+        // CRÍTICO: roda APÓS setConfigurationManager — o requireNonNull do
+        // InjectionManager.valida esta ordem agora
         injectionManager.initCoreInjectors();
+
+        LOGGER.log(System.Logger.Level.DEBUG, "Injectors inicializados com ConfigurationManager: {0} chaves",
+                configurationManager.getPropertyCount());
     }
 
     private void validate() {
@@ -111,6 +143,10 @@ public final class BootSequence {
         inject();
         validate();
         lifecycleManager.initialize();
+
+        LOGGER.log(System.Logger.Level.INFO, "BootSequence concluído com {0} chaves",
+                configurationManager.getPropertyCount());
+
         return new BootResult(
                 dependencyResolver, injectionManager, instanceCreator,
                 strategyManager, beanRegistry, scopeManager, lifecycleManager,

@@ -29,8 +29,8 @@ public @interface RegisterView {
     ModeUse modeUse() default ModeUse.VIEW;
     String title() default "";
     String icon() default "";
-    int width() default 800;
-    int height() default 600;
+    int width() default -1;
+    int height() default -1;
     boolean resizable() default true;
     boolean centered() default true;
     boolean alwaysOnTop() default false;

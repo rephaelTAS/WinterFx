@@ -1,9 +1,13 @@
-// WinterApplication.java v20.1 - 2026-08-26
-// Correção: Ordem de inicialização corrigida (ApiDispatcher no final)
+// WinterApplication.java v20.3 - 2026-09-02
+// FIX 1: initPropertiesConfig() retorna ConfigurationManager (antes: void → erro de compilação)
+// FIX 2: removido diContainer.register() de dentro de initPropertiesConfig() (diContainer ainda não existia → NPE)
+// FIX 3: registro do ConfigurationManager centralizado em initializeDiContainer()
 package com.ossobo.winterfx.bootstrap;
 
 import com.ossobo.winterfx.di.DiContainer;
-import com.ossobo.winterfx.di.injection.DependencyInjector;
+import com.ossobo.winterfx.di.configuration.ConfigurationManager;
+import com.ossobo.winterfx.di.configuration.PropertySourceProcessor;
+import com.ossobo.winterfx.event.EventBus;
 import com.ossobo.winterfx.imagemanager.ImageManager;
 import com.ossobo.winterfx.imagemanager.ImageResourceInjector;
 import com.ossobo.winterfx.imagemanager.handler.SwapImageHandler;
@@ -50,12 +54,13 @@ import java.util.function.Consumer;
  *   <li><b>Forma 2 (SplashScreen):</b> {@link #runWithSplash(Class, Consumer)} - Com progresso</li>
  * </ul>
  *
- * @version 20.1 (26/08/2026) - Correção de registros duplicados e ordem de inicialização
+ * @version 20.3 (02/09/2026) - initPropertiesConfig() retorna ConfigurationManager;
+ *                              registro no DI centralizado em initializeDiContainer()
  */
 public final class WinterApplication {
 
     private static final System.Logger LOGGER = System.getLogger(WinterApplication.class.getName());
-    private static final String VERSION = "20.1";
+    private static final String VERSION = "20.3";
     private static volatile WinterApplication INSTANCE;
 
     // ==================== SUBSISTEMAS ====================
@@ -115,7 +120,7 @@ public final class WinterApplication {
         return local;
     }
 
-    // ==================== ENTRADA PRINCIPAL - FORMA 1 (SIMPLES) ====================
+    // ==================== ENTRADA PRINCIPAL ====================
 
     public static void run(Class<? extends Application> appClass) {
         var packageName = appClass.getPackageName();
@@ -124,8 +129,6 @@ public final class WinterApplication {
                 .withMainView("main");
         Application.launch(appClass);
     }
-
-    // ==================== ENTRADA PRINCIPAL - FORMA 2 (SPLASH SCREEN) ====================
 
     public static void runWithSplash(Class<? extends Application> appClass,
                                      Consumer<Double> splashUpdater) {
@@ -166,14 +169,12 @@ public final class WinterApplication {
         return useSplash;
     }
 
-    // ==================== INICIALIZAÇÃO COM SPLASH ====================
+    // ==================== INICIALIZAÇÃO ====================
 
     public void initializeWithSplash(Stage primaryStage) {
         this.primaryStage = Objects.requireNonNull(primaryStage, "primaryStage não pode ser nulo");
         initializeWithProgress(splashProgressCallback);
     }
-
-    // ==================== INICIALIZAÇÃO PRINCIPAL ====================
 
     public void initializeWithProgress(Consumer<Double> progressCallback) {
         if (initialized) {
@@ -191,32 +192,33 @@ public final class WinterApplication {
             if (progressCallback != null) progressCallback.accept(0.20);
             initializeResourceModule();
 
+            // Fase 0.25: propriedades carregadas ANTES do DiContainer e de qualquer bean
             if (progressCallback != null) progressCallback.accept(0.25);
             initializeDiContainer();
 
-            if (progressCallback != null) progressCallback.accept(0.30);
+            if (progressCallback != null) progressCallback.accept(0.35);
             initializeImageManager();
 
-            if (progressCallback != null) progressCallback.accept(0.40);
+            if (progressCallback != null) progressCallback.accept(0.45);
             initializeSoundManager();
 
-            if (progressCallback != null) progressCallback.accept(0.50);
+            if (progressCallback != null) progressCallback.accept(0.55);
             initializeNotificationManager();
 
-            if (progressCallback != null) progressCallback.accept(0.60);
+            if (progressCallback != null) progressCallback.accept(0.65);
             initializeStageManager();
 
-            if (progressCallback != null) progressCallback.accept(0.70);
+            if (progressCallback != null) progressCallback.accept(0.75);
             initializeAlertManager();
 
-            if (progressCallback != null) progressCallback.accept(0.80);
+            if (progressCallback != null) progressCallback.accept(0.85);
             initializeFloatingWindowManager();
 
-            if (progressCallback != null) progressCallback.accept(0.85);
+            if (progressCallback != null) progressCallback.accept(0.90);
             initializeInterceptionSystem();
 
-            // ✅ CORREÇÃO: ApiDispatcher movido para o final, quando todos os beans já existem
-            if (progressCallback != null) progressCallback.accept(0.90);
+            // ApiDispatcher por último, quando todos os beans já existem
+            if (progressCallback != null) progressCallback.accept(0.95);
             initializeApiDispatcher();
 
             if (progressCallback != null) progressCallback.accept(1.0);
@@ -253,15 +255,67 @@ public final class WinterApplication {
                 resourceModule.getResourceCount());
     }
 
+    /**
+     * Inicializa o DiContainer com as propriedades carregadas.
+     *
+     * <p>ORDEM CRÍTICA (contrato do sistema de propriedades):</p>
+     * <ol>
+     *   <li>initPropertiesConfig() → carrega @PropertySource (SEM tocar no container)</li>
+     *   <li>DiContainer.initialize() → recebe o ConfigurationManager já populado</li>
+     *   <li>Registro do ConfigurationManager como bean (AGORA o container existe)</li>
+     * </ol>
+     */
     private void initializeDiContainer() {
-        DiContainer.initialize(beanRegistry, resourceRegistry);
+        // 1. PRIMEIRO: carrega as propriedades (não depende do container)
+        ConfigurationManager configManager = initPropertiesConfig();
+        EventBus eventBus = new EventBus();
+
+        // 2. DEPOIS: inicializa o DiContainer com o ConfigurationManager populado
+        DiContainer.initialize(beanRegistry, resourceRegistry, configManager);
         diContainer = DiContainer.getInstance();
 
+        // 3. AGORA SIM: registra os beans de infraestrutura
         diContainer.register(ResourceModule.class, resourceModule);
+        diContainer.register(ConfigurationManager.class, configManager);
+        diContainer.register(EventBus.class, eventBus);
+
+        LOGGER.log(System.Logger.Level.INFO,
+                "✅ DiContainer inicializado com ConfigurationManager populado ({0} chaves)",
+                configManager.getPropertyCount());
+    }
+
+    /**
+     * Carrega as propriedades do sistema.
+     *
+     * <p>FIX v20.3: este método NÃO acessa o diContainer (ainda inexistente)
+     * e RETORNA o ConfigurationManager para o chamador registrá-lo.</p>
+     *
+     * <p>ORDEM INTERNA: apenas processPropertySources(). NÃO chamar
+     * loadDefaultProperties() antes — os defaults manuais escritos antes do
+     * arquivo bloqueariam as mesmas chaves (semântica "primeiro definido
+     * vence") e o application.properties viraria papel morto. Defaults
+     * pertencem ao placeholder: ${chave:default}.</p>
+     *
+     * @return ConfigurationManager populado e pronto para injeção
+     */
+    private ConfigurationManager initPropertiesConfig() {
+        LOGGER.log(System.Logger.Level.INFO, "📝 Inicializando ConfigurationManager...");
+
+        // System properties + env vars já entram no construtor (maior precedência)
+        ConfigurationManager configManager = new ConfigurationManager();
+
+        PropertySourceProcessor processor = new PropertySourceProcessor(configManager);
+
+        // ÚNICO passo de carga: @PropertySource nas classes escaneadas
+        processor.processPropertySources(beanRegistry);
+
+        LOGGER.log(System.Logger.Level.INFO, "✅ Sistema de propriedades inicializado");
+        return configManager;
     }
 
     private void initializeApiDispatcher() {
         this.apiDispatcher = new ApiDispatcher(diContainer);
+        LOGGER.log(System.Logger.Level.DEBUG, "ApiDispatcher inicializado");
     }
 
     private void initializeImageManager() {
@@ -279,9 +333,7 @@ public final class WinterApplication {
 
     private void initializeSoundManager() {
         soundManager = new SoundManager();
-
         registerIfAbsent(SoundManager.class, soundManager);
-
         LOGGER.log(System.Logger.Level.DEBUG, "SoundManager inicializado");
     }
 
@@ -363,16 +415,14 @@ public final class WinterApplication {
     }
 
     // ============================================================
-    // MÉTODO AUXILIAR PARA REGISTRO SEGURO
+    // REGISTRO SEGURO
     // ============================================================
 
     /**
      * Registra um bean no DiContainer apenas se ele ainda não existir.
-     * Evita o erro "Bean 'xxx' já está registrado".
      */
     private <T> void registerIfAbsent(Class<T> type, T instance) {
         try {
-            // Verifica se já está no cache de instâncias singleton
             if (diContainer.isBeanCached(type)) {
                 LOGGER.log(System.Logger.Level.DEBUG,
                         "Bean '{0}' já registrado. Ignorando registro duplicado.",
@@ -380,10 +430,13 @@ public final class WinterApplication {
                 return;
             }
         } catch (Exception e) {
-            // Falha ao verificar, tenta registrar
+            // FIX v20.3: log antes de prosseguir — falha na verificação não
+            // deve esconder um problema real do container
+            LOGGER.log(System.Logger.Level.DEBUG,
+                    "Não foi possível verificar cache para {0}: {1}",
+                    type.getName(), e.getMessage());
         }
 
-        // Registra o bean
         diContainer.register(type, instance);
         LOGGER.log(System.Logger.Level.DEBUG,
                 "Bean de infraestrutura '{0}' registrado com sucesso.",
@@ -412,7 +465,6 @@ public final class WinterApplication {
         }
 
         var descriptor = resourceModule.requireView(viewId);
-
         var loadedView = stageManager.loadView(viewId);
 
         var width = descriptor.width() > 0 ? descriptor.width() : 900;

@@ -21,7 +21,6 @@ module com.ossobo.winterfx {
     exports com.ossobo.winterfx.exceptions;
     exports com.ossobo.winterfx.view.floatingwindow;
     exports com.ossobo.winterfx.di;
-    exports com.ossobo.winterfx.di.annotations;
     exports com.ossobo.winterfx.di.enums;
     exports com.ossobo.winterfx.di.exceptions;
     exports com.ossobo.winterfx.di.scopes;

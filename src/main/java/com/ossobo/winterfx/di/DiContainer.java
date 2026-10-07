@@ -18,16 +18,18 @@ import com.ossobo.winterfx.scanner.models.BeanDefinition;
 import com.ossobo.winterfx.scanner.registry.BeanRegistry;
 import com.ossobo.winterfx.scanner.registry.ResourceRegistry;
 
-import javafx.util.Callback; // ✅ NOVO IMPORT
+import javafx.util.Callback;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Fachada principal do módulo de Injeção de Dependências.
- * Versão 8.1 - Adicionada ponte nativa para FXML e destruição de Prototypes.
+ * Versão 8.2 - Suporte a ConfigurationManager externo.
  */
 public final class DiContainer {
+
+    private static final System.Logger LOGGER = System.getLogger(DiContainer.class.getName());
 
     private static volatile DiContainer INSTANCE;
     private final List<BeanPostProcessor> beanPostProcessors = new CopyOnWriteArrayList<>();
@@ -45,25 +47,43 @@ public final class DiContainer {
     private InstantiationStrategyManager strategyManager;
     private DependencyResolver dependencyResolver;
 
-    private DiContainer(BeanRegistry beanRegistry, ResourceRegistry resourceRegistry) {
+    private DiContainer(BeanRegistry beanRegistry, ResourceRegistry resourceRegistry, ConfigurationManager configurationManager) {
         this.beanRegistry = beanRegistry;
         this.resourceRegistry = resourceRegistry;
+        this.configurationManager = configurationManager;
     }
 
-    public static void initialize(BeanRegistry beanRegistry, ResourceRegistry resourceRegistry) {
+    /**
+     * Inicializa o DiContainer com um ConfigurationManager já populado.
+     * @param beanRegistry Registro de beans
+     * @param resourceRegistry Registro de recursos
+     * @param configurationManager ConfigurationManager já populado com propriedades
+     */
+    public static void initialize(BeanRegistry beanRegistry, ResourceRegistry resourceRegistry, ConfigurationManager configurationManager) {
         if (INSTANCE == null) {
             synchronized (DiContainer.class) {
                 if (INSTANCE == null) {
-                    DiContainer tempInstance = new DiContainer(beanRegistry, resourceRegistry);
-                    tempInstance.boot(); // Se falhar, INSTANCE continua null (Seguro)
+                    LOGGER.log(System.Logger.Level.INFO, "Inicializando DiContainer com ConfigurationManager externo...");
+                    DiContainer tempInstance = new DiContainer(beanRegistry, resourceRegistry, configurationManager);
+                    tempInstance.boot();
                     INSTANCE = tempInstance;
+                    LOGGER.log(System.Logger.Level.INFO, "DiContainer inicializado com {0} propriedades",
+                            configurationManager.getPropertyCount());
                 }
             }
         }
     }
 
+    /**
+     * @deprecated Use {@link #initialize(BeanRegistry, ResourceRegistry, ConfigurationManager)}
+     */
+    @Deprecated
+    public static void initialize(BeanRegistry beanRegistry, ResourceRegistry resourceRegistry) {
+        initialize(beanRegistry, resourceRegistry, new ConfigurationManager());
+    }
+
     private void boot() {
-        var sequence = new BootSequence(beanRegistry);
+        var sequence = new BootSequence(beanRegistry, configurationManager);
         var result = sequence.boot();
         this.dependencyResolver = result.dependencyResolver();
         this.injectionManager = result.injectionManager();
@@ -79,7 +99,7 @@ public final class DiContainer {
     }
 
     // ============================================================
-    // ✅ NOVO: PONTE OFICIAL COM O JAVAFX
+    // PONTE OFICIAL COM O JAVAFX
     // ============================================================
 
     /**
@@ -111,7 +131,7 @@ public final class DiContainer {
     }
 
     // ============================================================
-    // ✅ NOVO: CICLO DE VIDA PARA PROTOTYPES (TELA FECHADA)
+    // CICLO DE VIDA PARA PROTOTYPES (TELA FECHADA)
     // ============================================================
 
     /**
@@ -148,16 +168,25 @@ public final class DiContainer {
         injectionManager.inject(target);
     }
 
-    public void registerExternalInjector(DependencyInjector injector) { injectionManager.registerExternalInjector(injector); }
+    public void registerExternalInjector(DependencyInjector injector) {
+        injectionManager.registerExternalInjector(injector);
+    }
 
     public void registerBeanPostProcessor(BeanPostProcessor processor) {
         if (processor != null) beanPostProcessors.add(processor);
     }
 
-    public List<BeanPostProcessor> getBeanPostProcessors() { return List.copyOf(beanPostProcessors); }
+    public List<BeanPostProcessor> getBeanPostProcessors() {
+        return List.copyOf(beanPostProcessors);
+    }
 
-    public void addLifecycleListener(DependencyLifecycleListener listener) { lifecycleManager.addListener(listener); }
-    public void refresh() { lifecycleManager.initialize(); }
+    public void addLifecycleListener(DependencyLifecycleListener listener) {
+        lifecycleManager.addListener(listener);
+    }
+
+    public void refresh() {
+        lifecycleManager.initialize();
+    }
 
     public void close() {
         lifecycleManager.shutdown();
@@ -171,15 +200,41 @@ public final class DiContainer {
     // GETTERS
     // ============================================================
 
-    public ConfigurationManager getConfiguration() { return configurationManager; }
-    public BeanRegistry getBeanRegistry() { return beanRegistry; }
-    public ResourceRegistry getResourceRegistry() { return resourceRegistry; }
-    public ScopeManager getScopeManager() { return scopeManager; }
-    public LifecycleManager getLifecycleManager() { return lifecycleManager; }
-    public DependencyResolver getDependencyResolver() { return dependencyResolver; }
-    public InjectionManager getInjectionManager() { return injectionManager; }
-    public ReflectionCache getReflectionCache() { return reflectionCache; }
-    public ReflectionProcessor getReflectionProcessor() { return reflectionProcessor; }
+    public ConfigurationManager getConfiguration() {
+        return configurationManager;
+    }
+
+    public BeanRegistry getBeanRegistry() {
+        return beanRegistry;
+    }
+
+    public ResourceRegistry getResourceRegistry() {
+        return resourceRegistry;
+    }
+
+    public ScopeManager getScopeManager() {
+        return scopeManager;
+    }
+
+    public LifecycleManager getLifecycleManager() {
+        return lifecycleManager;
+    }
+
+    public DependencyResolver getDependencyResolver() {
+        return dependencyResolver;
+    }
+
+    public InjectionManager getInjectionManager() {
+        return injectionManager;
+    }
+
+    public ReflectionCache getReflectionCache() {
+        return reflectionCache;
+    }
+
+    public ReflectionProcessor getReflectionProcessor() {
+        return reflectionProcessor;
+    }
 
     public boolean isBeanCached(Class<?> type) {
         var singletonScope = scopeManager.getSingletonScope();
@@ -187,7 +242,9 @@ public final class DiContainer {
     }
 
     public static DiContainer getInstance() {
-        if (INSTANCE == null) throw new IllegalStateException("DiContainer não inicializado. Chame DiContainer.initialize() primeiro.");
+        if (INSTANCE == null) {
+            throw new IllegalStateException("DiContainer não inicializado. Chame DiContainer.initialize() primeiro.");
+        }
         return INSTANCE;
     }
 }
